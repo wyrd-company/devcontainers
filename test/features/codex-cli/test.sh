@@ -19,4 +19,8 @@ check "codex package is user-owned" test "$(stat -c %U "${USER_HOME}/.local/lib/
 # shellcheck disable=SC2016
 check "node major is 24" bash -c 'test "$(node -p "process.versions.node.split(\".\")[0]")" = 24'
 
+schema_dir="$(mktemp -d)"
+check "codex app-server schema generation works" env HOME="${USER_HOME}" "${CODEX}" app-server generate-json-schema --out "${schema_dir}"
+check "codex thread start schema exists" test -s "${schema_dir}/v2/ThreadStartParams.json"
+
 reportResults

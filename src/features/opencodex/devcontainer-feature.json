@@ -1,0 +1,38 @@
+{
+  "id": "opencodex",
+  "version": "1.0.0",
+  "name": "OpenCodex",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/opencodex",
+  "description": "Installs OpenCodex (ocx) for the service user and runs its proxy and dashboard as an s6-overlay service on Debian/Ubuntu images.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "OpenCodex npm version or dist-tag to install, such as `latest`, `preview`, or `2.51.0`."
+    },
+    "port": {
+      "type": "string",
+      "default": "10100",
+      "description": "Loopback port the OpenCodex proxy and dashboard listen on."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User account that owns the installation and runs the service. `automatic` prefers the remote user, container user, `vscode`, then `root`."
+    },
+    "dnsName": {
+      "type": "string",
+      "default": "",
+      "description": "Optional fully qualified DNS name that exposes the dashboard through the Caddy Feature, such as `ocx.dev-environment.example.test`."
+    }
+  },
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24"
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/caddy"
+  ]
+}

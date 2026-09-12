@@ -1,0 +1,29 @@
+{
+  "opencodex-custom-options": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "opencodex": {
+        "port": "4123",
+        "serviceUser": "root"
+      }
+    }
+  },
+  "opencodex-caddy": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "opencodex": {
+        "port": "4123",
+        "dnsName": "ocx.test-container.example.test"
+      },
+      "caddy": {}
+    }
+  },
+  "opencodex-pinned": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "opencodex": {
+        "version": "2.50.0"
+      }
+    }
+  }
+}

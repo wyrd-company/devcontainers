@@ -31,6 +31,28 @@ fail() {
     exit 1
 }
 
+console_url="http://127.0.0.1:${port}/"
+
+fetch_console() {
+    docker exec "${name}" curl \
+        --fail \
+        --silent \
+        --show-error \
+        --connect-timeout 2 \
+        --max-time 5 \
+        "${console_url}"
+}
+
+report_container_state() {
+    printf '%s\n' 'T3 Code container state:' >&2
+    docker inspect --format '{{.State.Status}} exit={{.State.ExitCode}} error={{.State.Error}}' \
+        "${name}" >&2 || true
+    printf '%s\n' 'T3 Code service processes:' >&2
+    docker exec "${name}" ps -ef >&2 || true
+    printf '%s\n' 'T3 Code container log:' >&2
+    docker logs "${name}" >&2 || true
+}
+
 cleanup() {
     docker stop "${name}" >/dev/null 2>&1 || true
     docker rm "${name}" >/dev/null 2>&1 || true
@@ -68,17 +90,25 @@ EOF
 devcontainer build \
     --workspace-folder "${workspace}" \
     --image-name "${image}" >/dev/null
+printf 'Built T3 Code runtime image.\n'
 
 docker run --detach --name "${name}" "${image}" >/dev/null
+printf 'Started T3 Code runtime container.\n'
 
-for _ in $(seq 1 120); do
-    if docker exec "${name}" curl --fail --silent "http://127.0.0.1:${port}/" >/dev/null 2>&1; then
+ready=false
+deadline=$((SECONDS + 120))
+while ((SECONDS < deadline)); do
+    if fetch_console >/dev/null 2>&1; then
+        ready=true
         break
     fi
     sleep 1
 done
-docker exec "${name}" curl --fail --silent "http://127.0.0.1:${port}/" >/dev/null \
-    || fail "Console did not serve on port ${port} within the startup window."
+if [ "${ready}" != true ]; then
+    report_container_state
+    fail "Console did not serve on port ${port} within the 120-second startup window."
+fi
+printf 'T3 Code console became ready.\n'
 
 installed_version="$(docker exec "${name}" /usr/local/bin/t3 --version)"
 [ "${installed_version}" = "t3 v${expected_version}" ] \
@@ -100,7 +130,10 @@ service_user="$(docker exec "${name}" ps -o user= -p "${t3_pid}" | tr -d ' ')"
 docker exec "${name}" sh -c "tr '\\0' ' ' </proc/${t3_pid}/cmdline" | grep -q -- '--mode=web' \
     || fail "T3 Code serve is not running the web runtime."
 
-console="$(docker exec "${name}" curl --fail --silent "http://127.0.0.1:${port}/")"
+if ! console="$(fetch_console)"; then
+    report_container_state
+    fail "Console stopped responding after it became ready."
+fi
 printf '%s' "${console}" | grep -qi '<!doctype html' \
     || fail "Console root did not return an HTML document."
 

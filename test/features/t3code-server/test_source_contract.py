@@ -71,6 +71,20 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn('"version": "0.0.37-wyrd.1"', readme)
         self.assertIn('"version": "latest"', readme)
 
+    def test_runtime_probe_is_bounded_and_reports_container_state(self):
+        runtime_test = (ROOT / "scripts/test-t3code-runtime.sh").read_text()
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+
+        self.assertIn("--connect-timeout 2", runtime_test)
+        self.assertIn("--max-time 5", runtime_test)
+        self.assertIn("deadline=$((SECONDS + 120))", runtime_test)
+        self.assertIn('docker inspect --format', runtime_test)
+        self.assertIn('docker logs "${name}"', runtime_test)
+        self.assertRegex(
+            workflow,
+            r"(?ms)^  test-t3code-runtime:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10$",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

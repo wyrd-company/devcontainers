@@ -10,7 +10,7 @@ check_debian_family
 ensure_s6_overlay
 ensure_apt_packages ca-certificates
 
-[[ "${VERSION}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || err "version must be an npm version or dist-tag."
+[[ "${VERSION}" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]] || err "version must be an npm version or dist-tag."
 
 [[ "${PORT}" =~ ^[0-9]+$ ]] || err "port must be an integer between 1 and 65535."
 [ "${#PORT}" -le 5 ] || err "port must be an integer between 1 and 65535."
@@ -46,10 +46,16 @@ install -d -m 0755 -o "${service_user}" -g "${service_group}" \
     "${install_prefix}" "${install_prefix}/bin" "${install_prefix}/lib"
 
 package_spec="@bitkyc08/opencodex@${VERSION}"
-log "Installing ${package_spec} for ${service_user} under ${install_prefix}"
+user_path="${node_bin_dir}:${install_prefix}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+resolved_version="$(run_as_user "${service_user}" env HOME="${service_home}" PATH="${user_path}" \
+    NPM_CONFIG_UPDATE_NOTIFIER=false npm view "${package_spec}" version 2>/dev/null | tail -n 1)"
+resolved_version="${resolved_version##* }"
+resolved_version="${resolved_version//\'/}"
+[ -n "${resolved_version}" ] || err "Unable to resolve ${package_spec} on the npm registry."
+log "Installing ${package_spec} (${resolved_version}) for ${service_user} under ${install_prefix}"
 run_as_user "${service_user}" env \
     HOME="${service_home}" \
-    PATH="${node_bin_dir}:${install_prefix}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    PATH="${user_path}" \
     NPM_CONFIG_UPDATE_NOTIFIER=false \
     npm install --global --prefix "${install_prefix}" \
     --allow-scripts=bun --no-audit --no-fund "${package_spec}"
@@ -57,9 +63,14 @@ run_as_user "${service_user}" env \
 ocx_binary="${install_prefix}/bin/ocx"
 [ -x "${ocx_binary}" ] || err "OpenCodex was not installed at ${ocx_binary}."
 
+# /run/opencodex/paused is the operator's manual hold. /run/opencodex/holds/<pid> files
+# are per-process holds owned by a running `ocx update`; the launcher ignores holds
+# whose process is gone. update.lock serializes updates.
 gate_dir=/run/opencodex
 gate_file="${gate_dir}/paused"
-install -d -m 0755 -o "${service_user}" -g "${service_group}" "${gate_dir}"
+holds_dir="${gate_dir}/holds"
+lock_file="${gate_dir}/update.lock"
+install -d -m 0755 -o "${service_user}" -g "${service_group}" "${gate_dir}" "${holds_dir}"
 
 printf -v quoted_user '%q' "${service_user}"
 printf -v quoted_group '%q' "${service_group}"
@@ -68,6 +79,8 @@ printf -v quoted_ocx '%q' "${ocx_binary}"
 printf -v quoted_port '%q' "${PORT}"
 printf -v quoted_gate_dir '%q' "${gate_dir}"
 printf -v quoted_gate '%q' "${gate_file}"
+printf -v quoted_holds '%q' "${holds_dir}"
+printf -v quoted_lock '%q' "${lock_file}"
 
 # System-wide `ocx` entry point. It holds the supervised proxy down while `ocx update`
 # replaces the package so s6 does not restart the old code mid-update.
@@ -76,7 +89,8 @@ cat >/usr/local/bin/ocx <<EOF2
 set -euo pipefail
 
 ocx=${quoted_ocx}
-gate=${quoted_gate}
+holds=${quoted_holds}
+lock=${quoted_lock}
 hold=0
 
 if [ "\${1-}" = update ]; then
@@ -89,10 +103,16 @@ if [ "\${1-}" = update ]; then
 fi
 
 if [ "\${hold}" -eq 1 ]; then
-    if touch "\${gate}" 2>/dev/null; then
-        trap 'rm -f "\${gate}"' EXIT
+    if mkdir -p "\${holds}" 2>/dev/null && exec 9>"\${lock}" 2>/dev/null; then
+        if ! flock -n 9; then
+            echo "[ocx] Another ocx update holds \${lock}; wait for it to finish." >&2
+            exit 1
+        fi
+        hold_file="\${holds}/\$\$"
+        printf '%s\\n' "\$\$" >"\${hold_file}"
+        trap 'rm -f "\${hold_file}"' EXIT
     else
-        echo "[ocx] Unable to write \${gate}; the supervised proxy is not held during this update." >&2
+        echo "[ocx] Unable to write \${holds}; the supervised proxy is not held during this update." >&2
     fi
 fi
 
@@ -113,10 +133,25 @@ export OCX_SERVICE=1
 
 port=${quoted_port}
 gate=${quoted_gate}
+holds=${quoted_holds}
 
-if [ -e "\${gate}" ]; then
-    echo "[opencodex-service] Paused while \${gate} exists."
-    while [ -e "\${gate}" ]; do
+held() {
+    local hold_file owner
+    [ ! -e "\${gate}" ] || return 0
+    for hold_file in "\${holds}"/*; do
+        [ -f "\${hold_file}" ] || continue
+        owner="\$(cat "\${hold_file}" 2>/dev/null || true)"
+        if [[ "\${owner}" =~ ^[0-9]+$ ]] && [ -d "/proc/\${owner}" ]; then
+            return 0
+        fi
+        rm -f "\${hold_file}"
+    done
+    return 1
+}
+
+if held; then
+    echo "[opencodex-service] Paused while \${gate} or a live hold in \${holds} exists."
+    while held; do
         sleep 1
     done
     echo "[opencodex-service] Resuming."
@@ -133,7 +168,7 @@ touch "${service_dir}/dependencies.d/base"
 
 cat >"${service_dir}/run" <<EOF2
 #!/command/with-contenv bash
-install -d -m 0755 -o ${quoted_user} -g ${quoted_group} ${quoted_gate_dir}
+install -d -m 0755 -o ${quoted_user} -g ${quoted_group} ${quoted_gate_dir} ${quoted_holds}
 exec s6-setuidgid ${quoted_user} /usr/local/bin/opencodex-service
 EOF2
 chmod 0755 "${service_dir}/run"
@@ -160,7 +195,6 @@ fi
 
 installed_version="$(run_as_user "${service_user}" env HOME="${service_home}" PATH="${node_bin_dir}:${PATH}" "${ocx_binary}" --version)"
 installed_version="${installed_version#opencodex }"
-if [[ "${VERSION}" =~ ^[0-9] ]] && [ "${installed_version}" != "${VERSION}" ]; then
-    err "OpenCodex ${VERSION} was requested, but ${installed_version} was installed."
-fi
+[ "${installed_version}" = "${resolved_version}" ] \
+    || err "OpenCodex ${VERSION} resolved to ${resolved_version}, but ${installed_version} was installed."
 log "Installed OpenCodex ${installed_version} as an s6 service running as ${service_user}."

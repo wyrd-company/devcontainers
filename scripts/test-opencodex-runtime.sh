@@ -136,14 +136,31 @@ status="$(probe https://other.example.test)"
 [ "${status}" = 403 ] || fail "Foreign Origin through Caddy returned ${status} rather than 403."
 printf 'Caddy fragment admits the dashboard and refuses foreign origins.\n'
 
-# ocx update: the wrapper holds the service, OpenCodex stops the proxy and swaps the
-# package, then s6 restarts the proxy on the new version.
-as_user ocx update >"${workspace}/update.log" 2>&1 \
-    || { cat "${workspace}/update.log"; fail "ocx update failed."; }
+proxy_running() {
+    docker exec "${name}" pgrep --full -- '/.local/bin/ocx start --port' >/dev/null 2>&1
+}
+
+# ocx update: the wrapper takes a hold, OpenCodex stops the proxy and swaps the
+# package, then s6 restarts the proxy on the new version. While the hold exists no
+# proxy may run; sample that from outside for the whole update.
+as_user ocx update >"${workspace}/update.log" 2>&1 &
+update_pid=$!
+saw_hold=0
+while kill -0 "${update_pid}" 2>/dev/null; do
+    if docker exec "${name}" sh -c 'ls -A /run/opencodex/holds 2>/dev/null | grep -q .'; then
+        saw_hold=1
+        if ! docker exec "${name}" test -e /home/vscode/.opencodex/ocx.pid && proxy_running; then
+            fail "A proxy process ran while an update hold existed."
+        fi
+    fi
+    sleep 0.5
+done
+wait "${update_pid}" || { cat "${workspace}/update.log"; fail "ocx update failed."; }
+[ "${saw_hold}" -eq 1 ] || fail "ocx update never wrote a hold file."
 grep -q "Updated to v${latest_version}" "${workspace}/update.log" \
     || { cat "${workspace}/update.log"; fail "ocx update did not report the new version."; }
-docker exec "${name}" test ! -e /run/opencodex/paused \
-    || fail "The pause file remained after ocx update."
+docker exec "${name}" sh -c '! ls -A /run/opencodex/holds 2>/dev/null | grep -q .' \
+    || fail "A hold file remained after ocx update."
 
 updated_version="$(as_user ocx --version)"
 [ "${updated_version}" = "opencodex ${latest_version}" ] \
@@ -157,6 +174,28 @@ new_user="$(docker exec "${name}" ps -o user= -p "${new_pid}" | tr -d ' ')"
 [ "${new_user}" = vscode ] || fail "The restarted proxy runs as '${new_user}'."
 docker exec "${name}" sh -c "tr '\\0' ' ' </proc/${new_pid}/cmdline" | grep -q -- "--port ${port}" \
     || fail "The restarted proxy is not listening on the configured port."
-
 printf 'Proxy restarted as vscode on %s after ocx update.\n' "${updated_version}"
+
+# An operator hold outlives an update and keeps the proxy down until removed. A stale
+# hold from a vanished process must not.
+as_user touch /run/opencodex/paused
+as_user sh -c 'echo 999999 >/run/opencodex/holds/999999'
+as_user ocx stop >/dev/null 2>&1 || true
+sleep 5
+proxy_running && fail "The proxy restarted while /run/opencodex/paused existed."
+as_user ocx update --tag preview >"${workspace}/update-preview.log" 2>&1 \
+    || { cat "${workspace}/update-preview.log"; fail "ocx update --tag preview failed while paused."; }
+sleep 3
+proxy_running && fail "ocx update removed the operator hold."
+docker exec "${name}" test -e /run/opencodex/paused || fail "ocx update deleted /run/opencodex/paused."
+as_user rm /run/opencodex/paused
+wait_for_health || fail "Proxy did not return after the operator hold was removed."
+docker exec "${name}" test ! -e /run/opencodex/holds/999999 || fail "The launcher kept a stale hold."
+preview_version="$(as_user ocx --version)"
+case "${preview_version}" in
+    *-preview.*) ;;
+    *) fail "ocx update --tag preview installed '${preview_version}'." ;;
+esac
+printf 'Operator hold survived an update; stale hold was discarded; now on %s.\n' "${preview_version}"
+
 printf 'OpenCodex runtime checks passed.\n'

@@ -43,14 +43,16 @@ To pin a release and expose the dashboard through Caddy:
 
 ## Layout
 
-| Path                                                 | Owner        | Purpose                                                                        |
-| ---------------------------------------------------- | ------------ | ------------------------------------------------------------------------------ |
-| `<home>/.opencodex`                                  | service user | OpenCodex state: `config.json`, provider logins, admin token, logs, pid files. |
-| `<home>/.local/lib/node_modules/@bitkyc08/opencodex` | service user | The installed package. `ocx update` stages and swaps it here.                  |
-| `<home>/.local/bin/ocx`                              | service user | The npm launcher for the installed package.                                    |
-| `/usr/local/bin/ocx`, `/usr/local/bin/opencodex`     | root         | System-wide entry points. They run the user-owned launcher.                    |
-| `/usr/local/bin/opencodex-service`                   | root         | The s6 launcher. It runs `ocx start --port <port>` as the service user.        |
-| `/run/opencodex/paused`                              | service user | When present, the s6 launcher waits instead of starting the proxy.             |
+| Path                                                 | Owner        | Purpose                                                                            |
+| ---------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------- |
+| `<home>/.opencodex`                                  | service user | OpenCodex state: `config.json`, provider logins, admin token, logs, pid files.     |
+| `<home>/.local/lib/node_modules/@bitkyc08/opencodex` | service user | The installed package. `ocx update` stages and swaps it here.                      |
+| `<home>/.local/bin/ocx`                              | service user | The npm launcher for the installed package.                                        |
+| `/usr/local/bin/ocx`, `/usr/local/bin/opencodex`     | root         | System-wide entry points. They run the user-owned launcher.                        |
+| `/usr/local/bin/opencodex-service`                   | root         | The s6 launcher. It runs `ocx start --port <port>` as the service user.            |
+| `/run/opencodex/paused`                              | service user | Operator hold. While present, the s6 launcher waits instead of starting the proxy. |
+| `/run/opencodex/holds/<pid>`                         | service user | Hold owned by a running `ocx update`. Ignored once that process is gone.           |
+| `/run/opencodex/update.lock`                         | service user | Lock that serializes `ocx update` runs.                                            |
 
 ## Persistent state
 
@@ -76,7 +78,7 @@ The service does not depend on `ocx init`. Configure providers through the dashb
 
 ## Updating
 
-Run `ocx update` as the service user. The system `ocx` wrapper creates `/run/opencodex/paused` for the duration of the update. OpenCodex stops the proxy, stages the new package beside the installed one, swaps it in, and exits. The wrapper then removes the pause file and s6 starts the proxy on the new version.
+Run `ocx update` as the service user. The system `ocx` wrapper takes `/run/opencodex/update.lock` and writes a hold file named after its own process id under `/run/opencodex/holds`. OpenCodex stops the proxy, stages the new package beside the installed one, swaps it in, and exits. The wrapper then removes its hold and s6 starts the proxy on the new version. A second `ocx update` exits while the lock is held. The launcher ignores a hold whose process no longer exists, so an interrupted update cannot leave the proxy down. An operator hold in `/run/opencodex/paused` is independent: the proxy stays down after the update until that file is removed.
 
 ```bash
 ocx update

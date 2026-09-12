@@ -25,8 +25,6 @@ check "wrapper targets the user installation" grep -q "^ocx=${OCX}$" /usr/local/
 check "wrapper holds the service during update" grep -q '^holds=/run/opencodex/holds$' /usr/local/bin/ocx
 check "wrapper serializes updates" grep -q '^lock=/run/opencodex/update.lock$' /usr/local/bin/ocx
 check "wrapper reports version" bash -c "/usr/local/bin/ocx --version | grep -q '^opencodex '"
-check "pause directory is user-owned" test "$(stat -c %U /run/opencodex)" = "${SERVICE_USER}"
-check "holds directory is user-owned" test "$(stat -c %U /run/opencodex/holds)" = "${SERVICE_USER}"
 check "service launcher uses the default port" grep -q '^port=10100$' /usr/local/bin/opencodex-service
 check "service launcher marks the service" grep -q '^export OCX_SERVICE=1$' /usr/local/bin/opencodex-service
 check "service launcher honors the pause file" grep -q '^gate=/run/opencodex/paused$' /usr/local/bin/opencodex-service

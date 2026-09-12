@@ -3,6 +3,7 @@
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "opencodex": {
+        "mode": "standalone",
         "port": "4123",
         "serviceUser": "root"
       }
@@ -12,6 +13,7 @@
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "opencodex": {
+        "mode": "standalone",
         "port": "4123",
         "dnsName": "ocx.test-container.example.test"
       },

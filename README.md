@@ -34,7 +34,7 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 - `ghcr.io/wyrd-company/devcontainers/cursor-agent-cli:1`
 - `ghcr.io/wyrd-company/devcontainers/grok-cli:1`
 - `ghcr.io/wyrd-company/devcontainers/opencode-cli:1`
-- `ghcr.io/wyrd-company/devcontainers/opencodex:1`
+- `ghcr.io/wyrd-company/devcontainers/opencodex:2`
 - `ghcr.io/wyrd-company/devcontainers/t3code-server:1`
 - `ghcr.io/wyrd-company/devcontainers/dagu:1`
 - `ghcr.io/wyrd-company/devcontainers/openobserve:1`

@@ -13,6 +13,10 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 image="${1:-devcontainers-opencodex-runtime:test}"
 name="opencodex-runtime-test-${RANDOM}-$$"
+client_name="${name}-client"
+client_image="${image}-client"
+client_ocx_volume="${name}-ocx"
+client_codex_volume="${name}-codex"
 port=10100
 caddy_port=18080
 dns_name=ocx.test-container.example.test
@@ -30,8 +34,11 @@ fail() {
 }
 
 cleanup() {
+    docker stop "${client_name}" >/dev/null 2>&1 || true
+    docker rm "${client_name}" >/dev/null 2>&1 || true
     docker stop "${name}" >/dev/null 2>&1 || true
     docker rm "${name}" >/dev/null 2>&1 || true
+    docker volume rm "${client_ocx_volume}" "${client_codex_volume}" >/dev/null 2>&1 || true
     rm -rf "${workspace}"
 }
 trap cleanup EXIT
@@ -64,8 +71,49 @@ cat >"${workspace}/.devcontainer/devcontainer.json" <<EOF2
 {
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
+        "./opencodex": {
+            "version": "${pinned_version}"
+        }
+    }
+}
+EOF2
+
+devcontainer build \
+    --workspace-folder "${workspace}" \
+    --image-name "${client_image}" >/dev/null
+
+docker run --detach --name "${client_name}" \
+    --mount "source=${client_ocx_volume},target=/home/vscode/.opencodex" \
+    --mount "source=${client_codex_volume},target=/home/vscode/.codex" \
+    "${client_image}" >/dev/null
+
+for _ in $(seq 1 30); do
+    if docker logs "${client_name}" 2>&1 | grep -q 'Enrollment required'; then
+        break
+    fi
+    sleep 1
+done
+docker logs "${client_name}" 2>&1 | grep -q 'Enrollment required' \
+    || fail "The disconnected client oneshot did not run at startup."
+[ "$(docker inspect --format '{{.State.Running}}' "${client_name}")" = true ] \
+    || fail "The disconnected client oneshot blocked container startup."
+docker exec "${client_name}" test ! -e /etc/s6-overlay/s6-rc.d/opencodex \
+    || fail "Client mode installed the standalone proxy service."
+docker exec "${client_name}" sh -c \
+    '[ "$(stat -c %U /home/vscode/.opencodex)" = vscode ] && [ "$(stat -c %U /home/vscode/.codex)" = vscode ]' \
+    || fail "Fresh client state volumes are not owned by the service user."
+docker stop "${client_name}" >/dev/null
+docker rm "${client_name}" >/dev/null
+docker volume rm "${client_ocx_volume}" "${client_codex_volume}" >/dev/null
+printf 'Disconnected client startup completed with service-user-owned state volumes.\n'
+
+cat >"${workspace}/.devcontainer/devcontainer.json" <<EOF2
+{
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
         "./caddy": {},
         "./opencodex": {
+            "mode": "standalone",
             "version": "${pinned_version}",
             "port": "${port}",
             "dnsName": "${dns_name}"

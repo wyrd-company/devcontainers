@@ -1,0 +1,20 @@
+{
+  "id": "pi-coding-agent-cli",
+  "version": "1.0.0",
+  "name": "Pi Coding Agent CLI",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/pi-coding-agent-cli",
+  "description": "Installs the Pi coding agent for the Dev Container user from npm and ensures `pi` is on the PATH.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "Pi coding agent version to install from npm."
+    }
+  },
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24"
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}

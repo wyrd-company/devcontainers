@@ -29,6 +29,7 @@ jobs:
           - cursor-agent-cli
           - grok-cli
           - opencode-cli
+          - pi-coding-agent-cli
         baseImage:
           - debian:bookworm
           - mcr.microsoft.com/devcontainers/base:noble

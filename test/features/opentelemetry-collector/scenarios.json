@@ -1,0 +1,12 @@
+{
+  "opentelemetry-collector-contrib": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "opentelemetry-collector": {
+        "version": "0.160.0",
+        "distribution": "contrib",
+        "serviceUser": "root"
+      }
+    }
+  }
+}

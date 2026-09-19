@@ -39,6 +39,7 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 - `ghcr.io/wyrd-company/devcontainers/t3code-server:1`
 - `ghcr.io/wyrd-company/devcontainers/dagu:1`
 - `ghcr.io/wyrd-company/devcontainers/openobserve:1`
+- `ghcr.io/wyrd-company/devcontainers/opentelemetry-collector:1`
 - `ghcr.io/wyrd-company/devcontainers/go:1`
 - `ghcr.io/wyrd-company/devcontainers/sshd:1`
 - `ghcr.io/wyrd-company/devcontainers/docker-outside-of-docker:1`

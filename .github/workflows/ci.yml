@@ -50,6 +50,7 @@ jobs:
         feature:
           - caddy
           - dagu
+          - opentelemetry-collector
           - grok-cli
           - openobserve
           - opencode-cli
@@ -97,6 +98,7 @@ jobs:
           - caddy
           - dagu
           - openobserve
+          - opentelemetry-collector
           - go
           - sshd
           - docker-outside-of-docker
@@ -167,6 +169,15 @@ jobs:
 
       - name: Test OpenObserve runtime under s6
         run: ./scripts/test-openobserve-runtime.sh
+
+  test-opentelemetry-collector-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Test OpenTelemetry Collector runtime under s6
+        run: ./scripts/test-opentelemetry-collector-runtime.sh
 
   test-image:
     runs-on: ubuntu-latest

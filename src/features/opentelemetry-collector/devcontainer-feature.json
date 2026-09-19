@@ -1,0 +1,26 @@
+{
+  "id": "opentelemetry-collector",
+  "version": "1.0.0",
+  "name": "OpenTelemetry Collector",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/opentelemetry-collector",
+  "description": "Installs the OpenTelemetry Collector core or contrib distribution and runs it as an s6-overlay service.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "OpenTelemetry Collector release version to install. `latest` installs the newest stable release containing the selected distribution."
+    },
+    "distribution": {
+      "type": "string",
+      "proposals": ["core", "contrib"],
+      "default": "core",
+      "description": "Official OpenTelemetry Collector distribution to install: `core` or `contrib`."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User account that runs the Collector. Automatic selection prefers the remote user, container user, `vscode`, then `root`."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}

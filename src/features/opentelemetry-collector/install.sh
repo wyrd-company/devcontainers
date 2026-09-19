@@ -49,7 +49,7 @@ resolve_latest_version() {
 
     while :; do
         releases_json="$(curl "${curl_args[@]}" \
-            "https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases?per_page=100&page=${page}")" \
+            "https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases?per_page=20&page=${page}")" \
             || err "Unable to query OpenTelemetry Collector releases. Set 'version' to a published version and retry."
 
         version="$(printf '%s\n' "${releases_json}" | jq -r \

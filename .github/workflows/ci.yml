@@ -50,6 +50,7 @@ jobs:
         feature:
           - caddy
           - dagu
+          - openbao-agent
           - opentelemetry-collector
           - grok-cli
           - openobserve
@@ -98,6 +99,7 @@ jobs:
           - caddy
           - dagu
           - openobserve
+          - openbao-agent
           - opentelemetry-collector
           - go
           - sshd
@@ -178,6 +180,15 @@ jobs:
 
       - name: Test OpenTelemetry Collector runtime under s6
         run: ./scripts/test-opentelemetry-collector-runtime.sh
+
+  test-openbao-agent-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Test OpenBao Agent runtime under s6
+        run: ./scripts/test-openbao-agent-runtime.sh
 
   test-image:
     runs-on: ubuntu-latest

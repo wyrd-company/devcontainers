@@ -1,0 +1,25 @@
+{
+  "id": "openbao-agent",
+  "version": "1.0.0",
+  "name": "OpenBao Agent",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/openbao-agent",
+  "description": "Installs OpenBao and runs OpenBao Agent as an s6-overlay service.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "OpenBao release version to install. `latest` installs the newest stable release with a Linux archive for the current architecture."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User account that runs OpenBao Agent. Automatic selection prefers the remote user, container user, `vscode`, then `root`."
+    },
+    "configPath": {
+      "type": "string",
+      "default": "/etc/openbao/agent.hcl",
+      "description": "Absolute path to the user-supplied OpenBao Agent configuration file."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}

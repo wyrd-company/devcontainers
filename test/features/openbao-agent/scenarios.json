@@ -1,0 +1,12 @@
+{
+  "openbao-agent-pinned": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "openbao-agent": {
+        "version": "2.6.1",
+        "serviceUser": "root",
+        "configPath": "/etc/custom-openbao/agent.hcl"
+      }
+    }
+  }
+}

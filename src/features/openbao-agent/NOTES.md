@@ -1,0 +1,1 @@
+OpenBao Agent runs under s6-overlay as the selected devcontainer user. Supply a readable Agent configuration at `/etc/openbao/agent.hcl`, or at `configPath`, and restart the service with `sudo /command/s6-svc -r /run/service/openbao-agent` after changing it.

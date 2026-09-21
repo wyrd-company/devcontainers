@@ -50,6 +50,34 @@ Replace the starter configuration with a read-only bind mount for project-specif
 
 The Feature does not expose Collector endpoints outside the container. Bind them to another interface in the mounted configuration when access from the host or another container is required.
 
+## Secret file
+
+The service loads `NAME=value` lines from `/run/openbao/secrets/opentelemetry-collector.env` into the Collector environment when that file exists. Reference the values with the Collector's `${env:NAME}` syntax so that the configuration file holds no credential:
+
+```yaml
+exporters:
+  otlphttp/central:
+    endpoint: https://telemetry.example.test/api/default
+    headers:
+      Authorization: ${env:OTLP_AUTHORIZATION}
+```
+
+When the OpenBao Agent Feature is present and its configuration has a `template` with that destination, the Collector does not start until the file is rendered. The matching template builds the complete header value:
+
+```hcl
+template {
+  destination = "/run/openbao/secrets/opentelemetry-collector.env"
+  perms       = "0640"
+  contents    = <<-EOT
+    {{ with secret "secret/data/telemetry" -}}
+    OTLP_AUTHORIZATION=Basic {{ printf "%s:%s" .Data.data.username .Data.data.token | base64Encode }}
+    {{- end }}
+  EOT
+}
+```
+
+Values are literal text, so a value can contain spaces. A variable that the container environment already sets keeps its container value. The Collector reads the file once, at start; restart the service after a secret changes. Without the OpenBao Agent Feature, any other source can supply the file, such as a bind mount.
+
 ## Installed commands
 
 The selected upstream command is installed as `otelcol` or `otelcol-contrib`. The stable `opentelemetry-collector` command points to the selected binary.

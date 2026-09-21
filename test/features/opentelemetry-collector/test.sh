@@ -18,6 +18,8 @@ check "Collector service is a longrun" grep -qx longrun /etc/s6-overlay/s6-rc.d/
 check "Collector service runs as the automatic service user" grep -q '^exec s6-setuidgid vscode ' /etc/s6-overlay/s6-rc.d/opentelemetry-collector/run
 check "Collector service receives the service user home" grep -q ' HOME=/home/vscode ' /etc/s6-overlay/s6-rc.d/opentelemetry-collector/run
 check "Collector service receives the service user name" grep -q ' USER=vscode ' /etc/s6-overlay/s6-rc.d/opentelemetry-collector/run
+check "Collector launcher loads the conventional secret file" grep -Fq 'secret_file=/run/openbao/secrets/opentelemetry-collector.env' /usr/local/bin/opentelemetry-collector-service
+check "Collector does not depend on an absent OpenBao Agent Feature" test ! -e /etc/s6-overlay/s6-rc.d/opentelemetry-collector/dependencies.d/openbao-secrets
 check "Collector Feature does not register systemd" test ! -e /etc/systemd/system/otelcol.service
 
 reportResults

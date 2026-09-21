@@ -1,6 +1,6 @@
 {
   "id": "opentelemetry-collector",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "OpenTelemetry Collector",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/opentelemetry-collector",
   "description": "Installs the OpenTelemetry Collector core or contrib distribution and runs it as an s6-overlay service.",
@@ -22,5 +22,8 @@
       "description": "User account that runs the Collector. Automatic selection prefers the remote user, container user, `vscode`, then `root`."
     }
   },
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/openbao-agent"
+  ]
 }

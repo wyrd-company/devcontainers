@@ -158,8 +158,55 @@ install -m 0755 "${extract_dir}/bao" /usr/local/bin/bao
 config_dir="$(dirname "${config_path}")"
 install -d -m 0755 "${config_dir}"
 
+getent group openbao-secrets >/dev/null 2>&1 || groupadd --system openbao-secrets
+
 printf -v quoted_bao '%q' /usr/local/bin/bao
 printf -v quoted_config '%q' "${config_path}"
+printf -v quoted_user '%q' "${service_user}"
+printf -v quoted_home '%q' "${service_home}"
+
+cat >/usr/local/bin/openbao-prepare-secrets <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Files from a previous container start must not satisfy openbao-wait-for-secrets.
+rm -rf /run/openbao/secrets
+install -d -m 0755 -o root -g root /run/openbao
+install -d -m 2750 -o ${quoted_user} -g openbao-secrets /run/openbao/secrets
+EOF
+chmod 0755 /usr/local/bin/openbao-prepare-secrets
+
+cat >/usr/local/bin/openbao-wait-for-secrets <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_path=${quoted_config}
+
+if [ "\$#" -ne 1 ] || ! [[ "\$1" =~ ^[a-z0-9][a-z0-9-]*\$ ]]; then
+    echo "usage: openbao-wait-for-secrets <feature-id>" >&2
+    exit 2
+fi
+secret_file="/run/openbao/secrets/\$1.env"
+
+if [ ! -r "\${config_path}" ]; then
+    echo "[openbao-wait-for-secrets] Configuration is not readable at \${config_path}; not waiting for \${secret_file}." >&2
+    exit 0
+fi
+
+# The Agent configuration declares which files are expected: a template
+# destination that names the conventional path.
+if ! grep --recursive --no-filename --invert-match --extended-regexp '^[[:space:]]*(#|//)' -- "\${config_path}" \\
+    | grep --fixed-strings -- "\${secret_file}" >/dev/null; then
+    exit 0
+fi
+
+while [ ! -r "\${secret_file}" ]; do
+    echo "[openbao-wait-for-secrets] Waiting for a readable \${secret_file}" >&2
+    sleep 1
+done
+EOF
+chmod 0755 /usr/local/bin/openbao-wait-for-secrets
+
 cat >/usr/local/bin/openbao-agent-service <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -174,12 +221,18 @@ exec ${quoted_bao} agent -config="\${config_path}" "\$@"
 EOF
 chmod 0755 /usr/local/bin/openbao-agent-service
 
+secrets_dir=/etc/s6-overlay/s6-rc.d/openbao-secrets
+install -d -m 0755 "${secrets_dir}/dependencies.d"
+printf 'oneshot\n' >"${secrets_dir}/type"
+touch "${secrets_dir}/dependencies.d/base"
+printf '/usr/local/bin/openbao-prepare-secrets\n' >"${secrets_dir}/up"
+touch /etc/s6-overlay/user-bundles.d/user/contents.d/openbao-secrets
+
 service_dir=/etc/s6-overlay/s6-rc.d/openbao-agent
 install -d -m 0755 "${service_dir}/dependencies.d"
 printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
-printf -v quoted_user '%q' "${service_user}"
-printf -v quoted_home '%q' "${service_home}"
+touch "${service_dir}/dependencies.d/openbao-secrets"
 cat >"${service_dir}/run" <<EOF
 #!/command/with-contenv bash
 exec s6-setuidgid ${quoted_user} env HOME=${quoted_home} USER=${quoted_user} /usr/local/bin/openbao-agent-service

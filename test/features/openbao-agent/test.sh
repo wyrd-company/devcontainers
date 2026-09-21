@@ -21,6 +21,14 @@ check "Agent service is a longrun" grep -qx longrun /etc/s6-overlay/s6-rc.d/open
 check "Agent service runs as the automatic service user" grep -q '^exec s6-setuidgid vscode ' /etc/s6-overlay/s6-rc.d/openbao-agent/run
 check "Agent service receives the service user home" grep -q ' HOME=/home/vscode ' /etc/s6-overlay/s6-rc.d/openbao-agent/run
 check "Agent service receives the service user name" grep -q ' USER=vscode ' /etc/s6-overlay/s6-rc.d/openbao-agent/run
+check "secret file group exists" getent group openbao-secrets
+check "secret file wait helper is executable" test -x /usr/local/bin/openbao-wait-for-secrets
+check "wait helper rejects a missing Feature id" bash -c '/usr/local/bin/openbao-wait-for-secrets; test "$?" -eq 2'
+check "wait helper does not wait without a configuration" timeout 5 /usr/local/bin/openbao-wait-for-secrets sample-feature
+check "secret file directory service is a oneshot" grep -qx oneshot /etc/s6-overlay/s6-rc.d/openbao-secrets/type
+check "secret file directory service is registered" test -f /etc/s6-overlay/user-bundles.d/user/contents.d/openbao-secrets
+check "Agent starts after the secret file directory exists" test -f /etc/s6-overlay/s6-rc.d/openbao-agent/dependencies.d/openbao-secrets
+check "secret file directory belongs to the Agent user" grep -Fq -- '-m 2750 -o vscode -g openbao-secrets /run/openbao/secrets' /usr/local/bin/openbao-prepare-secrets
 check "Agent Feature does not register systemd" test ! -e /etc/systemd/system/openbao-agent.service
 
 reportResults

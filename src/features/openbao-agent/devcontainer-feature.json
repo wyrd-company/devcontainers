@@ -1,6 +1,6 @@
 {
   "id": "openbao-agent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "OpenBao Agent",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/openbao-agent",
   "description": "Installs OpenBao and runs OpenBao Agent as an s6-overlay service.",

@@ -20,5 +20,15 @@
       },
       "caddy": {}
     }
+  },
+  "dagu-openbao-agent": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "dagu": {},
+      "openbao-agent": {
+        "serviceUser": "root"
+      }
+    },
+    "overrideFeatureInstallOrder": ["./openbao-agent", "./dagu"]
   }
 }

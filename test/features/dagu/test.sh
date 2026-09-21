@@ -17,6 +17,8 @@ check "Dagu service receives the service user home" grep -q ' HOME=/home/vscode 
 check "Dagu service receives the service user name" grep -q ' USER=vscode ' /etc/s6-overlay/s6-rc.d/dagu/run
 check "Dagu binds to IPv4 loopback by default" grep -q -- 'start-all --host 127.0.0.1 --port 8080' /usr/local/bin/dagu-service
 check "Dagu Feature does not create a managed config" test ! -e /etc/dagu/config.yaml
+check "Dagu launcher loads the conventional secret file" grep -Fq 'secret_file=/run/openbao/secrets/dagu.env' /usr/local/bin/dagu-service
+check "Dagu does not depend on an absent OpenBao Agent Feature" test ! -e /etc/s6-overlay/s6-rc.d/dagu/dependencies.d/openbao-secrets
 check "Dagu Feature does not register systemd" test ! -e /etc/systemd/system/dagu.service
 
 reportResults

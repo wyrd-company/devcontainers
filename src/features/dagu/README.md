@@ -25,6 +25,26 @@ Set `dnsName` when the Caddy Feature is present to expose Dagu through automatic
 
 Setting `dnsName` requires the Caddy Feature. Caddy-enabled configurations accept `127.0.0.1`, `localhost`, or `0.0.0.0` as the Dagu bind address. `localhost` is normalized to `127.0.0.1`, and Caddy always connects through IPv4 loopback.
 
+## Secret file
+
+The service loads `NAME=value` lines from `/run/openbao/secrets/dagu.env` into Dagu's environment when that file exists. Workflows read the values as environment variables. Values are literal text, and a variable that the container environment already sets keeps its container value.
+
+When the OpenBao Agent Feature is present and its configuration has a `template` with that destination, Dagu does not start until the file is rendered:
+
+```hcl
+template {
+  destination = "/run/openbao/secrets/dagu.env"
+  perms       = "0640"
+  contents    = <<-EOT
+    {{ with secret "secret/data/workflows" -}}
+    SAMPLE_API_TOKEN={{ .Data.data.token }}
+    {{- end }}
+  EOT
+}
+```
+
+Dagu reads the file once, at start; restart the service after a secret changes. Without the OpenBao Agent Feature, any other source can supply the file, such as a bind mount.
+
 ## Options
 
 | Option        | Type   | Default     | Description                                                       |

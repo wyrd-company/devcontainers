@@ -1,6 +1,6 @@
 {
   "id": "dagu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Dagu",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/dagu",
   "description": "Installs Dagu and runs its all-in-one server as an s6-overlay service.",
@@ -33,6 +33,7 @@
   },
   "installsAfter": [
     "ghcr.io/devcontainers/features/common-utils",
-    "ghcr.io/wyrd-company/devcontainers/caddy"
+    "ghcr.io/wyrd-company/devcontainers/caddy",
+    "ghcr.io/wyrd-company/devcontainers/openbao-agent"
   ]
 }

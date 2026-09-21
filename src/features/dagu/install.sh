@@ -86,6 +86,11 @@ service_user="$(pick_service_user "${SERVICEUSER}")"
 service_home="$(getent passwd "${service_user}" | cut -d: -f6)"
 [ -n "${service_home}" ] || err "Unable to resolve the home directory for ${service_user}."
 
+# Rendered secret files from the OpenBao Agent Feature are group-readable.
+if [ "${service_user}" != root ] && getent group openbao-secrets >/dev/null 2>&1; then
+    usermod -aG openbao-secrets "${service_user}"
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y --no-install-recommends ca-certificates curl
@@ -151,6 +156,28 @@ export DAGU_PUBLIC_URL=${quoted_public_url}
 EOF
 fi
 cat >>/usr/local/bin/dagu-service <<EOF
+secret_file=/run/openbao/secrets/dagu.env
+if [ -x /usr/local/bin/openbao-wait-for-secrets ]; then
+    /usr/local/bin/openbao-wait-for-secrets dagu
+fi
+if [ -r "\${secret_file}" ]; then
+    # Values are literal text, not shell. The container environment takes precedence.
+    while IFS= read -r line || [ -n "\${line}" ]; do
+        line="\${line#"\${line%%[![:space:]]*}"}"
+        case "\${line}" in
+            ''|'#'*) continue ;;
+        esac
+        name="\${line%%=*}"
+        if [ "\${name}" = "\${line}" ] || ! [[ "\${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*\$ ]]; then
+            echo "[dagu] ERROR: \${secret_file} contains a line that is not NAME=value." >&2
+            exit 1
+        fi
+        if [ -z "\${!name+x}" ]; then
+            export "\${name}=\${line#*=}"
+        fi
+    done <"\${secret_file}"
+fi
+
 exec ${quoted_dagu} start-all --host ${quoted_host} --port ${quoted_port} "\$@"
 EOF
 chmod 0755 /usr/local/bin/dagu-service
@@ -159,6 +186,9 @@ service_dir=/etc/s6-overlay/s6-rc.d/dagu
 install -d -m 0755 "${service_dir}/dependencies.d"
 printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
+if [ -d /etc/s6-overlay/s6-rc.d/openbao-secrets ]; then
+    touch "${service_dir}/dependencies.d/openbao-secrets"
+fi
 printf -v quoted_user '%q' "${service_user}"
 printf -v quoted_home '%q' "${service_home}"
 cat >"${service_dir}/run" <<EOF

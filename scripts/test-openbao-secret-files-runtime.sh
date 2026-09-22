@@ -76,7 +76,7 @@ docker logs "${container}" 2>&1 \
     | grep -F '[openbao-wait-for-secrets] Waiting for /run/openbao/secrets/dagu.env' >/dev/null
 
 # Only a destination assignment declares a file.
-for feature in commented-feature slashed-feature blocked-feature mentioned-feature heredoc-feature inner-feature backup-feature sample-feature; do
+for feature in commented-feature slashed-feature blocked-feature mentioned-feature heredoc-feature crlf-heredoc-feature inner-feature backup-feature sample-feature; do
     docker exec --user vscode "${container}" timeout 5 /usr/local/bin/openbao-wait-for-secrets "${feature}"
 done
 # A configuration file the service user cannot read is reported, not treated as silence.
@@ -86,7 +86,9 @@ printf '%s\n' "${output}" | grep -F 'Configuration is not readable at /etc/openb
 docker exec "${container}" chmod 0644 /etc/openbao/agent.d/agent.json
 # A JSON destination, and an HCL one after a /* inside a string, declare files:
 # the helper waits until timeout ends it.
-for feature in json-feature string-feature; do
+docker exec "${container}" sh -c 'sed "s/json-feature/newline-feature/" /etc/openbao/agent.d/agent.json >"/etc/openbao/agent.d/odd
+name.json"'
+for feature in json-feature string-feature crlf-feature newline-feature; do
     status=0
     docker exec --user vscode "${container}" timeout 5 /usr/local/bin/openbao-wait-for-secrets "${feature}" || status=$?
     test "${status}" -eq 124

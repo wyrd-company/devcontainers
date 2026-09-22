@@ -206,6 +206,7 @@ cat >/usr/local/lib/openbao-agent/declarations.awk <<'EOF'
 BEGIN { state = "code"; marker = "" }
 {
     line = $0
+    sub(/\r$/, "", line)
     if (state == "heredoc") {
         trimmed = line
         sub(/^[ \t]*/, "", trimmed)
@@ -273,10 +274,12 @@ not_readable() {
 configuration_files=()
 if [ -d "\${config_path}" ]; then
     [ -r "\${config_path}" ] && [ -x "\${config_path}" ] || not_readable "\${config_path}"
-    listing="\$(find "\${config_path}" -type f \\( -name '*.hcl' -o -name '*.json' \\) -print 2>/dev/null)" \\
+    listing="\$(mktemp)"
+    trap 'rm -f "\${listing}"' EXIT
+    find "\${config_path}" -type f \\( -name '*.hcl' -o -name '*.json' \\) -print0 >"\${listing}" 2>/dev/null \\
         || not_readable "\${config_path}"
-    [ -n "\${listing}" ] || exit 0
-    mapfile -t configuration_files <<<"\${listing}"
+    [ -s "\${listing}" ] || exit 0
+    mapfile -d '' -t configuration_files <"\${listing}"
 else
     configuration_files=("\${config_path}")
 fi

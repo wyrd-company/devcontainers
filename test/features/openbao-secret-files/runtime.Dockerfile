@@ -28,4 +28,5 @@ RUN VERSION=latest \
 RUN install -d -m 0755 /etc/openbao/agent.d
 COPY --chmod=0644 test/features/openbao-secret-files/runtime-agent.hcl /etc/openbao/agent.d/agent.hcl
 COPY --chmod=0644 test/features/openbao-secret-files/runtime-agent.json /etc/openbao/agent.d/agent.json
+COPY --chmod=0644 test/features/openbao-secret-files/runtime-agent-crlf.hcl /etc/openbao/agent.d/agent-crlf.hcl
 COPY --chmod=0600 test/features/openbao-agent/runtime-token /root/.openbao-token

@@ -27,6 +27,13 @@ RUN set -eux; \
     test -x /init; \
     test -x /command/s6-svscan
 
+# Limit the vscode user's sudo access to apt installs and s6-overlay service control.
+COPY sudoers.d/vscode /etc/sudoers.d/vscode
+RUN set -eux; \
+    chmod 0440 /etc/sudoers.d/vscode; \
+    visudo --check --file=/etc/sudoers.d/vscode; \
+    ! sudo -n -l -U vscode /bin/true >/dev/null 2>&1
+
 LABEL org.opencontainers.image.authors="Bob Langley" \
       org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay" \
       org.opencontainers.image.licenses="MIT" \

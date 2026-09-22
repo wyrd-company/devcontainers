@@ -1,0 +1,14 @@
+# Restrict the vscode user to package installation and s6-overlay service control.
+# Replaces the unrestricted "vscode ALL=(root) NOPASSWD:ALL" rule from the upstream image.
+
+Cmnd_Alias APT_UPDATE = /usr/bin/apt-get update, /usr/bin/apt-get update *, /usr/bin/apt-get * update, /usr/bin/apt-get * update *, \
+                        /usr/bin/apt update, /usr/bin/apt update *, /usr/bin/apt * update, /usr/bin/apt * update *
+Cmnd_Alias APT_INSTALL = /usr/bin/apt-get install *, /usr/bin/apt-get * install *, \
+                         /usr/bin/apt install *, /usr/bin/apt * install *
+Cmnd_Alias S6_SERVICES = /command/s6-svc * /run/service/*, \
+                         /command/s6-svstat * /run/service/*, /command/s6-svstat /run/service/*, \
+                         /command/s6-rc *
+
+Defaults:vscode env_keep += "DEBIAN_FRONTEND"
+
+vscode ALL=(root) NOPASSWD: APT_UPDATE, APT_INSTALL, S6_SERVICES

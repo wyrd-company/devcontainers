@@ -160,6 +160,10 @@ secret_file=/run/openbao/secrets/dagu.env
 if [ -x /usr/local/bin/openbao-wait-for-secrets ]; then
     /usr/local/bin/openbao-wait-for-secrets dagu
 fi
+if [ -e "\${secret_file}" ] && [ ! -r "\${secret_file}" ]; then
+    echo "[dagu] ERROR: \${secret_file} exists but is not readable by \$(id -un)." >&2
+    exit 1
+fi
 if [ -r "\${secret_file}" ]; then
     # Values are literal text, not shell. The container environment takes precedence.
     while IFS= read -r line || [ -n "\${line}" ]; do

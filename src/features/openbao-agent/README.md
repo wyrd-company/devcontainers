@@ -39,7 +39,7 @@ See the [OpenBao Agent documentation](https://openbao.org/docs/agent-and-proxy/a
 
 ## Secret files for other Features
 
-A Feature that runs a service loads `/run/openbao/secrets/<feature-id>.env` before it starts the service. The Agent configuration decides which files exist: add one `template` whose `destination` is that path.
+The `opentelemetry-collector` and `dagu` Features load `/run/openbao/secrets/<feature-id>.env` before they start their service. The Agent configuration decides which files exist: add one `template` whose `destination` is that path.
 
 ```hcl
 template {
@@ -62,15 +62,13 @@ Each line is `NAME=value`. The value is literal text to the end of the line and 
 | `openbao-wait-for-secrets <feature-id>` | Blocks until the file for that Feature is readable. Returns at once when no template names the file.     |
 | `openbao-secrets` s6 oneshot            | Creates the render directory before the Agent and the consuming services start.                          |
 
-`openbao-wait-for-secrets` reads the Agent configuration at `configPath` and ignores lines that start with `#` or `//`. The consuming service user must be able to read the configuration; when it cannot, the helper logs the condition and does not wait. The wait has no time limit, so a service whose secret cannot be rendered stays down and the helper logs one line each second.
+`openbao-wait-for-secrets` reads the Agent configuration at `configPath` and looks for a `destination` assignment whose value is exactly that path, in HCL or JSON form; comments and other mentions of the path do not count. The consuming service user must be able to read the configuration; when it cannot, the helper logs the condition and does not wait. The wait has no time limit, so a service whose secret cannot be rendered stays down and the helper logs one line each second. A file that exists but is not readable by the service user stops the service with an error.
 
 A service reads its secret file once, at start. Restart the service after a secret changes:
 
 ```sh
 sudo /command/s6-svc -r /run/service/opentelemetry-collector
 ```
-
-The `opentelemetry-collector` and `dagu` Features load secret files.
 
 ## Options
 

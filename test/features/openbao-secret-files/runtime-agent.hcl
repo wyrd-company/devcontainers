@@ -20,8 +20,26 @@ template {
     {{ with secret "secret/data/example" -}}
     SAMPLE_HEADER_VALUE=Basic {{ printf "%s:%s" .Data.data.username .Data.data.token | base64Encode }}
     SAMPLE_PRECEDENCE_VALUE={{ .Data.data.precedence }}
+    SAMPLE_LITERAL_VALUE={{ .Data.data.literal }}
+    SAMPLE_EMPTY_VALUE={{ .Data.data.empty }}
     {{- end }}
   EOT
 }
 
-# template { destination = "/run/openbao/secrets/dagu.env" }
+template {
+  destination = "/run/openbao/secrets/dagu.env"
+  perms       = "0640"
+  contents    = <<-EOT
+    {{ with secret "secret/data/example" -}}
+    SAMPLE_DAGU_VALUE={{ .Data.data.precedence }}
+    {{- end }}
+  EOT
+}
+
+# A mention that is not a destination assignment does not declare a file.
+# destination = "/run/openbao/secrets/commented-feature.env"
+// destination = "/run/openbao/secrets/slashed-feature.env"
+template {
+  destination = "/root/.openbao-notes"
+  contents    = "see /run/openbao/secrets/mentioned-feature.env and /run/openbao/secrets/dagu.env.backup"
+}

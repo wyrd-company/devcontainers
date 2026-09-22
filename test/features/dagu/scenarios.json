@@ -28,5 +28,13 @@
       "openbao-agent": {}
     },
     "overrideFeatureInstallOrder": ["./openbao-agent", "./dagu"]
+  },
+  "dagu-before-openbao-agent": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "dagu": {},
+      "openbao-agent": {}
+    },
+    "overrideFeatureInstallOrder": ["./dagu", "./openbao-agent"]
   }
 }

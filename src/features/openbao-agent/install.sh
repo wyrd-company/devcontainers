@@ -169,10 +169,21 @@ cat >/usr/local/bin/openbao-prepare-secrets <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
+secrets_dir=/run/openbao/secrets
+
+# The directory is owned by this Feature. Refuse to clear anything mounted there.
+for path in /run/openbao "\${secrets_dir}"; do
+    if mountpoint -q "\${path}" 2>/dev/null; then
+        echo "[openbao-secrets] ERROR: \${path} is a mount point; the Feature owns \${secrets_dir} and does not clear mounted paths." >&2
+        exit 1
+    fi
+done
+[ ! -L "\${secrets_dir}" ] || rm -f "\${secrets_dir}"
+
 # Files from a previous container start must not satisfy openbao-wait-for-secrets.
-rm -rf /run/openbao/secrets
+rm -rf "\${secrets_dir}"
 install -d -m 0755 -o root -g root /run/openbao
-install -d -m 2750 -o ${quoted_user} -g openbao-secrets /run/openbao/secrets
+install -d -m 2750 -o ${quoted_user} -g openbao-secrets "\${secrets_dir}"
 EOF
 chmod 0755 /usr/local/bin/openbao-prepare-secrets
 
@@ -193,15 +204,17 @@ if [ ! -r "\${config_path}" ]; then
     exit 0
 fi
 
-# The Agent configuration declares which files are expected: a template
-# destination that names the conventional path.
-if ! grep --recursive --no-filename --invert-match --extended-regexp '^[[:space:]]*(#|//)' -- "\${config_path}" \\
-    | grep --fixed-strings -- "\${secret_file}" >/dev/null; then
+# The Agent configuration declares which files are expected: a template whose
+# destination is the conventional path, in HCL or JSON form. Comments, other
+# assignments, and longer paths that contain this one do not count.
+escaped_file="\${secret_file//./\\\\.}"
+pattern='^[[:space:]]*"?destination"?[[:space:]]*[=:][[:space:]]*"'"\${escaped_file}"'"[[:space:]]*,?[[:space:]]*(#.*|//.*)?$'
+if ! grep --recursive --no-filename --extended-regexp --quiet -- "\${pattern}" "\${config_path}"; then
     exit 0
 fi
 
-while [ ! -r "\${secret_file}" ]; do
-    echo "[openbao-wait-for-secrets] Waiting for a readable \${secret_file}" >&2
+while [ ! -e "\${secret_file}" ]; do
+    echo "[openbao-wait-for-secrets] Waiting for \${secret_file}" >&2
     sleep 1
 done
 EOF
@@ -239,6 +252,24 @@ exec s6-setuidgid ${quoted_user} env HOME=${quoted_home} USER=${quoted_user} /us
 EOF
 chmod 0755 "${service_dir}/run"
 touch /etc/s6-overlay/user-bundles.d/user/contents.d/openbao-agent
+
+# A service Feature installed before this one could not see the group or the
+# oneshot. Its launcher names the wait helper, so reconcile it here.
+for run_file in /etc/s6-overlay/s6-rc.d/*/run; do
+    [ -f "${run_file}" ] || continue
+    consumer_dir="$(dirname "${run_file}")"
+    [ "${consumer_dir}" != "${service_dir}" ] || continue
+    launcher="$(grep -oE '/usr/local/bin/[A-Za-z0-9._-]+' "${run_file}" | tail -n 1 || true)"
+    [ -n "${launcher}" ] && [ -f "${launcher}" ] || continue
+    grep -Fq openbao-wait-for-secrets "${launcher}" || continue
+    install -d -m 0755 "${consumer_dir}/dependencies.d"
+    touch "${consumer_dir}/dependencies.d/openbao-secrets"
+    consumer_user="$(sed -nE 's/^exec s6-setuidgid ([^ ]+) .*/\1/p' "${run_file}" | head -n 1)"
+    if [ -n "${consumer_user}" ] && [ "${consumer_user}" != root ] && id -u "${consumer_user}" >/dev/null 2>&1; then
+        usermod -aG openbao-secrets "${consumer_user}"
+    fi
+    log "Reconciled $(basename "${consumer_dir}") to start after the secret file directory exists."
+done
 
 /usr/local/bin/bao version >/dev/null
 rm -rf /var/lib/apt/lists/*

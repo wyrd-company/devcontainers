@@ -28,7 +28,9 @@ check "wait helper does not wait without a configuration" timeout 5 /usr/local/b
 check "secret file directory service is a oneshot" grep -qx oneshot /etc/s6-overlay/s6-rc.d/openbao-secrets/type
 check "secret file directory service is registered" test -f /etc/s6-overlay/user-bundles.d/user/contents.d/openbao-secrets
 check "Agent starts after the secret file directory exists" test -f /etc/s6-overlay/s6-rc.d/openbao-agent/dependencies.d/openbao-secrets
-check "secret file directory belongs to the Agent user" grep -Fq -- '-m 2750 -o root -g openbao-secrets /run/openbao/secrets' /usr/local/bin/openbao-prepare-secrets
+# shellcheck disable=SC2016
+check "secret file directory belongs to the Agent user" grep -Fq -- '-m 2750 -o root -g openbao-secrets "${secrets_dir}"' /usr/local/bin/openbao-prepare-secrets
+check "secret file directory refuses a mount point" grep -Fq -- 'mountpoint -q' /usr/local/bin/openbao-prepare-secrets
 check "Agent Feature does not register systemd" test ! -e /etc/systemd/system/openbao-agent.service
 
 reportResults

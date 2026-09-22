@@ -13,7 +13,7 @@
     "serviceUser": {
       "type": "string",
       "default": "root",
-      "description": "User account that runs OpenBao Agent. The default `root` keeps the Agent's credential and token out of the remote user's reach. `automatic` prefers the remote user, container user, `vscode`, then `root`."
+      "description": "User account that runs OpenBao Agent. `automatic` prefers the remote user, container user, `vscode`, then `root`."
     },
     "configPath": {
       "type": "string",

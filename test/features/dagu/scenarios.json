@@ -25,9 +25,7 @@
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "dagu": {},
-      "openbao-agent": {
-        "serviceUser": "root"
-      }
+      "openbao-agent": {}
     },
     "overrideFeatureInstallOrder": ["./openbao-agent", "./dagu"]
   }

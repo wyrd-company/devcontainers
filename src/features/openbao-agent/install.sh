@@ -12,7 +12,7 @@ err() {
 }
 
 pick_service_user() {
-    local requested="${1:-automatic}"
+    local requested="${1:-root}"
     local candidate
 
     if [ -n "${requested}" ] && [ "${requested}" != automatic ] && [ "${requested}" != auto ]; then
@@ -82,7 +82,7 @@ resolve_latest_version() {
 [ -r /etc/os-release ] || err "Unable to detect Linux distribution."
 
 requested_version="${VERSION:-latest}"
-service_user_request="${SERVICEUSER:-automatic}"
+service_user_request="${SERVICEUSER:-root}"
 config_path="${CONFIGPATH:-/etc/openbao/agent.hcl}"
 
 # shellcheck disable=SC1091

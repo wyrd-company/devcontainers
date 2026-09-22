@@ -4,10 +4,9 @@ FROM ${BASE_IMAGE}
 COPY src/features/openbao-agent /tmp/openbao-agent-feature
 COPY src/features/opentelemetry-collector /tmp/opentelemetry-collector-feature
 
-# The Agent and the Collector run as different users so that the
+# The Agent runs as root by default and the Collector as vscode, so the
 # openbao-secrets group carries the read access.
 RUN VERSION=latest \
-    SERVICEUSER=root \
     CONFIGPATH=/etc/openbao/agent.hcl \
     _REMOTE_USER=vscode \
     /tmp/openbao-agent-feature/install.sh \

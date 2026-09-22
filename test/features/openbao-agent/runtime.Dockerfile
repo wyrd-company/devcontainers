@@ -4,7 +4,7 @@ FROM ${BASE_IMAGE}
 COPY src/features/openbao-agent /tmp/openbao-agent-feature
 
 RUN VERSION=latest \
-    SERVICEUSER=automatic \
+    SERVICEUSER=vscode \
     CONFIGPATH=/etc/openbao/agent.hcl \
     _REMOTE_USER=vscode \
     /tmp/openbao-agent-feature/install.sh \

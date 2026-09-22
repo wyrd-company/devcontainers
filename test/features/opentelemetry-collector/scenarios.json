@@ -13,9 +13,7 @@
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "opentelemetry-collector": {},
-      "openbao-agent": {
-        "serviceUser": "root"
-      }
+      "openbao-agent": {}
     },
     "overrideFeatureInstallOrder": [
       "./openbao-agent",

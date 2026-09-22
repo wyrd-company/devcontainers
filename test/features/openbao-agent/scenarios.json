@@ -4,7 +4,7 @@
     "features": {
       "openbao-agent": {
         "version": "2.6.1",
-        "serviceUser": "root",
+        "serviceUser": "automatic",
         "configPath": "/etc/custom-openbao/agent.hcl"
       }
     }

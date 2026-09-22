@@ -2,7 +2,7 @@
 
 Installs the official OpenBao `bao` binary and runs `bao agent` as an s6-overlay longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
-OpenBao Agent runs as the selected devcontainer user so that authentication inputs, rendered templates, and token sinks use that user's permissions. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
+OpenBao Agent runs as `root` by default, unlike the other service Features. The Agent holds the first credential and the token that every rendered secret derives from; running as `root` keeps both out of the remote user's reach, so a process running as that user, such as a coding agent, cannot read them. Rendered secret files reach other Features through the `openbao-secrets` group. Set `serviceUser` to override: `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. Authentication inputs must be readable, and template destinations and token sinks writable, by the selected user.
 
 ## Configuration
 
@@ -13,7 +13,7 @@ The Feature does not create an Agent configuration or choose an authentication m
   "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
   "overrideCommand": false,
   "features": {
-    "ghcr.io/wyrd-company/devcontainers/openbao-agent:1": {}
+    "ghcr.io/wyrd-company/devcontainers/openbao-agent:2": {}
   },
   "mounts": [
     "source=${localWorkspaceFolder}/.devcontainer/openbao-agent.hcl,target=/etc/openbao/agent.hcl,type=bind,readonly"
@@ -28,7 +28,7 @@ Use `configPath` when the configuration must be mounted elsewhere:
 ```json
 {
   "features": {
-    "ghcr.io/wyrd-company/devcontainers/openbao-agent:1": {
+    "ghcr.io/wyrd-company/devcontainers/openbao-agent:2": {
       "configPath": "/workspace-config/openbao-agent.hcl"
     }
   }
@@ -77,7 +77,7 @@ The `opentelemetry-collector` and `dagu` Features load secret files.
 | Option        | Type   | Default                  | Description                                                       |
 | ------------- | ------ | ------------------------ | ----------------------------------------------------------------- |
 | `version`     | string | `latest`                 | OpenBao release version, with or without the upstream `v` prefix. |
-| `serviceUser` | string | `automatic`              | User account that runs OpenBao Agent.                             |
+| `serviceUser` | string | `root`                   | User account that runs OpenBao Agent; see above for the override. |
 | `configPath`  | string | `/etc/openbao/agent.hcl` | Absolute path to the user-supplied Agent configuration file.      |
 
 For `latest`, the installer selects the newest stable release containing a Linux archive for the current architecture. Archives come from the official `openbao/openbao` GitHub releases and are verified against the published `checksums.txt` file.

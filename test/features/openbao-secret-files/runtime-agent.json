@@ -1,8 +1,1 @@
-{
-  "template": [
-    {
-      "destination": "/run/openbao/secrets/json-feature.env",
-      "contents": "{{ with secret \"secret/data/example\" }}SAMPLE_JSON_VALUE={{ .Data.data.precedence }}{{ end }}"
-    }
-  ]
-}
+{"template":[{"destination":"/run/openbao/secrets/json-feature.env","contents":"{{ with secret \"secret/data/example\" }}SAMPLE_JSON_VALUE={{ .Data.data.precedence }} {\"destination\": \"/run/openbao/secrets/inner-feature.env\"}{{ end }}"}]}

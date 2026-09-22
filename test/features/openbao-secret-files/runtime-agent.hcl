@@ -46,7 +46,19 @@ template {
 */
 template {
   destination = "/root/.openbao-notes"
-  contents    = "see /run/openbao/secrets/mentioned-feature.env"
+  contents    = "see /run/openbao/secrets/mentioned-feature.env and an unclosed /* in a string"
+}
+
+template {
+  destination = "/run/openbao/secrets/string-feature.env"
+  contents    = "a */ in a string does not end a comment, and # is not one either {{ with secret \"secret/data/example\" }}{{ .Data.data.precedence }}{{ end }}"
+}
+
+template {
+  destination = "/root/.openbao-heredoc"
+  contents    = <<-EOT
+    destination = "/run/openbao/secrets/heredoc-feature.env"
+  EOT
 }
 
 template {

@@ -180,7 +180,11 @@ for path in "\${parent_dir}" "\${secrets_dir}"; do
         exit 1
     fi
 done
-mounted="\$(findmnt --raw --noheadings --output TARGET | grep -E "^\${parent_dir}(/|\$)" || true)"
+if ! mount_targets="\$(findmnt --raw --noheadings --output TARGET)"; then
+    echo "[openbao-secrets] ERROR: Unable to inventory mounts; the Feature does not clear \${secrets_dir} without one." >&2
+    exit 1
+fi
+mounted="\$(printf '%s\\n' "\${mount_targets}" | grep -E "^\${parent_dir}(/|\$)" || true)"
 if [ -n "\${mounted}" ]; then
     echo "[openbao-secrets] ERROR: \${mounted//\$'\\n'/, } is a mount point; the Feature owns \${secrets_dir} and does not clear mounted paths." >&2
     exit 1
@@ -192,6 +196,62 @@ install -d -m 0755 -o root -g root /run/openbao
 install -d -m 2750 -o ${quoted_user} -g openbao-secrets "\${secrets_dir}"
 EOF
 chmod 0755 /usr/local/bin/openbao-prepare-secrets
+
+install -d -m 0755 /usr/local/lib/openbao-agent
+cat >/usr/local/lib/openbao-agent/declarations.awk <<'EOF'
+# Keeps the code of an HCL or JSON configuration and blanks everything that
+# cannot declare a template destination: # and // line comments, /* */ block
+# comments, heredoc bodies, and the text inside quoted strings other than the
+# string itself. Line count is preserved so that each line stands alone.
+BEGIN { state = "code"; marker = "" }
+{
+    line = $0
+    if (state == "heredoc") {
+        trimmed = line
+        sub(/^[ \t]*/, "", trimmed)
+        sub(/[ \t]*$/, "", trimmed)
+        if (trimmed == marker) { state = "code" }
+        print ""
+        next
+    }
+    out = ""
+    i = 1
+    n = length(line)
+    while (i <= n) {
+        c = substr(line, i, 1)
+        pair = substr(line, i, 2)
+        if (state == "block") {
+            if (pair == "*/") { state = "code"; i += 2 } else { i++ }
+            continue
+        }
+        if (state == "string") {
+            if (c == "\\") { out = out c substr(line, i + 1, 1); i += 2; continue }
+            out = out c
+            if (c == "\"") { state = "code" }
+            i++
+            continue
+        }
+        if (c == "#" || pair == "//") { break }
+        if (pair == "/*") { state = "block"; i += 2; continue }
+        if (c == "\"") { state = "string"; out = out c; i++; continue }
+        if (pair == "<<") {
+            rest = substr(line, i + 2)
+            sub(/^-/, "", rest)
+            if (rest ~ /^[A-Za-z_][A-Za-z0-9_]*[ \t]*$/) {
+                sub(/[ \t]*$/, "", rest)
+                marker = rest
+                state = "heredoc"
+                break
+            }
+        }
+        out = out c
+        i++
+    }
+    if (state == "string") { state = "code" }
+    print out
+}
+EOF
+chmod 0644 /usr/local/lib/openbao-agent/declarations.awk
 
 cat >/usr/local/bin/openbao-wait-for-secrets <<EOF
 #!/usr/bin/env bash
@@ -205,33 +265,35 @@ if [ "\$#" -ne 1 ] || ! [[ "\$1" =~ ^[a-z0-9][a-z0-9-]*\$ ]]; then
 fi
 secret_file="/run/openbao/secrets/\$1.env"
 
+not_readable() {
+    echo "[openbao-wait-for-secrets] Configuration is not readable at \$1; not waiting for \${secret_file}." >&2
+    exit 0
+}
+
 configuration_files=()
 if [ -d "\${config_path}" ]; then
-    while IFS= read -r -d '' file; do
-        configuration_files+=("\${file}")
-    done < <(find "\${config_path}" -type f \\( -name '*.hcl' -o -name '*.json' \\) -print0 2>/dev/null)
+    [ -r "\${config_path}" ] && [ -x "\${config_path}" ] || not_readable "\${config_path}"
+    listing="\$(find "\${config_path}" -type f \\( -name '*.hcl' -o -name '*.json' \\) -print 2>/dev/null)" \\
+        || not_readable "\${config_path}"
+    [ -n "\${listing}" ] || exit 0
+    mapfile -t configuration_files <<<"\${listing}"
 else
     configuration_files=("\${config_path}")
 fi
-for file in "\${config_path}" "\${configuration_files[@]}"; do
-    if [ ! -r "\${file}" ]; then
-        echo "[openbao-wait-for-secrets] Configuration is not readable at \${file}; not waiting for \${secret_file}." >&2
-        exit 0
-    fi
+for file in "\${configuration_files[@]}"; do
+    [ -r "\${file}" ] || not_readable "\${file}"
 done
 
 # The Agent configuration declares which files are expected: a template whose
-# destination is the conventional path, in HCL or JSON form. Comments, other
-# assignments, and longer paths that contain this one do not count.
-configuration_text() {
-    cat "\${configuration_files[@]}"
-}
-strip_block_comments() {
-    sed --null-data --regexp-extended 's#/\\*([^*]|\\*+[^*/])*\\*+/##g'
-}
+# destination is the conventional path, in HCL or JSON form. Comments, string
+# and heredoc contents, other assignments, and longer paths that contain this
+# one do not count.
 escaped_file="\${secret_file//./\\\\.}"
-pattern='^[[:space:]]*"?destination"?[[:space:]]*[=:][[:space:]]*"'"\${escaped_file}"'"[[:space:]]*,?[[:space:]]*(#.*|//.*)?$'
-if ! configuration_text | strip_block_comments | tr -d '\\0' | grep --extended-regexp --quiet -- "\${pattern}"; then
+hcl_pattern='^[[:space:]]*destination[[:space:]]*=[[:space:]]*"'"\${escaped_file}"'"[[:space:]]*$'
+json_pattern='(^|[^\\\\])"destination"[[:space:]]*:[[:space:]]*"'"\${escaped_file}"'"'
+if ! cat "\${configuration_files[@]}" \\
+    | awk -f /usr/local/lib/openbao-agent/declarations.awk \\
+    | grep --extended-regexp --quiet -e "\${hcl_pattern}" -e "\${json_pattern}"; then
     exit 0
 fi
 

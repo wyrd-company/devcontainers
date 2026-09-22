@@ -8,7 +8,7 @@ COPY src/features/dagu /tmp/dagu-feature
 # The Agent runs as root by default and the consumers as vscode, so the
 # openbao-secrets group carries the read access.
 RUN VERSION=latest \
-    CONFIGPATH=/etc/openbao/agent.hcl \
+    CONFIGPATH=/etc/openbao/agent.d \
     _REMOTE_USER=vscode \
     /tmp/openbao-agent-feature/install.sh \
     && VERSION=latest \
@@ -25,5 +25,7 @@ RUN VERSION=latest \
     /tmp/dagu-feature/install.sh \
     && rm -rf /tmp/openbao-agent-feature /tmp/opentelemetry-collector-feature /tmp/dagu-feature
 
-COPY --chmod=0644 test/features/openbao-secret-files/runtime-agent.hcl /etc/openbao/agent.hcl
+RUN install -d -m 0755 /etc/openbao/agent.d
+COPY --chmod=0644 test/features/openbao-secret-files/runtime-agent.hcl /etc/openbao/agent.d/agent.hcl
+COPY --chmod=0644 test/features/openbao-secret-files/runtime-agent.json /etc/openbao/agent.d/agent.json
 COPY --chmod=0600 test/features/openbao-agent/runtime-token /root/.openbao-token

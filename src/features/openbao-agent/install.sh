@@ -169,16 +169,22 @@ cat >/usr/local/bin/openbao-prepare-secrets <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
-secrets_dir=/run/openbao/secrets
+parent_dir=/run/openbao
+secrets_dir="\${parent_dir}/secrets"
 
-# The directory is owned by this Feature. Refuse to clear anything mounted there.
-for path in /run/openbao "\${secrets_dir}"; do
-    if mountpoint -q "\${path}" 2>/dev/null; then
-        echo "[openbao-secrets] ERROR: \${path} is a mount point; the Feature owns \${secrets_dir} and does not clear mounted paths." >&2
+# The Feature owns the render directory. It never removes through a symlinked
+# component or through a mount at or below the parent.
+for path in "\${parent_dir}" "\${secrets_dir}"; do
+    if [ -L "\${path}" ]; then
+        echo "[openbao-secrets] ERROR: \${path} is a symbolic link; the Feature owns \${secrets_dir} and does not clear linked paths." >&2
         exit 1
     fi
 done
-[ ! -L "\${secrets_dir}" ] || rm -f "\${secrets_dir}"
+mounted="\$(findmnt --raw --noheadings --output TARGET | grep -E "^\${parent_dir}(/|\$)" || true)"
+if [ -n "\${mounted}" ]; then
+    echo "[openbao-secrets] ERROR: \${mounted//\$'\\n'/, } is a mount point; the Feature owns \${secrets_dir} and does not clear mounted paths." >&2
+    exit 1
+fi
 
 # Files from a previous container start must not satisfy openbao-wait-for-secrets.
 rm -rf "\${secrets_dir}"
@@ -199,17 +205,33 @@ if [ "\$#" -ne 1 ] || ! [[ "\$1" =~ ^[a-z0-9][a-z0-9-]*\$ ]]; then
 fi
 secret_file="/run/openbao/secrets/\$1.env"
 
-if [ ! -r "\${config_path}" ]; then
-    echo "[openbao-wait-for-secrets] Configuration is not readable at \${config_path}; not waiting for \${secret_file}." >&2
-    exit 0
+configuration_files=()
+if [ -d "\${config_path}" ]; then
+    while IFS= read -r -d '' file; do
+        configuration_files+=("\${file}")
+    done < <(find "\${config_path}" -type f \\( -name '*.hcl' -o -name '*.json' \\) -print0 2>/dev/null)
+else
+    configuration_files=("\${config_path}")
 fi
+for file in "\${config_path}" "\${configuration_files[@]}"; do
+    if [ ! -r "\${file}" ]; then
+        echo "[openbao-wait-for-secrets] Configuration is not readable at \${file}; not waiting for \${secret_file}." >&2
+        exit 0
+    fi
+done
 
 # The Agent configuration declares which files are expected: a template whose
 # destination is the conventional path, in HCL or JSON form. Comments, other
 # assignments, and longer paths that contain this one do not count.
+configuration_text() {
+    cat "\${configuration_files[@]}"
+}
+strip_block_comments() {
+    sed --null-data --regexp-extended 's#/\\*([^*]|\\*+[^*/])*\\*+/##g'
+}
 escaped_file="\${secret_file//./\\\\.}"
 pattern='^[[:space:]]*"?destination"?[[:space:]]*[=:][[:space:]]*"'"\${escaped_file}"'"[[:space:]]*,?[[:space:]]*(#.*|//.*)?$'
-if ! grep --recursive --no-filename --extended-regexp --quiet -- "\${pattern}" "\${config_path}"; then
+if ! configuration_text | strip_block_comments | tr -d '\\0' | grep --extended-regexp --quiet -- "\${pattern}"; then
     exit 0
 fi
 

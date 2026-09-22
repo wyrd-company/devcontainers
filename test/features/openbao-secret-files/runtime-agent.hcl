@@ -39,7 +39,17 @@ template {
 # A mention that is not a destination assignment does not declare a file.
 # destination = "/run/openbao/secrets/commented-feature.env"
 // destination = "/run/openbao/secrets/slashed-feature.env"
+/*
+template {
+  destination = "/run/openbao/secrets/blocked-feature.env"
+}
+*/
 template {
   destination = "/root/.openbao-notes"
-  contents    = "see /run/openbao/secrets/mentioned-feature.env and /run/openbao/secrets/dagu.env.backup"
+  contents    = "see /run/openbao/secrets/mentioned-feature.env"
+}
+
+template {
+  destination = "/run/openbao/secrets/backup-feature.env.backup"
+  contents    = "a longer path that contains the conventional one"
 }

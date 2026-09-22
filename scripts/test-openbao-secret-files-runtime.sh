@@ -76,9 +76,18 @@ docker logs "${container}" 2>&1 \
     | grep -F '[openbao-wait-for-secrets] Waiting for /run/openbao/secrets/dagu.env' >/dev/null
 
 # Only a destination assignment declares a file.
-for feature in commented-feature slashed-feature mentioned-feature sample-feature; do
+for feature in commented-feature slashed-feature blocked-feature mentioned-feature backup-feature sample-feature; do
     docker exec --user vscode "${container}" timeout 5 /usr/local/bin/openbao-wait-for-secrets "${feature}"
 done
+# A configuration file the service user cannot read is reported, not treated as silence.
+docker exec "${container}" chmod 0600 /etc/openbao/agent.d/agent.json
+output="$(docker exec --user vscode "${container}" timeout 5 /usr/local/bin/openbao-wait-for-secrets json-feature 2>&1)"
+printf '%s\n' "${output}" | grep -F 'Configuration is not readable at /etc/openbao/agent.d/agent.json' >/dev/null
+docker exec "${container}" chmod 0644 /etc/openbao/agent.d/agent.json
+# A JSON destination declares a file: the helper waits until timeout ends it.
+status=0
+docker exec --user vscode "${container}" timeout 5 /usr/local/bin/openbao-wait-for-secrets json-feature || status=$?
+test "${status}" -eq 124
 
 docker exec --user vscode \
     --env BAO_ADDR=http://127.0.0.1:8200 \
@@ -107,14 +116,23 @@ done
 test -n "${dagu_pid}"
 environ_of "${dagu_pid}" | grep -Fx 'SAMPLE_DAGU_VALUE=from-secret' >/dev/null
 
-# A malformed line stops the launcher instead of exporting a guess.
+# The launcher passes its arguments to the Collector, so a run that reaches the
+# Collector prints the version and exits 0.
+docker exec --user vscode "${container}" /usr/local/bin/opentelemetry-collector-service --version | grep -F otelcol >/dev/null
+# A malformed line stops the launcher with status 1 before the Collector runs.
 docker exec "${container}" sh -c 'printf "not a pair\n" >/run/openbao/secrets/opentelemetry-collector.env'
-output="$(docker exec --user vscode "${container}" /usr/local/bin/opentelemetry-collector-service 2>&1 || true)"
+status=0
+output="$(docker exec --user vscode "${container}" /usr/local/bin/opentelemetry-collector-service --version 2>&1)" || status=$?
+test "${status}" -eq 1
 printf '%s\n' "${output}" | grep -F 'contains a line that is not NAME=value' >/dev/null
-# A file the service user cannot read stops the launcher instead of starting without it.
+printf '%s\n' "${output}" | grep -Fv otelcol >/dev/null
+# A file the service user cannot read stops the launcher with status 1.
 docker exec "${container}" chmod 0600 /run/openbao/secrets/opentelemetry-collector.env
-output="$(docker exec --user vscode "${container}" /usr/local/bin/opentelemetry-collector-service 2>&1 || true)"
+status=0
+output="$(docker exec --user vscode "${container}" /usr/local/bin/opentelemetry-collector-service --version 2>&1)" || status=$?
+test "${status}" -eq 1
 printf '%s\n' "${output}" | grep -F 'exists but is not readable by vscode' >/dev/null
+printf '%s\n' "${output}" | grep -Fv otelcol >/dev/null
 
 # The development server does not survive a restart, so a consumer that
 # starts here would have read a file from the previous start.
@@ -123,15 +141,25 @@ sleep 5
 test -z "$(service_pid "${collector_command}")"
 docker exec "${container}" test ! -e /run/openbao/secrets/opentelemetry-collector.env
 
-# The Feature owns /run/openbao/secrets and refuses to clear a mount there.
+agent_command='/usr/local/bin/bao agent -config=/etc/openbao/agent.d'
+
+# The Feature owns /run/openbao/secrets and refuses to clear a mount at or below it.
 mkdir -p "${scratch}/mounted"
 printf 'keep\n' >"${scratch}/mounted/host-file"
 mount_container="$(docker run --detach \
-    --mount "type=bind,source=${scratch}/mounted,target=/run/openbao/secrets" \
+    --mount "type=bind,source=${scratch}/mounted,target=/run/openbao/secrets/nested" \
     "${image}")"
 sleep 5
 test -f "${scratch}/mounted/host-file"
-docker logs "${mount_container}" 2>&1 | grep -F '/run/openbao/secrets is a mount point' >/dev/null
-test -z "$(docker exec "${mount_container}" pgrep --full --exact '/usr/local/bin/bao agent -config=/etc/openbao/agent.hcl' | head -n 1 || true)"
+docker logs "${mount_container}" 2>&1 | grep -F '/run/openbao/secrets/nested is a mount point' >/dev/null
+test -z "$(docker exec "${mount_container}" pgrep --full --exact "${agent_command}" | head -n 1 || true)"
+
+# It also refuses to clear through a symbolic link in the path.
+docker exec "${container}" sh -c 'mkdir -p /srv/elsewhere/secrets && printf "keep\n" >/srv/elsewhere/secrets/linked-file && rm -rf /run/openbao && ln -s /srv/elsewhere /run/openbao'
+docker restart "${container}" >/dev/null
+sleep 5
+docker exec "${container}" test -f /srv/elsewhere/secrets/linked-file
+docker logs "${container}" 2>&1 | grep -F '/run/openbao is a symbolic link' >/dev/null
+test -z "$(service_pid "${agent_command}")"
 
 printf 'OpenBao secret file runtime checks passed.\n'

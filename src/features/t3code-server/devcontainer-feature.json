@@ -1,19 +1,24 @@
 {
   "id": "t3code-server",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "name": "T3 Code Server",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/t3code-server",
-  "description": "Installs T3 Code globally and configures an s6-overlay service that runs as the selected user on Debian/Ubuntu images.",
+  "description": "Installs T3 Code as a pinned release runtime and runs it under the T3 Code service launcher as an s6-overlay service, so clients can update the server remotely and operators can update it in place.",
   "options": {
     "version": {
       "type": "string",
       "default": "latest",
-      "description": "T3 Code version to install. Use `latest` with a GitHub source to select the greatest stable `server/*-wyrd.*` tag by SemVer precedence."
+      "description": "T3 Code version to install. With upstream, `latest` follows GitHub's latest upstream release. With a GitHub source, `latest` selects the greatest stable `server/*-wyrd.*` tag by SemVer precedence."
     },
     "packageSource": {
       "type": "string",
       "default": "",
-      "description": "Optional npm package spec, tarball URL, or GitHub repository source such as `github:wyrd-company/t3code`."
+      "description": "Optional GitHub repository source such as `github:wyrd-company/t3code`, or an npm package spec or tarball URL. Empty installs upstream T3 Code."
+    },
+    "releaseBaseUrl": {
+      "type": "string",
+      "default": "",
+      "description": "Optional base URL the server downloads release archives from when a client asks it to update itself (`T3CODE_RELEASE_BASE_URL`). Empty derives it from the package source."
     },
     "port": {
       "type": "string",
@@ -29,7 +34,7 @@
       "type": "string",
       "enum": ["", "web", "desktop"],
       "default": "",
-      "description": "Optional T3 runtime mode passed to `t3 serve --mode`. Set to `web` for the web runtime. Empty preserves the T3 CLI default."
+      "description": "Optional T3 runtime mode (`T3CODE_MODE`). Set to `web` for the web runtime. Empty preserves the T3 CLI default."
     },
     "serviceUser": {
       "type": "string",

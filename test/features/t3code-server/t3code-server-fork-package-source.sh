@@ -5,8 +5,12 @@ set -e
 # shellcheck disable=SC1091
 source dev-container-features-test-lib
 
+T3_HOME="$(getent passwd vscode | cut -d: -f6)"
+
 check "fork T3 command exists globally" test -x /usr/local/bin/t3
-check "fork tarball links its bin globally" test "$(readlink -f /usr/local/bin/t3)" = /usr/local/lib/node_modules/t3/dist/bin.mjs
-check "fork T3 reports the published version" test "$(/usr/local/bin/t3 --version)" = "t3 v0.0.37-wyrd.1"
+check "fork T3 reports the published version" test "$(/usr/local/bin/t3 --version)" = "t3 v0.0.42-wyrd.2"
+check "fork runtime is pinned under the service home" test -x "${T3_HOME}/.t3/runtime/versions/0.0.42-wyrd.2/t3"
+check "fork runtime install is marked complete" test "$(cat "${T3_HOME}/.t3/runtime/versions/0.0.42-wyrd.2/.install-complete")" = 0.0.42-wyrd.2
+check "fork release base URL targets the fork's server releases" grep -q '^default_release_base=https://github.com/wyrd-company/t3code/releases/download/server$' /usr/local/bin/t3code-server
 
 reportResults

@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+#
+# Update the T3 Code service inside the container.
+#
+# Resolves a version from the package source the Feature was installed with,
+# installs it as a pinned runtime beside the running one, selects it, and
+# restarts the s6 service so it starts the new version.
+
+set -euo pipefail
+
+lib_dir=/usr/local/lib/t3code-server
+config_file="${T3CODE_SERVER_CONFIG:-${lib_dir}/config.env}"
+# shellcheck disable=SC1090
+source "${config_file}"
+runtime="${lib_dir}/t3code-runtime"
+service_dir=/run/service/t3code-server
+
+usage() {
+    cat >&2 <<'EOF'
+usage: t3code-server-update [--force] [--no-restart] [VERSION|latest]
+       t3code-server-update --status
+
+Installs VERSION (default: latest) from the package source the Feature was
+configured with and switches the service to it.
+
+  --force       Reinstall VERSION even when it is already installed.
+  --no-restart  Select the version without restarting the service; it takes
+                effect on the next service start.
+  --status      Show the selected version, installed versions, and the
+                package source, then exit.
+EOF
+    exit 2
+}
+
+log() {
+    echo "[t3code-server-update] $*"
+}
+
+err() {
+    echo "[t3code-server-update] ERROR: $*" >&2
+    exit 1
+}
+
+force=false
+restart=true
+status=false
+requested=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --force) force=true ;;
+        --no-restart) restart=false ;;
+        --status) status=true ;;
+        -h|--help) usage ;;
+        -*) usage ;;
+        *)
+            [ -z "${requested}" ] || usage
+            requested="$1"
+            ;;
+    esac
+    shift
+done
+
+if [ "${status}" = true ]; then
+    [ -z "${requested}" ] || usage
+    printf 'package source: %s\n' "${T3CODE_SERVER_PACKAGE_SOURCE:-t3 (upstream)}"
+    printf 'selected version: %s\n' "$("${runtime}" selected-version 2>/dev/null || echo none)"
+    printf 'installed versions:\n'
+    "${runtime}" versions | sed 's/^/  /'
+    if [ -d "${service_dir}" ]; then
+        printf 'service: %s\n' "$(/command/s6-svstat "${service_dir}" 2>/dev/null || echo unknown)"
+    else
+        printf 'service: not supervised\n'
+    fi
+    exit 0
+fi
+
+[ "$(id -u)" -eq 0 ] || err "Run this command as root, for example with sudo."
+requested="${requested:-latest}"
+
+mapfile -t resolution < <(
+    python3 "${lib_dir}/resolve-package-source.py" \
+        "${T3CODE_SERVER_PACKAGE_SOURCE:-}" "${requested}" "${T3CODE_SERVER_ARCH}"
+)
+[ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve T3 Code ${requested}."
+kind="${resolution[0]}"
+source="${resolution[1]}"
+version="${resolution[2]}"
+checksums="${resolution[3]}"
+
+case "${kind}" in
+    archive)
+        if [ "${force}" != true ] && "${runtime}" installed "${version}"; then
+            log "T3 Code ${version} is already installed."
+        else
+            "${runtime}" install-archive "${version}" "${source}" "${checksums}"
+        fi
+        ;;
+    npm)
+        version="$("${runtime}" install-npm "${source}")"
+        ;;
+    *)
+        err "Unknown package kind '${kind}'."
+        ;;
+esac
+
+current="$("${runtime}" selected-version 2>/dev/null || true)"
+if [ "${current}" = "${version}" ] && [ "${force}" != true ]; then
+    log "T3 Code ${version} is already the selected version."
+    exit 0
+fi
+"${runtime}" select "${version}"
+
+if [ "${restart}" != true ]; then
+    log "T3 Code ${version} starts on the next service restart."
+    exit 0
+fi
+if [ ! -d "${service_dir}" ]; then
+    log "The service is not supervised in this context; T3 Code ${version} starts with the service."
+    exit 0
+fi
+/command/s6-svc -r "${service_dir}"
+log "Restarted the T3 Code service on ${version}."

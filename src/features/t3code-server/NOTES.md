@@ -1,4 +1,4 @@
-T3 Code runs under s6-overlay using `${HOME}/.t3` as its base directory.
+T3 Code runs under s6-overlay with `${HOME}/.t3` as its base directory. `sudo t3code-server-update [version]` updates it from inside the container; `t3code-server-update --status` shows the selected and installed versions.
 
 Mint a pairing code manually under the service user's home context:
 

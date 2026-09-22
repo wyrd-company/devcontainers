@@ -8,7 +8,7 @@ source "$(dirname "$0")/common.sh"
 require_root
 check_debian_family
 ensure_s6_overlay
-ensure_apt_packages build-essential ca-certificates python3
+ensure_apt_packages ca-certificates curl python3 tar
 
 [[ "${PORT}" =~ ^[0-9]+$ ]] || err "port must be an integer between 1 and 65535."
 [ "${#PORT}" -le 5 ] || err "port must be an integer between 1 and 65535."
@@ -28,28 +28,71 @@ if [ -n "${DNSNAME}" ]; then
         || err "dnsName requires a Caddy Feature version with DNS readiness support."
 fi
 
+case "$(dpkg --print-architecture)" in
+    amd64) arch=x64 ;;
+    arm64) arch=arm64 ;;
+    *) err "T3 Code release archives support amd64 and arm64 only." ;;
+esac
+
 service_user="$(pick_service_user "${SERVICEUSER}")"
 service_home="$(user_home_dir "${service_user}")"
 [ -n "${service_home}" ] || err "Unable to resolve the home directory for ${service_user}."
 
-install -d -m 0755 -o "${service_user}" -g "$(id -gn "${service_user}")" \
-    "${service_home}/.t3"
+lib_dir=/usr/local/lib/t3code-server
+install -d -m 0755 "${lib_dir}"
+install -m 0755 "$(dirname "$0")/t3code-runtime" "${lib_dir}/t3code-runtime"
+install -m 0755 "$(dirname "$0")/resolve-package-source.py" "${lib_dir}/resolve-package-source.py"
+install -m 0755 "$(dirname "$0")/t3code-server-update" /usr/local/bin/t3code-server-update
 
-mapfile -t package_resolution < <(python3 "$(dirname "$0")/resolve-package-source.py" "${PACKAGESOURCE}" "${VERSION}")
-[ "${#package_resolution[@]}" -eq 2 ] || err "Unable to resolve the T3 Code package source."
-package_spec="${package_resolution[0]}"
-resolved_version="${package_resolution[1]}"
-log "Installing ${package_spec} globally"
-env \
-    NPM_CONFIG_ENGINE_STRICT=true \
-    NPM_CONFIG_UPDATE_NOTIFIER=false \
-    npm install --global --prefix /usr/local "${package_spec}"
+mapfile -t resolution < <(python3 "${lib_dir}/resolve-package-source.py" "${PACKAGESOURCE}" "${VERSION}" "${arch}")
+[ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve the T3 Code package source."
+package_kind="${resolution[0]}"
+package_source="${resolution[1]}"
+resolved_version="${resolution[2]}"
+checksums_url="${resolution[3]}"
 
-t3_binary=/usr/local/bin/t3
-[ -x "${t3_binary}" ] || err "T3 Code was not installed at ${t3_binary}."
+# The runtime tool and the update command read this file; the service wrapper
+# exports the server settings from it.
+cat >"${lib_dir}/config.env" <<EOF
+T3CODE_SERVER_USER=$(printf '%q' "${service_user}")
+T3CODE_SERVER_HOME=$(printf '%q' "${service_home}")
+T3CODE_SERVER_ARCH=$(printf '%q' "${arch}")
+T3CODE_SERVER_PACKAGE_SOURCE=$(printf '%q' "${PACKAGESOURCE}")
+T3CODE_SERVER_PORT=$(printf '%q' "${PORT}")
+T3CODE_SERVER_HOST=$(printf '%q' "${HOST}")
+T3CODE_SERVER_MODE=$(printf '%q' "${SERVEMODE}")
+EOF
+chmod 0644 "${lib_dir}/config.env"
+
+install -d -m 0755 -o "${service_user}" -g "$(id -gn "${service_user}")" "${service_home}/.t3"
+
+case "${package_kind}" in
+    archive)
+        log "Installing T3 Code ${resolved_version} from ${package_source}"
+        "${lib_dir}/t3code-runtime" install-archive "${resolved_version}" "${package_source}" "${checksums_url}"
+        ;;
+    npm)
+        log "Installing ${package_source} with npm"
+        command -v npm >/dev/null 2>&1 || err "npm is required to install ${package_source}."
+        ensure_apt_packages build-essential
+        installed="$("${lib_dir}/t3code-runtime" install-npm "${package_source}")"
+        resolved_version="${resolved_version:-${installed}}"
+        ;;
+    *)
+        err "Unknown package kind '${package_kind}'."
+        ;;
+esac
+"${lib_dir}/t3code-runtime" select "${resolved_version}"
+
+# `t3` on PATH always runs the version the service is selected to run.
+cat >/usr/local/bin/t3 <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+exec "\$(${lib_dir@Q}/t3code-runtime selected-entry)" "\$@"
+EOF
+chmod 0755 /usr/local/bin/t3
 
 printf -v quoted_home '%q' "${service_home}"
-printf -v quoted_t3 '%q' "${t3_binary}"
 printf -v quoted_port '%q' "${PORT}"
 printf -v quoted_host '%q' "${HOST}"
 printf -v quoted_mode '%q' "${SERVEMODE}"
@@ -72,7 +115,8 @@ if [ -n "\${mode}" ]; then
     args+=(--mode="\${mode}")
 fi
 
-exec ${quoted_t3} "\${args[@]}" "\$@"
+# A restarted service runs whichever version is selected by then.
+exec "\$(${lib_dir@Q}/t3code-runtime selected-entry)" "\${args[@]}" "\$@"
 EOF
 chmod 0755 /usr/local/bin/t3code-server
 
@@ -89,6 +133,16 @@ EOF
 chmod 0755 "${service_dir}/run"
 touch /etc/s6-overlay/user-bundles.d/user/contents.d/t3code-server
 
+# The service user updates the service with its own command and nothing else.
+if [ "${service_user}" != root ] && command -v visudo >/dev/null 2>&1; then
+    cat >/etc/sudoers.d/t3code-server <<EOF
+# Let the T3 Code service user update the service in place.
+${service_user} ALL=(root) NOPASSWD: /usr/local/bin/t3code-server-update, /usr/local/bin/t3code-server-update *
+EOF
+    chmod 0440 /etc/sudoers.d/t3code-server
+    visudo --check --file=/etc/sudoers.d/t3code-server >/dev/null
+fi
+
 if [ -n "${DNSNAME}" ]; then
     cat >/etc/caddy/conf.d/t3code-server.caddy <<EOF
 ${DNSNAME} {
@@ -101,6 +155,6 @@ EOF
     log "Configured https://${DNSNAME} to proxy to T3 Code on 127.0.0.1:${PORT}."
 fi
 
-installed_version="$(run_as_user "${service_user}" env HOME="${service_home}" "${t3_binary}" --version)"
+installed_version="$(run_as_user "${service_user}" env HOME="${service_home}" /usr/local/bin/t3 --version)"
 "$(dirname "$0")/verify-version.sh" "${installed_version}" "${resolved_version}"
 log "Installed T3 Code ${installed_version}"

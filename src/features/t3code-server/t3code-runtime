@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+#
+# Pinned runtime management for the T3 Code service.
+#
+# A pinned runtime is one T3 Code version unpacked into
+# <home>/.t3/runtime/versions/<version>/ with its executable at t3 and an
+# .install-complete sentinel naming the version. The service runs the version
+# named in <home>/.t3/runtime/selected-version. This tool creates runtimes and
+# selects the one the service and the `t3` command run.
+
+set -euo pipefail
+
+config_file="${T3CODE_SERVER_CONFIG:-/usr/local/lib/t3code-server/config.env}"
+# shellcheck disable=SC1090
+source "${config_file}"
+
+: "${T3CODE_SERVER_USER:?config.env must set T3CODE_SERVER_USER}"
+: "${T3CODE_SERVER_HOME:?config.env must set T3CODE_SERVER_HOME}"
+
+base_dir="${T3CODE_SERVER_HOME}/.t3"
+runtime_dir="${base_dir}/runtime"
+versions_dir="${runtime_dir}/versions"
+selected_file="${runtime_dir}/selected-version"
+npm_prefix="/usr/local/lib/t3code-server/npm"
+
+log() {
+    echo "[t3code-runtime] $*" >&2
+}
+
+err() {
+    echo "[t3code-runtime] ERROR: $*" >&2
+    exit 1
+}
+
+usage() {
+    cat >&2 <<'EOF'
+usage: t3code-runtime <command> [arguments]
+
+  install-archive VERSION ARCHIVE_URL CHECKSUMS_URL
+      Download a release archive, verify it against SHA256SUMS, and unpack it
+      as the pinned runtime for VERSION.
+  install-npm SPEC
+      Install an npm package spec or tarball URL and expose its executable as a
+      pinned runtime. Prints the installed version.
+  select VERSION
+      Select VERSION as the version the service and the t3 command run.
+  selected-version
+      Print the selected version.
+  selected-entry
+      Print the executable path of the selected version.
+  versions
+      Print every completely installed version, one per line.
+  installed VERSION
+      Exit 0 when VERSION is completely installed.
+EOF
+    exit 2
+}
+
+own_as_service_user() {
+    if [ "$(id -u)" -eq 0 ]; then
+        chown -R "${T3CODE_SERVER_USER}:$(id -gn "${T3CODE_SERVER_USER}")" "$@"
+    fi
+}
+
+ensure_tree() {
+    install -d -m 0755 "${base_dir}" "${runtime_dir}" "${versions_dir}"
+    own_as_service_user "${base_dir}" "${runtime_dir}" "${versions_dir}"
+}
+
+version_dir() {
+    printf '%s/%s' "${versions_dir}" "$1"
+}
+
+is_installed() {
+    local dir
+    dir="$(version_dir "$1")"
+    [ -x "${dir}/t3" ] && [ -f "${dir}/.install-complete" ] \
+        && [ "$(tr -d '[:space:]' <"${dir}/.install-complete")" = "$1" ]
+}
+
+require_version() {
+    [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]] \
+        || err "'$1' is not an exact T3 Code version."
+}
+
+stage_dir=""
+cleanup_stage() {
+    if [ -n "${stage_dir}" ] && [ -d "${stage_dir}" ]; then
+        rm -rf "${stage_dir}"
+    fi
+}
+
+# Downloads, verifies, and unpacks an archive into a staging directory inside
+# the versions tree, then renames it into place. The sentinel is written last,
+# so a killed install never looks complete.
+install_archive() {
+    local version="$1" archive_url="$2" checksums_url="$3"
+    local target archive_name expected actual
+    require_version "${version}"
+    ensure_tree
+    target="$(version_dir "${version}")"
+    archive_name="${archive_url##*/}"
+
+    stage_dir="$(mktemp -d "${versions_dir}/.staging-XXXXXX")"
+    trap cleanup_stage EXIT
+
+    log "Downloading ${archive_url}"
+    curl --fail --silent --show-error --location --retry 3 \
+        --output "${stage_dir}/SHA256SUMS" "${checksums_url}"
+    curl --fail --silent --show-error --location --retry 3 \
+        --output "${stage_dir}/${archive_name}" "${archive_url}"
+
+    expected="$(awk -v name="${archive_name}" '$2 == name || $2 == "*" name { print $1 }' "${stage_dir}/SHA256SUMS")"
+    [ -n "${expected}" ] || err "${archive_name} is not listed in ${checksums_url}."
+    actual="$(sha256sum "${stage_dir}/${archive_name}" | cut -d' ' -f1)"
+    [ "${actual}" = "${expected}" ] || err "Checksum mismatch for ${archive_name}."
+
+    tar -xzf "${stage_dir}/${archive_name}" -C "${stage_dir}" --strip-components=1
+    rm -f "${stage_dir}/${archive_name}" "${stage_dir}/SHA256SUMS"
+    [ -x "${stage_dir}/t3" ] || err "The archive does not contain an executable t3."
+
+    printf '%s\n' "${version}" >"${stage_dir}/.install-complete"
+    rm -rf "${target}"
+    mv "${stage_dir}" "${target}"
+    stage_dir=""
+    own_as_service_user "${target}"
+    log "Installed T3 Code ${version} at ${target}"
+}
+
+# Installs an npm package into an isolated prefix and exposes its executable
+# through a shim laid out like an archive runtime, so both kinds are run the
+# same way. The version is whatever the package reports.
+install_npm() {
+    local spec="$1" version target
+    [ "$(id -u)" -eq 0 ] || err "install-npm must run as root."
+    command -v npm >/dev/null 2>&1 || err "npm is required to install ${spec}."
+    ensure_tree
+
+    log "Installing ${spec} with npm"
+    install -d -m 0755 "${npm_prefix}"
+    env NPM_CONFIG_ENGINE_STRICT=true NPM_CONFIG_UPDATE_NOTIFIER=false \
+        npm install --global --prefix "${npm_prefix}" "${spec}" >&2
+    [ -x "${npm_prefix}/bin/t3" ] || err "npm did not install a t3 executable."
+
+    version="$(runuser --user "${T3CODE_SERVER_USER}" -- env HOME="${T3CODE_SERVER_HOME}" "${npm_prefix}/bin/t3" --version)"
+    version="${version#t3 v}"
+    require_version "${version}"
+
+    target="$(version_dir "${version}")"
+    rm -rf "${target}"
+    install -d -m 0755 "${target}"
+    cat >"${target}/t3" <<EOF
+#!/usr/bin/env bash
+exec ${npm_prefix@Q}/bin/t3 "\$@"
+EOF
+    chmod 0755 "${target}/t3"
+    printf '%s\n' "${version}" >"${target}/.install-complete"
+    own_as_service_user "${target}"
+    log "Installed T3 Code ${version} at ${target}"
+    printf '%s\n' "${version}"
+}
+
+select_version() {
+    local version="$1" temp
+    require_version "${version}"
+    is_installed "${version}" || err "T3 Code ${version} is not completely installed."
+    ensure_tree
+    temp="$(mktemp "${runtime_dir}/.selected-version.XXXXXX")"
+    printf '%s\n' "${version}" >"${temp}"
+    chmod 0644 "${temp}"
+    mv "${temp}" "${selected_file}"
+    own_as_service_user "${selected_file}"
+    log "Selected T3 Code ${version} for the service"
+}
+
+selected_version() {
+    local version
+    [ -r "${selected_file}" ] || err "No T3 Code version is selected; ${selected_file} is missing or unreadable."
+    version="$(tr -d '[:space:]' <"${selected_file}")"
+    [ -n "${version}" ] || err "No T3 Code version is selected; ${selected_file} is empty."
+    printf '%s\n' "${version}"
+}
+
+list_versions() {
+    local dir version
+    [ -d "${versions_dir}" ] || return 0
+    for dir in "${versions_dir}"/*/; do
+        [ -d "${dir}" ] || continue
+        version="$(basename "${dir}")"
+        if is_installed "${version}"; then
+            printf '%s\n' "${version}"
+        fi
+    done
+}
+
+[ $# -ge 1 ] || usage
+command="$1"
+shift
+case "${command}" in
+    install-archive)
+        [ $# -eq 3 ] || usage
+        install_archive "$1" "$2" "$3"
+        ;;
+    install-npm)
+        [ $# -eq 1 ] || usage
+        install_npm "$1"
+        ;;
+    select)
+        [ $# -eq 1 ] || usage
+        select_version "$1"
+        ;;
+    selected-version)
+        selected_version
+        ;;
+    selected-entry)
+        printf '%s/t3\n' "$(version_dir "$(selected_version)")"
+        ;;
+    versions)
+        list_versions
+        ;;
+    installed)
+        [ $# -eq 1 ] || usage
+        is_installed "$1"
+        ;;
+    *)
+        usage
+        ;;
+esac

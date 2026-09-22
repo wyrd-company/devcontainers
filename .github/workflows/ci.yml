@@ -131,7 +131,7 @@ jobs:
 
   test-t3code-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -139,7 +139,7 @@ jobs:
       - name: Install latest devcontainer CLI
         run: npm install -g @devcontainers/cli
 
-      - name: Test T3 Code fork runtime
+      - name: Test T3 Code runtime and in-container update
         run: ./scripts/test-t3code-runtime.sh
 
   test-opencodex-runtime:

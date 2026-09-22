@@ -10,31 +10,37 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., VS Code client).
 
-2. The first time you've started the container, you will want to set a password for your user. If running as a user other than root, and you have `sudo` installed:
+2. Put your public key in the container user's `authorized_keys` file. Password and root login are disabled, so this is the only way in. Either mount the file from `devcontainer.json`:
 
-   ```bash
-   sudo passwd $(whoami)
+   ```json
+   "mounts": [
+     "source=${localEnv:HOME}/.ssh/id_ed25519.pub,target=/home/vscode/.ssh/authorized_keys,type=bind,readonly"
+   ]
    ```
 
-   Or if you are running as root:
+   Or copy it in from a terminal inside the container:
 
    ```bash
-   passwd
+   mkdir -p ~/.ssh && chmod 700 ~/.ssh
+   cat >> ~/.ssh/authorized_keys   # paste the public key, then Ctrl+D
+   chmod 600 ~/.ssh/authorized_keys
    ```
+
+   ...where `vscode` above is the user you are running as in the container.
 
 3. Forward the SSH port (`2222` by default) to your local machine using either the `forwardPorts` property in `devcontainer.json` or the user interface in your tool (e.g., you can press <kbd>F1</kbd> or <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> and select **Ports: Focus on Ports View** in VS Code to bring it into focus).
 
-4. Use a **local terminal** (or other tool) to connect to it using the command and password from step 2. e.g.
+4. Use a **local terminal** (or other tool) to connect to it with the matching private key. e.g.
 
    ```bash
-   ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null vscode@localhost
+   ssh -p 2222 -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null vscode@localhost
    ```
 
-   ...where `vscode` above is the user you are running as in the container and `2222` after `-p` is the **local address port** from step 2.
+   ...where `vscode` above is the user you are running as in the container and `2222` after `-p` is the **local address port** from step 3.
 
    The “-o” arguments are optional, but will prevent you from getting warnings or errors about known hosts when you do this from multiple containers/codespaces.
 
-5. Next time you connect to your container, just repeat steps 3 and 4 and use the same password you set in step 2.
+5. Next time you connect to your container, just repeat steps 3 and 4. The key stays authorized as long as the file is present.
 
 ### Using SSHFS
 

@@ -1,21 +1,20 @@
 # T3 Code Server
 
-Installs T3 Code as a pinned release runtime and runs it through the T3 Code service launcher (`t3 __service-launcher`) as a native s6-overlay 3 service. The launcher supervises `t3 serve` as the selected service user and applies updates that a T3 Code client requests from the server. Runtime state remains in the service user's home directory.
+Installs T3 Code as a pinned release runtime and runs `t3 serve` as the selected service user through a native s6-overlay 3 service. The service user updates it in place with `t3code-server-update`. Runtime state remains in the service user's home directory.
 
 The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. Release archives are self-contained; Node.js 24 is supplied through the official Dev Container Node Feature for npm package sources.
 
 ## Options
 
-| Option           | Type   | Default     | Description                                                                                                                                         |
-| ---------------- | ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `version`        | string | `latest`    | T3 Code version. With upstream, `latest` follows GitHub's latest upstream release. With a GitHub source, `latest` selects the greatest stable fork server tag by SemVer precedence. |
-| `packageSource`  | string | `""`        | Optional GitHub repository source, npm package spec, or tarball URL. Empty installs upstream T3 Code.                                               |
-| `releaseBaseUrl` | string | `""`        | Optional base URL for release archives the server downloads when a client updates it (`T3CODE_RELEASE_BASE_URL`). Empty derives it from the source. |
-| `port`           | string | `3773`      | Port exposed by the T3 Code server.                                                                                                                 |
-| `host`           | string | `0.0.0.0`   | Interface to bind the T3 Code server to.                                                                                                            |
-| `serveMode`      | string | `""`        | Optional T3 runtime mode (`T3CODE_MODE`). Empty preserves the T3 CLI default.                                                                       |
-| `serviceUser`    | string | `automatic` | User account that runs T3 and owns its runtime state. Automatic selection prefers the remote user, container user, `vscode`, then `root`.           |
-| `dnsName`        | string | `""`        | Optional fully qualified DNS name exposed through the Caddy Feature.                                                                                |
+| Option          | Type   | Default     | Description                                                                                                                                                             |
+| --------------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`       | string | `latest`    | T3 Code version. With upstream, `latest` follows GitHub's latest upstream release. With a GitHub source, `latest` selects the greatest stable fork server tag by SemVer precedence. |
+| `packageSource` | string | `""`        | Optional GitHub repository source, npm package spec, or tarball URL. Empty installs upstream T3 Code.                                                                   |
+| `port`          | string | `3773`      | Port exposed by the T3 Code server.                                                                                                                                     |
+| `host`          | string | `0.0.0.0`   | Interface to bind the T3 Code server to.                                                                                                                                |
+| `serveMode`     | string | `""`        | Optional T3 runtime mode passed to `t3 serve --mode`. Empty preserves the T3 CLI default.                                                                               |
+| `serviceUser`   | string | `automatic` | User account that runs T3 and owns its runtime state. Automatic selection prefers the remote user, container user, `vscode`, then `root`.                               |
+| `dnsName`       | string | `""`        | Optional fully qualified DNS name exposed through the Caddy Feature.                                                                                                    |
 
 ## Example usage
 
@@ -80,29 +79,25 @@ Any other non-empty `packageSource` is passed to `npm install` unchanged and tak
 
 ## Runtime layout
 
-Every installed version is a pinned runtime at `<home>/.t3/runtime/versions/<version>/` with its executable at `t3`. The version the service runs is recorded in `<home>/.t3/runtime/service-state.json`. An npm install is exposed through a shim in the same layout, so the launcher treats both kinds alike.
+Every installed version is a pinned runtime at `<home>/.t3/runtime/versions/<version>/` with its executable at `t3`. The version the service runs is named in `<home>/.t3/runtime/selected-version`. An npm install is exposed through a shim in the same layout, so both kinds run the same way.
 
-`/usr/local/bin/t3` runs the selected version, so the CLI on `PATH` always matches the service. `/usr/local/bin/t3code-server` is the service entry point: it exports `T3CODE_HOME`, `T3CODE_PORT`, `T3CODE_HOST`, `T3CODE_MODE`, and `T3CODE_RELEASE_BASE_URL`, then starts the selected version's launcher.
-
-The launcher requires T3 Code 0.0.42 or newer. Each release's launcher speaks one launcher protocol and reads only state written for it; selecting a version records the protocol that version answers its own preflight with, and a service restart starts that version's launcher.
+`/usr/local/bin/t3` runs the selected version, so the CLI on `PATH` always matches the service. `/usr/local/bin/t3code-server` is the service entry point: it runs the selected version's `t3 serve` with the configured host, port, mode, and `<home>/.t3` as the base directory.
 
 ## Updating
 
-**From a client.** A T3 Code client that is newer than the server offers to update it. The server downloads `t3-<client version>-linux-<arch>.tar.gz` and `SHA256SUMS` from `<releaseBaseUrl>/v<client version>/`, verifies it, stages it as a pinned runtime, and hands off to the launcher, which restarts `t3 serve` on the new version and rolls back if it fails to come up. With an upstream install the default base URL is upstream's GitHub Releases. With a GitHub source the default is `https://github.com/<owner>/<repository>/releases/download/server`, so a client-requested version resolves to the fork release `server/v<version>`; a fork that does not publish that release declines the update instead of installing upstream over the fork.
-
-A release that requires a newer launcher protocol than the running launcher declines a client-driven update with "This release requires a newer T3 Code service launcher"; update it inside the container instead, which restarts the service on the new launcher.
-
-**Inside the container.** `t3code-server-update` installs a version from the configured package source, selects it, and restarts the service:
+`t3code-server-update` installs a version from the configured package source, selects it, and restarts the service. The service user may run it through `sudo` and nothing else; the grant lives in `/etc/sudoers.d/t3code-server`.
 
 ```bash
 sudo t3code-server-update            # latest from the package source
 sudo t3code-server-update 0.0.42     # an exact version
-sudo t3code-server-update --status   # selected and installed versions
+t3code-server-update --status        # selected and installed versions
 ```
 
-`--no-restart` selects the version for the next service start. `--force` reinstalls and selects a version even while the launcher has an update pending. The service can also be restarted with `sudo /command/s6-svc -r /run/service/t3code-server`.
+`--no-restart` selects the version for the next service start. `--force` reinstalls a version that is already installed. The service can also be restarted with `sudo /command/s6-svc -r /run/service/t3code-server`.
 
-**Rebuild.** Changing `version` or `packageSource` and rebuilding the container installs that version fresh.
+Changing `version` or `packageSource` and rebuilding the container installs that version fresh.
+
+A T3 Code client that is newer than the server offers to update it remotely. This Feature does not support that path; the server declines it, and the update is made with `t3code-server-update` instead.
 
 ## Caddy
 
@@ -118,4 +113,4 @@ To mint a pairing code at any time, run the command as the service user and use 
 sudo -u vscode t3 auth pairing create --base-dir /home/vscode/.t3
 ```
 
-Replace `vscode` and its home directory when `serviceUser` resolves to another account. T3 writes its own logs beneath `<home>/.t3/userdata/logs`; s6 sends launcher and server output to the container logs.
+Replace `vscode` and its home directory when `serviceUser` resolves to another account. T3 writes its own logs beneath `<home>/.t3/userdata/logs`; s6 sends process output to the container logs.

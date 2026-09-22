@@ -5,13 +5,12 @@ Usage: resolve-package-source.py PACKAGE_SOURCE VERSION ARCH
 
 ARCH is the Node.js architecture name of the target machine: `x64` or `arm64`.
 
-Prints five lines:
+Prints four lines:
 
 1. kind: `archive` (a self-contained release archive) or `npm` (an npm install)
 2. source: the archive URL, or the npm package spec / tarball URL
 3. version: the exact resolved version, or empty when npm decides it
 4. checksums: the SHA256SUMS URL beside the archive, or empty
-5. release base: the default `T3CODE_RELEASE_BASE_URL` for the source, or empty
 
 An empty package source is upstream T3 Code. An exact version, or `latest`,
 installs the release archive from upstream's GitHub Releases. Any other
@@ -53,15 +52,14 @@ UPSTREAM_RELEASE_TAG = re.compile(r"/releases/tag/v([^/]+)$")
 
 
 class Resolution:
-    def __init__(self, kind, source, version="", checksums="", release_base=""):
+    def __init__(self, kind, source, version="", checksums=""):
         self.kind = kind
         self.source = source
         self.version = version
         self.checksums = checksums
-        self.release_base = release_base
 
     def lines(self):
-        return [self.kind, self.source, self.version, self.checksums, self.release_base]
+        return [self.kind, self.source, self.version, self.checksums]
 
 
 def archive_name(version, arch):
@@ -173,13 +171,12 @@ def resolve_fork(
 
     download_base = f"{web_base.rstrip('/')}/{owner}/{repository}/releases/download"
     tag = urllib.parse.quote(f"server/{resolved_version}", safe="/")
-    release_base = f"{download_base}/server"
     archive_url = f"{download_base}/{tag}/{urllib.parse.quote(archive_name(resolved_version, arch), safe='')}"
     if (exists or asset_exists)(archive_url):
-        return Resolution("archive", archive_url, resolved_version, f"{download_base}/{tag}/SHA256SUMS", release_base)
+        return Resolution("archive", archive_url, resolved_version, f"{download_base}/{tag}/SHA256SUMS")
 
     tarball = urllib.parse.quote(f"t3-{resolved_version}.tgz", safe="")
-    return Resolution("npm", f"{download_base}/{tag}/{tarball}", resolved_version, "", release_base)
+    return Resolution("npm", f"{download_base}/{tag}/{tarball}", resolved_version)
 
 
 def resolve(

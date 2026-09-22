@@ -5,12 +5,11 @@
 # Two clean devcontainers are built from the Feature source and started:
 #
 # 1. The fork: packageSource github:wyrd-company/t3code with version latest.
-#    Proves the console is served by that installation under the service
-#    launcher as the service user.
-# 2. Upstream: an exact older release archive. Proves the server runs as a
-#    launcher-managed child (the condition for client-driven updates), then
-#    proves the in-container update command moves the service to a newer
-#    release archive and the console comes back on it.
+#    Proves the console is served by that installation as the service user.
+# 2. Upstream: an exact release archive. Proves the service user can run the
+#    update command through sudo and nothing else, that the update moves the
+#    service to a newer release archive, and that the console comes back on
+#    it.
 #
 # Scope stops at the console. Whether a client can register its own MCP
 # endpoint and have an agent call it is proven by the fork's own consumer probe,
@@ -100,9 +99,7 @@ EOF
     printf 'Built T3 Code %s image.\n' "${scenario}"
 
     name="t3code-runtime-test-${scenario}-${RANDOM}-$$"
-    # The launcher's child drops privileges, which makes its /proc files
-    # unreadable without ptrace access; the assertions below read them.
-    docker run --detach --cap-add SYS_PTRACE --name "${name}" "${image}" >/dev/null
+    docker run --detach --name "${name}" "${image}" >/dev/null
     printf 'Started T3 Code %s container.\n' "${scenario}"
 }
 
@@ -125,52 +122,34 @@ wait_for_console() {
     printf 'T3 Code console became ready (%s).\n' "${phase}"
 }
 
-# The serve process is the launcher's child; 's6-supervise t3code-server',
-# the launcher, and the probing shell itself also mention t3, so match the
-# whole command line. An archive runtime runs from the versions tree; an npm
-# runtime's shim execs the npm-installed executable.
+# 's6-supervise t3code-server' and the probing shell itself also mention t3,
+# so match the whole command line. An archive runtime runs from the versions
+# tree; an npm runtime's shim execs the npm-installed executable.
 serve_pid() {
-    docker exec "${name}" pgrep --full --exact -- '.*/t3 serve' | head -n 1 || true
+    docker exec "${name}" pgrep --full --exact -- '.*/t3 serve .*' | head -n 1 || true
 }
 
-launcher_pid() {
-    docker exec "${name}" pgrep --full --exact -- '.*/t3 __service-launcher' | head -n 1 || true
-}
+assert_serve() {
+    local expected_version="$1" expected_mode="$2" t3_pid service_user cmdline
 
-assert_launcher_managed_serve() {
-    local expected_version="$1" expected_mode="$2" t3_pid launcher service_user parent cmdline
-
-    launcher="$(launcher_pid)"
-    [ -n "${launcher}" ] || fail "No T3 Code service launcher is running in the container."
     t3_pid="$(serve_pid)"
     [ -n "${t3_pid}" ] || fail "No T3 Code serve process is running in the container."
-
-    parent="$(docker exec "${name}" ps -o ppid= -p "${t3_pid}" | tr -d ' ')"
-    [ "${parent}" = "${launcher}" ] \
-        || fail "T3 Code serve (pid ${t3_pid}) is not a child of the service launcher (pid ${launcher})."
 
     service_user="$(docker exec "${name}" ps -o user= -p "${t3_pid}" | tr -d ' ')"
     [ "${service_user}" = vscode ] \
         || fail "T3 Code serve runs as '${service_user}' rather than the service user."
 
-    # The launcher hands its child the context that makes the server report
-    # itself as launcher-managed, which is what lets a client update it.
-    docker exec --user root "${name}" sh -c "tr '\\0' '\\n' </proc/${t3_pid}/environ" \
-        | grep -q '^T3_SERVICE_LAUNCHER_CONTEXT=' \
-        || fail "T3 Code serve did not receive the service launcher context."
-
     # An archive runtime names its version on the command line; an npm shim
     # does not, and its version is already proven through `t3 --version`.
-    cmdline="$(docker exec --user root "${name}" sh -c "tr '\\0' ' ' </proc/${t3_pid}/cmdline")"
+    cmdline="$(docker exec "${name}" sh -c "tr '\\0' ' ' </proc/${t3_pid}/cmdline")"
     if printf '%s' "${cmdline}" | grep -q -- '/.t3/runtime/versions/'; then
         printf '%s' "${cmdline}" | grep -q -- "/.t3/runtime/versions/${expected_version}/t3 serve" \
             || fail "T3 Code serve is not running the ${expected_version} runtime: ${cmdline}"
     fi
 
     if [ -n "${expected_mode}" ]; then
-        docker exec --user root "${name}" sh -c "tr '\\0' '\\n' </proc/${t3_pid}/environ" \
-            | grep -qx "T3CODE_MODE=${expected_mode}" \
-            || fail "T3 Code serve is not running the ${expected_mode} runtime mode."
+        printf '%s' "${cmdline}" | grep -q -- "--mode=${expected_mode}" \
+            || fail "T3 Code serve is not running the ${expected_mode} runtime mode: ${cmdline}"
     fi
 }
 
@@ -211,9 +190,9 @@ installed_version="$(docker exec "${name}" /usr/local/bin/t3 --version)"
 [ "${installed_version}" = "t3 v${expected_version}" ] \
     || fail "Feature installed '${installed_version}' but latest resolves to 't3 v${expected_version}'."
 
-assert_launcher_managed_serve "${expected_version}" web
+assert_serve "${expected_version}" web
 assert_console_html
-printf 'Console served by %s as vscode under the service launcher.\n' "${installed_version}"
+printf 'Console served by %s as vscode.\n' "${installed_version}"
 stop_container
 
 # --- Scenario 2: upstream archive, then an in-container update ---------------
@@ -232,19 +211,30 @@ wait_for_console "upstream ${upstream_old_version}"
 installed_version="$(docker exec "${name}" /usr/local/bin/t3 --version)"
 [ "${installed_version}" = "t3 v${upstream_old_version}" ] \
     || fail "Feature installed '${installed_version}' rather than 't3 v${upstream_old_version}'."
-assert_launcher_managed_serve "${upstream_old_version}" web
+assert_serve "${upstream_old_version}" web
 old_pid="$(serve_pid)"
 
-docker exec --user root "${name}" /usr/local/bin/t3code-server-update "${upstream_new_version}" \
+# The service user updates through sudo. On an image that restricts the
+# user's sudo, the Feature's grant is the only reason this is allowed, and it
+# must not open anything else; an image with unrestricted sudo cannot show
+# that, so the negative probe is skipped there.
+docker exec --user vscode "${name}" sudo -n -l /usr/local/bin/t3code-server-update >/dev/null \
+    || fail "sudo does not let the service user run t3code-server-update."
+if docker exec --user vscode "${name}" sudo -n -l /bin/true >/dev/null 2>&1; then
+    printf 'Image grants the service user unrestricted sudo; skipping the exclusivity probe.\n'
+elif docker exec --user vscode "${name}" sudo -n -l /usr/local/lib/t3code-server/t3code-runtime >/dev/null 2>&1; then
+    fail "sudo lets the service user run more than t3code-server-update."
+fi
+docker exec --user vscode "${name}" sudo -n /usr/local/bin/t3code-server-update "${upstream_new_version}" \
     || { report_container_state; fail "t3code-server-update ${upstream_new_version} failed."; }
 
 # The restart tears the old server down before the new one listens, so wait
 # for the old process to go before waiting for the console.
 deadline=$((SECONDS + 60))
-while ((SECONDS < deadline)) && docker exec --user root "${name}" test -d "/proc/${old_pid}"; do
+while ((SECONDS < deadline)) && docker exec "${name}" test -d "/proc/${old_pid}"; do
     sleep 1
 done
-docker exec --user root "${name}" test ! -d "/proc/${old_pid}" \
+docker exec "${name}" test ! -d "/proc/${old_pid}" \
     || fail "The previous T3 Code serve process (pid ${old_pid}) survived the update restart."
 wait_for_console "updated ${upstream_new_version}"
 
@@ -254,7 +244,7 @@ installed_version="$(docker exec "${name}" /usr/local/bin/t3 --version)"
 status="$(docker exec "${name}" /usr/local/bin/t3code-server-update --status)"
 printf '%s\n' "${status}" | grep -q "^selected version: ${upstream_new_version}$" \
     || fail "The update command does not report ${upstream_new_version} as selected: ${status}"
-assert_launcher_managed_serve "${upstream_new_version}" web
+assert_serve "${upstream_new_version}" web
 assert_console_html
 printf 'Console served by %s after the in-container update.\n' "${installed_version}"
 

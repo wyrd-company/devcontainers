@@ -28,10 +28,6 @@ if [ -n "${DNSNAME}" ]; then
         || err "dnsName requires a Caddy Feature version with DNS readiness support."
 fi
 
-if [ -n "${RELEASEBASEURL}" ]; then
-    [[ "${RELEASEBASEURL}" =~ ^https?:// ]] || err "releaseBaseUrl must be an http(s) URL."
-fi
-
 case "$(dpkg --print-architecture)" in
     amd64) arch=x64 ;;
     arm64) arch=arm64 ;;
@@ -49,12 +45,11 @@ install -m 0755 "$(dirname "$0")/resolve-package-source.py" "${lib_dir}/resolve-
 install -m 0755 "$(dirname "$0")/t3code-server-update" /usr/local/bin/t3code-server-update
 
 mapfile -t resolution < <(python3 "${lib_dir}/resolve-package-source.py" "${PACKAGESOURCE}" "${VERSION}" "${arch}")
-[ "${#resolution[@]}" -eq 5 ] || err "Unable to resolve the T3 Code package source."
+[ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve the T3 Code package source."
 package_kind="${resolution[0]}"
 package_source="${resolution[1]}"
 resolved_version="${resolution[2]}"
 checksums_url="${resolution[3]}"
-release_base_url="${RELEASEBASEURL:-${resolution[4]}}"
 
 # The runtime tool and the update command read this file; the service wrapper
 # exports the server settings from it.
@@ -63,7 +58,6 @@ T3CODE_SERVER_USER=$(printf '%q' "${service_user}")
 T3CODE_SERVER_HOME=$(printf '%q' "${service_home}")
 T3CODE_SERVER_ARCH=$(printf '%q' "${arch}")
 T3CODE_SERVER_PACKAGE_SOURCE=$(printf '%q' "${PACKAGESOURCE}")
-T3CODE_SERVER_RELEASE_BASE_URL=$(printf '%q' "${release_base_url}")
 T3CODE_SERVER_PORT=$(printf '%q' "${PORT}")
 T3CODE_SERVER_HOST=$(printf '%q' "${HOST}")
 T3CODE_SERVER_MODE=$(printf '%q' "${SERVEMODE}")
@@ -88,13 +82,13 @@ case "${package_kind}" in
         err "Unknown package kind '${package_kind}'."
         ;;
 esac
-"${lib_dir}/t3code-runtime" activate "${resolved_version}" --force
+"${lib_dir}/t3code-runtime" select "${resolved_version}"
 
 # `t3` on PATH always runs the version the service is selected to run.
 cat >/usr/local/bin/t3 <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-exec "\$(${lib_dir@Q}/t3code-runtime active-entry)" "\$@"
+exec "\$(${lib_dir@Q}/t3code-runtime selected-entry)" "\$@"
 EOF
 chmod 0755 /usr/local/bin/t3
 
@@ -102,35 +96,27 @@ printf -v quoted_home '%q' "${service_home}"
 printf -v quoted_port '%q' "${PORT}"
 printf -v quoted_host '%q' "${HOST}"
 printf -v quoted_mode '%q' "${SERVEMODE}"
-printf -v quoted_release_base '%q' "${release_base_url}"
 
 cat >/usr/local/bin/t3code-server <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
 export HOME=${quoted_home}
-export T3CODE_HOME="\${HOME}/.t3"
 export T3CODE_NO_BROWSER=1
 
 default_port=${quoted_port}
 default_host=${quoted_host}
 default_mode=${quoted_mode}
-default_release_base=${quoted_release_base}
-export T3CODE_PORT="\${T3CODE_PORT:-\${default_port}}"
-export T3CODE_HOST="\${T3CODE_HOST:-\${default_host}}"
-mode="\${T3CODE_MODE:-\${default_mode}}"
+port="\${T3CODE_PORT:-\${default_port}}"
+host="\${T3CODE_HOST:-\${default_host}}"
+mode="\${T3CODE_SERVE_MODE:-\${default_mode}}"
+args=(serve --host="\${host}" --port="\${port}" --base-dir "\${HOME}/.t3")
 if [ -n "\${mode}" ]; then
-    export T3CODE_MODE="\${mode}"
-fi
-release_base="\${T3CODE_RELEASE_BASE_URL:-\${default_release_base}}"
-if [ -n "\${release_base}" ]; then
-    export T3CODE_RELEASE_BASE_URL="\${release_base}"
+    args+=(--mode="\${mode}")
 fi
 
-# The launcher of the selected version supervises \`t3 serve\` and applies
-# updates requested by clients; a restarted service picks up whichever
-# version is selected by then.
-exec "\$(${lib_dir@Q}/t3code-runtime active-entry)" __service-launcher "\$@"
+# A restarted service runs whichever version is selected by then.
+exec "\$(${lib_dir@Q}/t3code-runtime selected-entry)" "\${args[@]}" "\$@"
 EOF
 chmod 0755 /usr/local/bin/t3code-server
 
@@ -146,6 +132,16 @@ exec s6-setuidgid ${quoted_user} /usr/local/bin/t3code-server
 EOF
 chmod 0755 "${service_dir}/run"
 touch /etc/s6-overlay/user-bundles.d/user/contents.d/t3code-server
+
+# The service user updates the service with its own command and nothing else.
+if [ "${service_user}" != root ] && command -v visudo >/dev/null 2>&1; then
+    cat >/etc/sudoers.d/t3code-server <<EOF
+# Let the T3 Code service user update the service in place.
+${service_user} ALL=(root) NOPASSWD: /usr/local/bin/t3code-server-update, /usr/local/bin/t3code-server-update *
+EOF
+    chmod 0440 /etc/sudoers.d/t3code-server
+    visudo --check --file=/etc/sudoers.d/t3code-server >/dev/null
+fi
 
 if [ -n "${DNSNAME}" ]; then
     cat >/etc/caddy/conf.d/t3code-server.caddy <<EOF

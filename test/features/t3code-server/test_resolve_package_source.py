@@ -57,7 +57,6 @@ class UpstreamSourceTests(unittest.TestCase):
                 f"{UPSTREAM_DOWNLOADS}/v1.2.3/t3-1.2.3-linux-x64.tar.gz",
                 "1.2.3",
                 f"{UPSTREAM_DOWNLOADS}/v1.2.3/SHA256SUMS",
-                "",
             ],
         )
 
@@ -96,12 +95,12 @@ class UpstreamSourceTests(unittest.TestCase):
     def test_npm_ranges_and_dist_tags_install_through_npm(self):
         for version in ("^1.2.3", "1.2", "next"):
             with self.subTest(version=version):
-                self.assertEqual(lines(resolver.resolve("", version, "x64")), ["npm", f"t3@{version}", "", "", ""])
+                self.assertEqual(lines(resolver.resolve("", version, "x64")), ["npm", f"t3@{version}", "", ""])
 
     def test_explicit_npm_spec_and_url_are_passed_to_npm_unchanged(self):
         for source in ("example-package@1.2.3", "https://packages.example.test/tool.tgz"):
             with self.subTest(source=source):
-                self.assertEqual(lines(resolver.resolve(source, "latest", "x64")), ["npm", source, "", "", ""])
+                self.assertEqual(lines(resolver.resolve(source, "latest", "x64")), ["npm", source, "", ""])
 
     def test_unsupported_architecture_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Unsupported architecture"):
@@ -120,7 +119,6 @@ class ForkSourceTests(unittest.TestCase):
                 f"{FORK_DOWNLOADS}/server/1.2.3-wyrd.4/t3-1.2.3-wyrd.4-linux-x64.tar.gz",
                 "1.2.3-wyrd.4",
                 f"{FORK_DOWNLOADS}/server/1.2.3-wyrd.4/SHA256SUMS",
-                f"{FORK_DOWNLOADS}/server",
             ],
         )
 
@@ -133,7 +131,6 @@ class ForkSourceTests(unittest.TestCase):
                 f"{FORK_DOWNLOADS}/server/1.2.3-wyrd.4/t3-1.2.3-wyrd.4.tgz",
                 "1.2.3-wyrd.4",
                 "",
-                f"{FORK_DOWNLOADS}/server",
             ],
         )
 

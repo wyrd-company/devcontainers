@@ -4,7 +4,7 @@
 #
 # Resolves a version from the package source the Feature was installed with,
 # installs it as a pinned runtime beside the running one, selects it, and
-# restarts the s6 service so the launcher starts the new version.
+# restarts the s6 service so it starts the new version.
 
 set -euo pipefail
 
@@ -23,8 +23,7 @@ usage: t3code-server-update [--force] [--no-restart] [VERSION|latest]
 Installs VERSION (default: latest) from the package source the Feature was
 configured with and switches the service to it.
 
-  --force       Reinstall VERSION even when it is already installed, and
-                select it even while the launcher has an update pending.
+  --force       Reinstall VERSION even when it is already installed.
   --no-restart  Select the version without restarting the service; it takes
                 effect on the next service start.
   --status      Show the selected version, installed versions, and the
@@ -64,7 +63,7 @@ done
 if [ "${status}" = true ]; then
     [ -z "${requested}" ] || usage
     printf 'package source: %s\n' "${T3CODE_SERVER_PACKAGE_SOURCE:-t3 (upstream)}"
-    printf 'selected version: %s\n' "$("${runtime}" active-version 2>/dev/null || echo none)"
+    printf 'selected version: %s\n' "$("${runtime}" selected-version 2>/dev/null || echo none)"
     printf 'installed versions:\n'
     "${runtime}" versions | sed 's/^/  /'
     if [ -d "${service_dir}" ]; then
@@ -82,7 +81,7 @@ mapfile -t resolution < <(
     python3 "${lib_dir}/resolve-package-source.py" \
         "${T3CODE_SERVER_PACKAGE_SOURCE:-}" "${requested}" "${T3CODE_SERVER_ARCH}"
 )
-[ "${#resolution[@]}" -eq 5 ] || err "Unable to resolve T3 Code ${requested}."
+[ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve T3 Code ${requested}."
 kind="${resolution[0]}"
 source="${resolution[1]}"
 version="${resolution[2]}"
@@ -104,17 +103,12 @@ case "${kind}" in
         ;;
 esac
 
-current="$("${runtime}" active-version 2>/dev/null || true)"
+current="$("${runtime}" selected-version 2>/dev/null || true)"
 if [ "${current}" = "${version}" ] && [ "${force}" != true ]; then
     log "T3 Code ${version} is already the selected version."
     exit 0
 fi
-
-if [ "${force}" = true ]; then
-    "${runtime}" activate "${version}" --force
-else
-    "${runtime}" activate "${version}"
-fi
+"${runtime}" select "${version}"
 
 if [ "${restart}" != true ]; then
     log "T3 Code ${version} starts on the next service restart."

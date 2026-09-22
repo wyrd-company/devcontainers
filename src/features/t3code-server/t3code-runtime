@@ -4,11 +4,9 @@
 #
 # A pinned runtime is one T3 Code version unpacked into
 # <home>/.t3/runtime/versions/<version>/ with its executable at t3 and an
-# .install-complete sentinel naming the version. The service launcher
-# (`t3 __service-launcher`) starts the version named in
-# <home>/.t3/runtime/service-state.json and swaps versions in place when a
-# client asks the server to update itself. This tool creates runtimes and
-# selects the active one; the launcher owns everything else in that tree.
+# .install-complete sentinel naming the version. The service runs the version
+# named in <home>/.t3/runtime/selected-version. This tool creates runtimes and
+# selects the one the service and the `t3` command run.
 
 set -euo pipefail
 
@@ -22,7 +20,7 @@ source "${config_file}"
 base_dir="${T3CODE_SERVER_HOME}/.t3"
 runtime_dir="${base_dir}/runtime"
 versions_dir="${runtime_dir}/versions"
-state_file="${runtime_dir}/service-state.json"
+selected_file="${runtime_dir}/selected-version"
 npm_prefix="/usr/local/lib/t3code-server/npm"
 
 log() {
@@ -44,13 +42,11 @@ usage: t3code-runtime <command> [arguments]
   install-npm SPEC
       Install an npm package spec or tarball URL and expose its executable as a
       pinned runtime. Prints the installed version.
-  activate VERSION [--force]
-      Select VERSION as the version the service launcher starts, recording the
-      launcher protocol that version speaks. Refuses while the launcher has an
-      update pending unless --force is given.
-  active-version
+  select VERSION
+      Select VERSION as the version the service and the t3 command run.
+  selected-version
       Print the selected version.
-  active-entry
+  selected-entry
       Print the executable path of the selected version.
   versions
       Print every completely installed version, one per line.
@@ -132,8 +128,8 @@ install_archive() {
 }
 
 # Installs an npm package into an isolated prefix and exposes its executable
-# through a shim laid out like an archive runtime, so the launcher treats both
-# the same way. The version is whatever the package reports.
+# through a shim laid out like an archive runtime, so both kinds are run the
+# same way. The version is whatever the package reports.
 install_npm() {
     local spec="$1" version target
     [ "$(id -u)" -eq 0 ] || err "install-npm must run as root."
@@ -164,78 +160,24 @@ EOF
     printf '%s\n' "${version}"
 }
 
-state_json() {
-    [ -r "${state_file}" ] || return 1
-    cat "${state_file}"
-}
-
-state_field() {
-    state_json | python3 -c 'import json, sys
-state = json.load(sys.stdin)
-value = state
-for key in sys.argv[1:]:
-    value = value.get(key) if isinstance(value, dict) else None
-print("" if value is None else value)' "$@"
-}
-
-run_as_service_user() {
-    if [ "$(id -u)" -eq 0 ] && [ "${T3CODE_SERVER_USER}" != root ]; then
-        runuser --user "${T3CODE_SERVER_USER}" -- env HOME="${T3CODE_SERVER_HOME}" T3CODE_HOME="${base_dir}" "$@"
-    else
-        env HOME="${T3CODE_SERVER_HOME}" T3CODE_HOME="${base_dir}" "$@"
-    fi
-}
-
-# The launcher protocol a runtime speaks. Each release's launcher only reads
-# state written for its own protocol, and only the release itself knows which
-# that is: its staged preflight answers "ready" for exactly that number.
-detect_protocol() {
-    local version="$1" entry candidate result
-    entry="$(version_dir "${version}")/t3"
-    for candidate in $(seq 1 16); do
-        result="$(run_as_service_user "${entry}" __service-preflight \
-            --database-path "${base_dir}/userdata/probe.db" \
-            --launcher-protocol "${candidate}" 2>/dev/null || true)"
-        if printf '%s' "${result}" | grep -q '"status":"ready"'; then
-            printf '%s\n' "${candidate}"
-            return 0
-        fi
-    done
-    err "T3 Code ${version} does not answer the service launcher preflight; it needs T3 Code 0.0.42 or newer."
-}
-
-activate() {
-    local version="$1" force="${2:-}" service_protocol
+select_version() {
+    local version="$1" temp
     require_version "${version}"
     is_installed "${version}" || err "T3 Code ${version} is not completely installed."
-    if [ "${force}" != "--force" ] && [ -r "${state_file}" ] \
-        && [ "$(state_field update status)" = "pending" ]; then
-        err "The service launcher has an update pending; wait for it to finish or pass --force."
-    fi
     ensure_tree
-    service_protocol="$(detect_protocol "${version}")"
-    python3 - "${state_file}" "${version}" "${service_protocol}" <<'EOF'
-import json, os, sys, tempfile
-path, version, protocol = sys.argv[1], sys.argv[2], int(sys.argv[3])
-state = {"protocol": protocol, "activeVersion": version}
-directory = os.path.dirname(path)
-fd, temp = tempfile.mkstemp(prefix=".service-state.", dir=directory)
-with os.fdopen(fd, "w") as handle:
-    json.dump(state, handle, indent=2)
-    handle.write("\n")
-    handle.flush()
-    os.fsync(handle.fileno())
-os.chmod(temp, 0o600)
-os.replace(temp, path)
-EOF
-    own_as_service_user "${state_file}"
-    log "Selected T3 Code ${version} (launcher protocol ${service_protocol}) for the service"
+    temp="$(mktemp "${runtime_dir}/.selected-version.XXXXXX")"
+    printf '%s\n' "${version}" >"${temp}"
+    chmod 0644 "${temp}"
+    mv "${temp}" "${selected_file}"
+    own_as_service_user "${selected_file}"
+    log "Selected T3 Code ${version} for the service"
 }
 
-active_version() {
+selected_version() {
     local version
-    version="$(state_field activeVersion 2>/dev/null || true)"
-    [ -n "${version}" ] || err "No T3 Code version is selected; ${state_file} is missing or unreadable."
+    [ -r "${selected_file}" ] || err "No T3 Code version is selected; ${selected_file} is missing or unreadable."
+    version="$(tr -d '[:space:]' <"${selected_file}")"
+    [ -n "${version}" ] || err "No T3 Code version is selected; ${selected_file} is empty."
     printf '%s\n' "${version}"
 }
 
@@ -263,15 +205,15 @@ case "${command}" in
         [ $# -eq 1 ] || usage
         install_npm "$1"
         ;;
-    activate)
-        [ $# -ge 1 ] && [ $# -le 2 ] || usage
-        activate "$1" "${2:-}"
+    select)
+        [ $# -eq 1 ] || usage
+        select_version "$1"
         ;;
-    active-version)
-        active_version
+    selected-version)
+        selected_version
         ;;
-    active-entry)
-        printf '%s/t3\n' "$(version_dir "$(active_version)")"
+    selected-entry)
+        printf '%s/t3\n' "$(version_dir "$(selected_version)")"
         ;;
     versions)
         list_versions

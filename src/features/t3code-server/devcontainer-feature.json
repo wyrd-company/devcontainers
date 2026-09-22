@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "name": "T3 Code Server",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/t3code-server",
-  "description": "Installs T3 Code as a pinned release runtime and runs it under the T3 Code service launcher as an s6-overlay service, so clients can update the server remotely and operators can update it in place.",
+  "description": "Installs T3 Code as a pinned release runtime, runs it as an s6-overlay service under the selected user, and lets that user update it in place with t3code-server-update.",
   "options": {
     "version": {
       "type": "string",
@@ -14,11 +14,6 @@
       "type": "string",
       "default": "",
       "description": "Optional GitHub repository source such as `github:wyrd-company/t3code`, or an npm package spec or tarball URL. Empty installs upstream T3 Code."
-    },
-    "releaseBaseUrl": {
-      "type": "string",
-      "default": "",
-      "description": "Optional base URL the server downloads release archives from when a client asks it to update itself (`T3CODE_RELEASE_BASE_URL`). Empty derives it from the package source."
     },
     "port": {
       "type": "string",
@@ -34,7 +29,7 @@
       "type": "string",
       "enum": ["", "web", "desktop"],
       "default": "",
-      "description": "Optional T3 runtime mode (`T3CODE_MODE`). Set to `web` for the web runtime. Empty preserves the T3 CLI default."
+      "description": "Optional T3 runtime mode passed to `t3 serve --mode`. Set to `web` for the web runtime. Empty preserves the T3 CLI default."
     },
     "serviceUser": {
       "type": "string",

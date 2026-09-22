@@ -5,8 +5,7 @@
       "t3code-server": {
         "port": "4123",
         "host": "127.0.0.1",
-        "serviceUser": "root",
-        "releaseBaseUrl": "https://releases.example.test/t3"
+        "serviceUser": "root"
       }
     }
   },

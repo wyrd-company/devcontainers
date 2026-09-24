@@ -81,6 +81,7 @@ EOF2
 devcontainer build \
     --workspace-folder "${workspace}" \
     --image-name "${client_image}" >/dev/null
+"${repo_root}/scripts/check-sudo-no-all.sh" "${client_image}"
 
 docker run --detach --name "${client_name}" \
     --mount "source=${client_ocx_volume},target=/home/vscode/.opencodex" \
@@ -125,6 +126,7 @@ EOF2
 devcontainer build \
     --workspace-folder "${workspace}" \
     --image-name "${image}" >/dev/null
+"${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
 
 docker run --detach --name "${name}" "${image}" >/dev/null
 

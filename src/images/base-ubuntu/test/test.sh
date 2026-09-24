@@ -7,6 +7,7 @@ test_image="${image}-s6-test"
 container="base-ubuntu-s6-test-${RANDOM}"
 
 docker build --build-arg "IMAGE=${image}" --tag "${test_image}" "$(dirname "$0")"
+"$(dirname "$0")/../../../../scripts/check-sudo-no-all.sh" "${test_image}"
 
 cleanup() {
     docker container rm --force "${container}" >/dev/null 2>&1 || true

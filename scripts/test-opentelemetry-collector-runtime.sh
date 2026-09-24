@@ -17,6 +17,8 @@ docker build \
     --tag "${image}" \
     "${repo_root}"
 
+"${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
+
 docker run --detach \
     --name "${name}" \
     --env SAMPLE_RUNTIME_VALUE=sample-runtime-value \

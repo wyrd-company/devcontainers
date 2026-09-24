@@ -91,6 +91,7 @@ devcontainer build \
     --workspace-folder "${workspace}" \
     --image-name "${image}" >/dev/null
 printf 'Built T3 Code runtime image.\n'
+"${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
 
 docker run --detach --name "${name}" "${image}" >/dev/null
 printf 'Started T3 Code runtime container.\n'

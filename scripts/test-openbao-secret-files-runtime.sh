@@ -46,6 +46,8 @@ docker build \
     --tag "${image}" \
     "${repo_root}"
 
+"${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
+
 container="$(docker run --detach \
     --env SAMPLE_PRECEDENCE_VALUE=from-container \
     "${image}")"

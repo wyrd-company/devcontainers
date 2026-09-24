@@ -24,6 +24,8 @@ docker build \
     --tag "${image}" \
     "${repo_root}"
 
+"${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
+
 docker run --detach \
     --name "${name}" \
     --env ZO_HTTP_ADDR=0.0.0.0 \

@@ -14,6 +14,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+base_image="${BASE_IMAGE:-$("${repo_root}/scripts/build-base-image.sh" noble)}"
 image="${1:-devcontainers-t3code-runtime:test}"
 name="t3code-runtime-test-${RANDOM}-$$"
 port=3773
@@ -74,7 +75,7 @@ cp -a "${repo_root}/src/features/t3code-server" "${workspace}/.devcontainer/t3co
 
 cat >"${workspace}/.devcontainer/devcontainer.json" <<EOF
 {
-    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "image": "${base_image}",
     "features": {
         "./t3code-server": {
             "packageSource": "github:wyrd-company/t3code",

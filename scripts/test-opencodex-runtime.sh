@@ -11,6 +11,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+base_image="${BASE_IMAGE:-$("${repo_root}/scripts/build-base-image.sh" noble)}"
 image="${1:-devcontainers-opencodex-runtime:test}"
 name="opencodex-runtime-test-${RANDOM}-$$"
 client_name="${name}-client"
@@ -69,7 +70,7 @@ cp -a "${repo_root}/src/features/caddy" "${workspace}/.devcontainer/caddy"
 
 cat >"${workspace}/.devcontainer/devcontainer.json" <<EOF2
 {
-    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "image": "${base_image}",
     "features": {
         "./opencodex": {
             "version": "${pinned_version}"
@@ -110,7 +111,7 @@ printf 'Disconnected client startup completed with service-user-owned state volu
 
 cat >"${workspace}/.devcontainer/devcontainer.json" <<EOF2
 {
-    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "image": "${base_image}",
     "features": {
         "./caddy": {},
         "./opencodex": {

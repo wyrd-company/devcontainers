@@ -26,7 +26,7 @@ Add native s6-rc service definitions under `/etc/s6-overlay/s6-rc.d` and include
 
 The `vscode` user has passwordless `sudo` for two purposes only:
 
-- Package installation: `apt-get update`, `apt-get install`, and the `apt` equivalents. `DEBIAN_FRONTEND` is passed through.
+- Package installation: `apt-get update`, `apt-get install`, and the `apt` equivalents. `DEBIAN_FRONTEND` is passed through. The operation must be the first word that is not an option. Options that take a value use the `-o value`, `-ovalue`, or `--name=value` form. Package names must not end in `-` or `_`, which apt treats as remove and purge.
 - s6-overlay service control: `s6-svc` and `s6-svstat` on `/run/service/*`, and `s6-rc`.
 
 ```bash

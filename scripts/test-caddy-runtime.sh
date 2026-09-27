@@ -3,6 +3,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+base_image="${BASE_IMAGE:-$("${repo_root}/scripts/build-base-image.sh" noble)}"
 image="${1:-devcontainers-caddy-runtime:test}"
 name="caddy-runtime-test-${RANDOM}-$$"
 
@@ -14,6 +15,7 @@ trap cleanup EXIT
 
 docker build \
     --file "${repo_root}/test/features/caddy/runtime.Dockerfile" \
+    --build-arg "BASE_IMAGE=${base_image}" \
     --tag "${image}" \
     "${repo_root}"
 

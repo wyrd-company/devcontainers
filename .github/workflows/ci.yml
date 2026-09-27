@@ -222,6 +222,9 @@ jobs:
       - name: Test s6 runtime
         run: ./src/images/base-ubuntu/test/test.sh devcontainers-base:${{ matrix.variant }}
 
+      - name: Test the unrestricted sudo check
+        run: ./test/check-sudo-no-all/test.sh devcontainers-base:${{ matrix.variant }}
+
       - name: Verify Moby remains an explicit unsupported opt-in
         if: matrix.variant == 'resolute'
         run: ./scripts/test-moby-opt-in.sh devcontainers-base:resolute

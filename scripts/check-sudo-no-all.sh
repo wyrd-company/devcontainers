@@ -12,21 +12,23 @@
 #   - a probe command that no rule names, placed in every executable directory,
 #     every home directory, /opt, and /tmp, which catches ALL and directory
 #     wildcards such as /usr/bin/*;
-#   - every login shell and env, which run arbitrary commands.
+#   - every login shell, env, python3, and perl, with no arguments and with the
+#     -c, -e, and script-path forms that run an arbitrary command.
 
 set -euo pipefail
 
 image="${1:?usage: check-sudo-no-all.sh IMAGE}"
 
 docker run --rm --user root --entrypoint /bin/sh "${image}" -c '
-    set -eu
+    set -euf
     if ! command -v sudo >/dev/null 2>&1; then
         echo "sudo is not installed; nothing to check."
         exit 0
     fi
 
+    # One command line per line of this file, split into words when probed.
+    commands="$(mktemp)"
     probe_name="sudo-all-probe-$$"
-    commands=""
     homes="$(getent passwd | cut -d: -f6 | sort -u)"
     for dir in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin \
         /usr/libexec /usr/lib /command /opt /tmp ${homes}; do
@@ -36,10 +38,13 @@ docker run --rm --user root --entrypoint /bin/sh "${image}" -c '
             printf "#!/bin/sh\n" >"${probe}"
             chmod 0755 "${probe}"
         fi
-        commands="${commands} ${probe}"
+        echo "${probe}" >>"${commands}"
     done
-    for shell in $(grep "^/" /etc/shells) /usr/bin/env; do
-        [ -x "${shell}" ] && commands="${commands} ${shell}"
+    for interpreter in $(grep "^/" /etc/shells) /usr/bin/env /usr/bin/python3 /usr/bin/perl; do
+        [ -x "${interpreter}" ] || continue
+        for arguments in "" "-c ${probe_name}" "-e ${probe_name}" "/tmp/${probe_name}"; do
+            echo "${interpreter} ${arguments}" >>"${commands}"
+        done
     done
 
     runas_users="$(getent passwd | cut -d: -f1)"
@@ -49,20 +54,23 @@ docker run --rm --user root --entrypoint /bin/sh "${image}" -c '
         if ! LC_ALL=C sudo -n -l -U "${user}" 2>/dev/null | grep -q "may run the following commands"; then
             continue
         fi
-        for command in ${commands}; do
+        while IFS= read -r command; do
             for target in ${runas_users}; do
-                if sudo -n -l -U "${user}" -u "${target}" "${command}" >/dev/null 2>&1; then
-                    echo "sudo lets ${user} run ${command} as user ${target}." >&2
+                # The command line is split into words on purpose.
+                # shellcheck disable=SC2086
+                if sudo -n -l -U "${user}" -u "${target}" ${command} >/dev/null 2>&1; then
+                    echo "sudo lets ${user} run \"${command}\" as user ${target}." >&2
                     failed=1
                 fi
             done
             for group in ${runas_groups}; do
-                if sudo -n -l -U "${user}" -g "${group}" "${command}" >/dev/null 2>&1; then
-                    echo "sudo lets ${user} run ${command} as group ${group}." >&2
+                # shellcheck disable=SC2086
+                if sudo -n -l -U "${user}" -g "${group}" ${command} >/dev/null 2>&1; then
+                    echo "sudo lets ${user} run \"${command}\" as group ${group}." >&2
                     failed=1
                 fi
             done
-        done
+        done <"${commands}"
         if [ "${failed}" -ne 0 ]; then
             sudo -n -l -U "${user}" >&2 || true
             exit 1

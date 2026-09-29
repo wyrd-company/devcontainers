@@ -1,0 +1,21 @@
+{
+  "codex-cli-custom-options": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "codex-cli": {
+        "remoteControl": true,
+        "serviceUser": "root"
+      }
+    },
+    "remoteUser": "root"
+  },
+  "codex-cli-only": {
+    "image": "debian:bookworm",
+    "features": {
+      "codex-cli": {
+        "startAppServer": false,
+        "version": "0.154.0"
+      }
+    }
+  }
+}

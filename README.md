@@ -29,7 +29,7 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 
 ## Features
 
-- `ghcr.io/wyrd-company/devcontainers/codex-cli:1`
+- `ghcr.io/wyrd-company/devcontainers/codex-cli:2`
 - `ghcr.io/wyrd-company/devcontainers/claude-code-cli:1`
 - `ghcr.io/wyrd-company/devcontainers/cursor-agent-cli:1`
 - `ghcr.io/wyrd-company/devcontainers/grok-cli:1`

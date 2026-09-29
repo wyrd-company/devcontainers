@@ -16,7 +16,13 @@ require_root() {
 }
 
 pick_devcontainer_user() {
+    local requested="${1:-automatic}"
     local candidate
+    if [ "${requested}" != automatic ] && [ "${requested}" != auto ]; then
+        id -u "${requested}" >/dev/null 2>&1 || err "Requested service user '${requested}' does not exist."
+        echo "${requested}"
+        return
+    fi
 
     for candidate in "${_REMOTE_USER:-}" "${_CONTAINER_USER:-}" vscode root; do
         if [ -n "${candidate}" ] && id -u "${candidate}" >/dev/null 2>&1; then

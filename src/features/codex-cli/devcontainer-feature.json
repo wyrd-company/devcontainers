@@ -1,14 +1,29 @@
 {
   "id": "codex-cli",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "name": "Codex CLI",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/codex-cli",
-  "description": "Installs the Codex CLI for the Dev Container user and ensures `codex` is on the PATH.",
+  "description": "Installs Codex CLI for the Dev Container user and runs a shared app-server under s6-overlay.",
   "options": {
     "version": {
       "type": "string",
       "default": "latest",
       "description": "Codex CLI version to install from npm."
+    },
+    "startAppServer": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run a shared app-server under s6-overlay. Requires an s6-overlay 3 base image."
+    },
+    "remoteControl": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable remote control on the shared app-server. Requires codex login with ChatGPT."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User that owns the CLI and app-server: remote user, container user, vscode, then root; or an explicit existing user."
     }
   },
   "dependsOn": {

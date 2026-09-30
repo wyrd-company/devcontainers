@@ -21,7 +21,7 @@ esac
 
 start_app_server="${STARTAPPSERVER:-true}"
 remote_control="${REMOTECONTROL:-false}"
-exec_server="${EXECSERVER-false}"
+exec_server="${EXECSERVER:-false}"
 exec_port="${EXECSERVERPORT:-4501}"
 app_port="${APPSERVERPORT:-4500}"
 dns_name="${DNSNAME:-}"

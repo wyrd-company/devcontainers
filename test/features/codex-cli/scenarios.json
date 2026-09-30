@@ -14,7 +14,8 @@
     "features": {
       "codex-cli": {
         "startAppServer": false,
-        "version": "0.154.0"
+        "version": "0.154.0",
+        "execServer": ""
       }
     }
   },

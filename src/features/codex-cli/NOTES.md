@@ -1,15 +1,11 @@
-Installs the npm-distributed OpenAI Codex CLI beneath the resolved Dev Container user's `${HOME}/.local` directory.
+Installs the npm-distributed Codex CLI in the selected user's `~/.local` directory and runs a shared app-server under s6-overlay 3 by default.
 
-```json
-{
-  "features": {
-    "ghcr.io/wyrd-company/devcontainers/codex-cli:1": {}
-  }
-}
-```
+`serviceUser` defaults to the remote user, container user, `vscode`, then `root`. Set both `startAppServer=false` and `execServer="false"` for CLI-only installation. `remoteControl=true` adds remote control to the shared server and requires ChatGPT sign-in with `codex login`.
 
-## Programmatic Codex sessions
+The TUI and `async-codex-mcp` use the private control socket under the same `CODEX_HOME` (default `~/.codex`). Set custom profile paths in `containerEnv`. Mount that native state directory to retain sign-in and history across rebuilds; this Feature declares no mounts.
 
-`async-codex-mcp` uses `codex app-server` and supports Codex `0.153.4` and `0.154.0`. The older `codex mcp-server` interface is absent in `0.154.0`. Use `async-codex-mcp` `0.6.0` or later with that CLI.
+`execServer` is a string: `"false"` disables the optional S6 service, `"true"` enables it without authentication, and other values supply quoted CLI flags. Secret files can be mounted at runtime. The installer does not read them; Codex validates and loads them when the service starts.
 
-For a reproducible tools workspace, set this Feature's `version` option to `0.154.0`. The Feature default remains `latest`; its tests generate the app-server schema to verify that the programmatic interface is available. The async wrapper also checks the app-server initialization handshake and reports a named startup failure if the interface is unavailable.
+`dnsName` integrates with Caddy. App-server uses `/`, retaining the shared private Unix socket through a same-user S6 socket bridge. Exec-server uses `/exec-server`. Listeners bind to IPv4 loopback; `appServerPort` defaults to 4500 and `execServerPort` to 4501. The Caddy and DNS readiness directories are required.
+
+The app-server Caddy route permits unauthenticated command execution. Exec-server authentication protects only its own route. The installer warns about each unauthenticated enabled route. Restrict access through Caddy or the network; `dnsName` does not authenticate clients.

@@ -1,14 +1,50 @@
 {
   "id": "codex-cli",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "name": "Codex CLI",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/codex-cli",
-  "description": "Installs the Codex CLI for the Dev Container user and ensures `codex` is on the PATH.",
+  "description": "Installs Codex CLI for the Dev Container user and runs a shared app-server under s6-overlay.",
   "options": {
     "version": {
       "type": "string",
       "default": "latest",
       "description": "Codex CLI version to install from npm."
+    },
+    "startAppServer": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run a shared app-server under s6-overlay. Requires an s6-overlay 3 base image."
+    },
+    "remoteControl": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable remote control on the shared app-server. Requires codex login with ChatGPT."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User that owns the CLI and both services: remote user, container user, vscode, then root; or an explicit existing user."
+    },
+    "execServer": {
+      "type": "string",
+      "default": "false",
+      "proposals": ["false", "true"],
+      "description": "Run an exec-server under S6: false disables it; true enables it without authentication; otherwise provide quoted CLI flags, such as --ws-auth capability-token --ws-token-file /run/secrets/exec-token."
+    },
+    "execServerPort": {
+      "type": "string",
+      "default": "4501",
+      "description": "IPv4 loopback port for the optional exec-server."
+    },
+    "dnsName": {
+      "type": "string",
+      "default": "",
+      "description": "Optional fully qualified DNS name exposed through the Caddy Feature. App-server uses / and exec-server uses /exec-server."
+    },
+    "appServerPort": {
+      "type": "string",
+      "default": "4500",
+      "description": "IPv4 loopback port for the app-server socket bridge when dnsName is set."
     }
   },
   "dependsOn": {
@@ -16,5 +52,8 @@
       "version": "24"
     }
   },
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/caddy"
+  ]
 }

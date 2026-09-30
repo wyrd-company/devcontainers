@@ -1,0 +1,34 @@
+{
+  "codex-cli-custom-options": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "codex-cli": {
+        "remoteControl": true,
+        "serviceUser": "root"
+      }
+    },
+    "remoteUser": "root"
+  },
+  "codex-cli-only": {
+    "image": "debian:bookworm",
+    "features": {
+      "codex-cli": {
+        "startAppServer": false,
+        "version": "0.154.0",
+        "execServer": ""
+      }
+    }
+  },
+  "codex-cli-exec-server": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "codex-cli": {
+        "startAppServer": false,
+        "execServer": "--ws-auth capability-token --ws-token-file '/run/secrets/sample token'",
+        "execServerPort": "4511",
+        "serviceUser": "root"
+      }
+    },
+    "remoteUser": "root"
+  }
+}

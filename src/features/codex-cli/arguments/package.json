@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "relationships": {
+    "references": "codex-cli"
+  },
+  "dependencies": {
+    "shell-quote": "^1.11.0"
+  }
+}

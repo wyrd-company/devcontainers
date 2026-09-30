@@ -23,7 +23,28 @@
     "serviceUser": {
       "type": "string",
       "default": "automatic",
-      "description": "User that owns the CLI and app-server: remote user, container user, vscode, then root; or an explicit existing user."
+      "description": "User that owns the CLI and both services: remote user, container user, vscode, then root; or an explicit existing user."
+    },
+    "execServer": {
+      "type": "string",
+      "default": "false",
+      "proposals": ["false", "true"],
+      "description": "Run an exec-server under S6: false disables it; true enables it without authentication; otherwise provide quoted CLI flags, such as --ws-auth capability-token --ws-token-file /run/secrets/exec-token."
+    },
+    "execServerPort": {
+      "type": "string",
+      "default": "4501",
+      "description": "IPv4 loopback port for the optional exec-server."
+    },
+    "dnsName": {
+      "type": "string",
+      "default": "",
+      "description": "Optional fully qualified DNS name exposed through the Caddy Feature. App-server uses / and exec-server uses /exec-server."
+    },
+    "appServerPort": {
+      "type": "string",
+      "default": "4500",
+      "description": "IPv4 loopback port for the app-server socket bridge when dnsName is set."
     }
   },
   "dependsOn": {
@@ -31,5 +52,8 @@
       "version": "24"
     }
   },
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/caddy"
+  ]
 }

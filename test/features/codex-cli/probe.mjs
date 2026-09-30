@@ -3,15 +3,28 @@
 //   verifies: codex-cli
 // ---
 import net from "node:net";
+import fs from "node:fs";
+import path from "node:path";
 import WebSocket from "ws";
 const clients = [];
-async function connect() {
-  const socket = new WebSocket("ws://localhost", {
-    createConnection: () =>
-      net.createConnection(
-        "/home/vscode/.codex/app-server-control/app-server-control.sock",
-      ),
-  });
+async function connect(endpoint) {
+  const socket = new WebSocket(
+    endpoint || "ws://localhost",
+    endpoint
+      ? { ca: fs.readFileSync(process.env.SAMPLE_CA_FILE) }
+      : {
+          createConnection: () =>
+            net.createConnection(
+              path.join(
+                fs.realpathSync(
+                  process.env.CODEX_HOME || "/home/vscode/.codex",
+                ),
+                "app-server-control",
+                "app-server-control.sock",
+              ),
+            ),
+        },
+  );
   clients.push(socket);
   await new Promise((resolve, reject) => {
     socket.once("open", resolve);
@@ -41,7 +54,7 @@ async function connect() {
   return request;
 }
 try {
-  const a = await connect();
+  const a = await connect(process.env.SAMPLE_APP_ENDPOINT);
   const b = await connect();
   const status = await a("remoteControl/status/read", {});
   if (status.status !== "disabled")

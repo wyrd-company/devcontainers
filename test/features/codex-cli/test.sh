@@ -28,4 +28,5 @@ check "longrun service" grep -Fxq longrun /etc/s6-overlay/s6-rc.d/codex-cli/type
 check "service user and home" grep -Fq "s6-setuidgid ${FEATURE_USER} env HOME=${USER_HOME} USER=${FEATURE_USER}" /etc/s6-overlay/s6-rc.d/codex-cli/run
 check "canonical control socket listener" grep -Fq 'app-server --listen unix://' /usr/local/bin/codex-cli-service
 check "remote control is opt-in" bash -c '! grep -q -- --remote-control /usr/local/bin/codex-cli-service'
+check "exec-server is opt-in" test ! -e /etc/s6-overlay/user-bundles.d/user/contents.d/codex-exec-server
 reportResults

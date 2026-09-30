@@ -53,6 +53,13 @@ assert_install_rejected() {
     fi
     printf '%s\n' "${output}" | grep -Fq "${expected}"
 }
+assert_install_rejected 'execServerPort must be an integer' EXECSERVERPORT=sample-invalid
+assert_install_rejected 'appServerPort must be an integer' APPSERVERPORT=0
+assert_install_rejected 'appServerPort and execServerPort must differ' DNSNAME=sample-codex.example.test EXECSERVER=true APPSERVERPORT=4501
+assert_install_rejected 'dnsName requires an enabled' DNSNAME=sample-codex.example.test STARTAPPSERVER=false EXECSERVER=false
+assert_install_rejected 'dnsName requires the Caddy Feature' DNSNAME=sample-codex.example.test
+assert_install_rejected 'dnsName contains unsupported DNS characters' DNSNAME=$'sample-codex.example.test\n}'
+assert_install_rejected 'Unable to parse execServer arguments' EXECSERVER='--ws-issuer sample; sample-command'
 assert_install_rejected 'startAppServer must be true or false' STARTAPPSERVER=sample-invalid
 assert_install_rejected 'remoteControl must be true or false' REMOTECONTROL=sample-invalid
 assert_install_rejected 'remoteControl requires startAppServer' STARTAPPSERVER=false REMOTECONTROL=true
@@ -68,3 +75,5 @@ docker run --rm --entrypoint /bin/bash \
     test "$(_REMOTE_USER= _CONTAINER_USER= pick_devcontainer_user automatic)" = root
 '
 echo 'Codex service runtime, restart, environment, and option checks passed.'
+"${repo_root}/scripts/test-codex-exec-runtime.sh" "${base_image}"
+"${repo_root}/scripts/test-codex-caddy-runtime.sh" "${base_image}"

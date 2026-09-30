@@ -17,5 +17,17 @@
         "version": "0.154.0"
       }
     }
+  },
+  "codex-cli-exec-server": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "codex-cli": {
+        "startAppServer": false,
+        "execServer": "--ws-auth capability-token --ws-token-file '/run/secrets/sample token'",
+        "execServerPort": "4511",
+        "serviceUser": "root"
+      }
+    },
+    "remoteUser": "root"
   }
 }

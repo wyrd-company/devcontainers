@@ -141,4 +141,31 @@ printf '%s' "${console}" | grep -qi '<!doctype html' \
 
 printf 'Console served by %s as vscode.\n' "${installed_version}"
 
+# A restart must stop the server it supervises. A launcher that leaves the
+# server behind keeps the port bound and the replacement crash-loops.
+docker exec "${name}" /command/s6-svc -r /run/service/t3code-server
+deadline=$((SECONDS + 30))
+while docker exec "${name}" kill -0 "${t3_pid}" 2>/dev/null; do
+    if ((SECONDS >= deadline)); then
+        report_container_state
+        fail "T3 Code serve process ${t3_pid} survived an s6 restart."
+    fi
+    sleep 1
+done
+
+ready=false
+deadline=$((SECONDS + 120))
+while ((SECONDS < deadline)); do
+    if fetch_console >/dev/null 2>&1; then
+        ready=true
+        break
+    fi
+    sleep 1
+done
+if [ "${ready}" != true ]; then
+    report_container_state
+    fail "Console did not serve again within 120 seconds of an s6 restart."
+fi
+printf 'Console recovered after an s6 restart.\n'
+
 printf 'T3 Code fork runtime checks passed.\n'

@@ -1,6 +1,6 @@
 {
   "id": "t3code-server",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "name": "T3 Code Server",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/t3code-server",
   "description": "Installs T3 Code globally and configures an s6-overlay service that runs as the selected user on Debian/Ubuntu images.",

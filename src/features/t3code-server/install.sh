@@ -47,9 +47,18 @@ env \
 
 t3_binary=/usr/local/bin/t3
 [ -x "${t3_binary}" ] || err "T3 Code was not installed at ${t3_binary}."
+t3_package=/usr/local/lib/node_modules/t3
+[ -f "${t3_package}/package.json" ] || err "T3 Code package was not installed at ${t3_package}."
+
+install -d -m 0755 /usr/local/lib/t3code-server
+install -m 0755 "$(dirname "$0")/resolve-executable.cjs" /usr/local/lib/t3code-server/resolve-executable.cjs
+server_executable="$(node /usr/local/lib/t3code-server/resolve-executable.cjs "${t3_package}" "${t3_binary}")"
+[ -x "${server_executable}" ] || err "T3 Code server executable is not runnable: ${server_executable}."
+log "Service will exec ${server_executable}"
 
 printf -v quoted_home '%q' "${service_home}"
 printf -v quoted_t3 '%q' "${t3_binary}"
+printf -v quoted_package '%q' "${t3_package}"
 printf -v quoted_port '%q' "${PORT}"
 printf -v quoted_host '%q' "${HOST}"
 printf -v quoted_mode '%q' "${SERVEMODE}"
@@ -72,7 +81,9 @@ if [ -n "\${mode}" ]; then
     args+=(--mode="\${mode}")
 fi
 
-exec ${quoted_t3} "\${args[@]}" "\$@"
+# Resolved at each start so that an in-place upgrade of the package is used.
+server_executable="\$(node /usr/local/lib/t3code-server/resolve-executable.cjs ${quoted_package} ${quoted_t3})"
+exec "\${server_executable}" "\${args[@]}" "\$@"
 EOF
 chmod 0755 /usr/local/bin/t3code-server
 

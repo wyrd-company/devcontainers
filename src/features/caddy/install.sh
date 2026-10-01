@@ -59,33 +59,70 @@ case "${ACMECAROOT}" in
     *$'\n'*|*$'\r'*|*'{'*|*'}'*) err "acmeCaRoot contains unsupported Caddyfile characters." ;;
 esac
 
+case "$(uname -m)" in
+    x86_64|amd64) architecture=amd64 ;;
+    arm64|aarch64) architecture=arm64 ;;
+    *) err "Unsupported architecture: $(uname -m)." ;;
+esac
+
+if [ "${requested_version}" != latest ]; then
+    [[ "${requested_version}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] \
+        || err "version must be 'latest' or a semantic version such as '2.11.4'."
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y --no-install-recommends \
-    apt-transport-https \
     ca-certificates \
     curl \
-    debian-archive-keyring \
-    debian-keyring \
-    gnupg \
-    inotify-tools
+    inotify-tools \
+    jq
 
-curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
-    | gpg --dearmor --yes --output /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
-    --output /etc/apt/sources.list.d/caddy-stable.list
-chmod a+r \
-    /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
-    /etc/apt/sources.list.d/caddy-stable.list
+download_dir="$(mktemp -d)"
+trap 'rm -rf "${download_dir}"' EXIT
 
-apt-get update -y
+# Caddy's Cloudsmith apt repository is signed with an expired subkey, so the
+# package is installed from the GitHub release and verified against its checksums.
 if [ "${requested_version}" = latest ]; then
-    apt-get install -y --no-install-recommends caddy
+    log "Resolving the latest stable Caddy release..."
+    curl_args=(--fail --location --silent --show-error --retry 3 -H "Accept: application/vnd.github+json")
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        curl_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    fi
+    normalized_version="$(curl "${curl_args[@]}" \
+        https://api.github.com/repos/caddyserver/caddy/releases/latest \
+        | jq -r '.tag_name // empty | ltrimstr("v")')" \
+        || err "Unable to query Caddy releases. Set 'version' to a published version and retry."
+    [ -n "${normalized_version}" ] || err "Unable to resolve the latest Caddy release."
 else
-    apt-get install -y --no-install-recommends "caddy=${requested_version}"
+    normalized_version="${requested_version#v}"
 fi
 
+package_name="caddy_${normalized_version}_linux_${architecture}.deb"
+checksums_name="caddy_${normalized_version}_checksums.txt"
+release_url="https://github.com/caddyserver/caddy/releases/download/v${normalized_version}"
+package="${download_dir}/${package_name}"
+checksums_file="${download_dir}/${checksums_name}"
+
+log "Downloading Caddy ${normalized_version} for Linux ${architecture}."
+curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
+    --output "${checksums_file}" "${release_url}/${checksums_name}"
+curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
+    --output "${package}" "${release_url}/${package_name}"
+
+expected_checksum="$(awk -v package="${package_name}" '$2 == package { print $1 }' "${checksums_file}")"
+[[ "${expected_checksum}" =~ ^[0-9a-fA-F]{128}$ ]] \
+    || err "No valid checksum was published for ${package_name}."
+printf '%s  %s\n' "${expected_checksum}" "${package}" | sha512sum --check --status \
+    || err "Checksum verification failed for ${package_name}."
+
+apt-get install -y --no-install-recommends "${package}"
+
 command -v caddy >/dev/null 2>&1 || err "Caddy installation failed."
+case "$(caddy version)" in
+    "v${normalized_version}"|"v${normalized_version} "*) ;;
+    *) err "Installed Caddy reports '$(caddy version)', expected v${normalized_version}." ;;
+esac
 id -u caddy >/dev/null 2>&1 || err "The Caddy package did not create its service user."
 
 config_user="$(pick_config_user "${CONFIGUSER}")"

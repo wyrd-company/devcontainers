@@ -1,6 +1,6 @@
 {
   "id": "caddy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Caddy Reverse Proxy",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/caddy",
   "description": "Installs Caddy with an s6-supervised config watcher for dynamically managed development reverse proxies.",
@@ -8,7 +8,7 @@
     "version": {
       "type": "string",
       "default": "latest",
-      "description": "Caddy package version to install. `latest` installs the current stable package."
+      "description": "Caddy release version to install. `latest` installs the current stable release."
     },
     "acmeCa": {
       "type": "string",

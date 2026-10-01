@@ -1,6 +1,6 @@
 # Caddy Reverse Proxy
 
-Installs Caddy from its official stable Debian repository and supervises it with s6-overlay. A second s6 service watches a well-known fragment directory and gracefully reloads valid configuration changes through a permissioned Unix admin socket.
+Installs Caddy's official Debian package from the GitHub release, verified against the release's SHA-512 checksums, and supervises it with s6-overlay. A second s6 service watches a well-known fragment directory and gracefully reloads valid configuration changes through a permissioned Unix admin socket.
 
 The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed.
 
@@ -22,7 +22,7 @@ Integrations that require automatic HTTPS should place each required DNS name on
 
 | Option       | Type   | Default     | Description                                                                                  |
 | ------------ | ------ | ----------- | -------------------------------------------------------------------------------------------- |
-| `version`    | string | `latest`    | Stable Caddy package version.                                                                |
+| `version`    | string | `latest`    | Stable Caddy release version, such as `2.11.4`.                                              |
 | `acmeCa`     | string | `""`        | Optional ACME directory URL for automatic HTTPS.                                             |
 | `acmeCaRoot` | string | `""`        | Optional in-container path to the public CA root certificate protecting the ACME endpoint.   |
 | `configUser` | string | `automatic` | User allowed to manage fragments. Automatic selection prefers the Dev Container remote user. |

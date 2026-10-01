@@ -14,8 +14,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  # After CI, publish only when the image sources changed. The schedule and
+  # manual runs always publish so that the image picks up package updates.
+  gate:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+    steps:
+      - name: Download CI change selection
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-changes
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Decide whether to publish
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "${EVENT_NAME}" != workflow_run ]; then
+            publish=true
+          elif [ -f ci-changes.env ]; then
+            publish="$(sed -n 's/^images=//p' ci-changes.env)"
+          else
+            echo "::warning::CI change selection is unavailable; publishing the base image."
+            publish=true
+          fi
+          case "${publish}" in
+            true|false) ;;
+            *) echo "::error::Unexpected images value '${publish}'."; exit 1 ;;
+          esac
+          echo "Publish base image: ${publish}"
+          echo "publish=${publish}" >>"${GITHUB_OUTPUT}"
+
+  publish:
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

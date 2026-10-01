@@ -25,10 +25,19 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           if [ "${EVENT_NAME}" = workflow_dispatch ]; then
-            python3 scripts/ci-changes.py --all >>"${GITHUB_OUTPUT}"
+            python3 scripts/ci-changes.py --all >ci-changes.env
           else
-            python3 scripts/ci-changes.py "${BASE_SHA}" "${GITHUB_SHA}" >>"${GITHUB_OUTPUT}"
+            python3 scripts/ci-changes.py "${BASE_SHA}" "${GITHUB_SHA}" >ci-changes.env
           fi
+          cat ci-changes.env >>"${GITHUB_OUTPUT}"
+
+      # The image workflow reads this to decide whether to publish the base image.
+      - name: Upload change selection
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-changes
+          path: ci-changes.env
+          retention-days: 7
 
   test-t3code-package-source-resolver:
     needs: changes

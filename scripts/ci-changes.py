@@ -4,10 +4,15 @@
 Usage: ci-changes.py --all
        ci-changes.py <base-sha> <head-sha>
 
-Prints `targets=<JSON array>` for $GITHUB_OUTPUT. Targets are Feature ids plus
-`base-image` and `template`. A change to shared test infrastructure, the base
-image, or a path this script does not recognize selects every target, as does
-a base commit that is missing or not in the checked-out history.
+Prints `targets=<JSON array>` and `images=<true|false>` for $GITHUB_OUTPUT.
+Targets are Feature ids plus `base-image` and `template`. A change to shared
+test infrastructure, the base image, or a path this script does not recognize
+selects every target, as does a base commit that is missing or not in the
+checked-out history.
+
+`images` tells the image workflow whether to publish the base image. It is true
+when the image sources or the image workflow changed, or when the change cannot
+be determined.
 """
 
 import json
@@ -35,6 +40,12 @@ IGNORED = (
     ".github/",
     "LICENSES/",
     "scripts/cleanup-ghcr-images.sh",
+)
+
+# Paths whose change requires publishing the base image.
+IMAGE_SOURCES = (
+    "src/images/",
+    ".github/workflows/images.yml",
 )
 
 # Runtime scripts whose name is not a Feature id: scripts/test-<name>-runtime.sh.
@@ -121,16 +132,24 @@ def select(paths):
     return sorted(add_dependents(selected, features))
 
 
+def images_changed(paths):
+    return paths is None or any(path.startswith(IMAGE_SOURCES) for path in paths)
+
+
 def main(argv):
     if argv == ["--all"]:
-        targets = all_targets()
+        paths = None
     elif len(argv) == 2:
-        targets = select(changed_paths(argv[0], argv[1]))
+        paths = changed_paths(argv[0], argv[1])
     else:
         print(__doc__, file=sys.stderr)
         return 2
+    targets = select(paths)
+    images = images_changed(paths)
     print(f"Selected targets: {', '.join(targets) or '(none)'}", file=sys.stderr)
+    print(f"Publish base image: {str(images).lower()}", file=sys.stderr)
     print("targets=" + json.dumps(targets, separators=(",", ":")))
+    print("images=" + str(images).lower())
     return 0
 
 

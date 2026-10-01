@@ -82,7 +82,7 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn('docker logs "${name}"', runtime_test)
         self.assertRegex(
             workflow,
-            r"(?ms)^  test-t3code-runtime:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10$",
+            r"(?m)^  test-t3code-runtime:\n(?:    (?!timeout-minutes:)\S.*\n)*    timeout-minutes: 10$",
         )
 
 

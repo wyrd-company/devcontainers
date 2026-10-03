@@ -45,20 +45,12 @@ install -m 0755 "$(dirname "$0")/resolve-executable.cjs" "${lib_dir}/resolve-exe
 install -m 0755 "$(dirname "$0")/resolve-package-source.py" "${lib_dir}/resolve-package-source.py"
 install -m 0755 "$(dirname "$0")/t3code-server-update" /usr/local/bin/t3code-server-update
 
-mapfile -t resolution < <(python3 "${lib_dir}/resolve-package-source.py" "${PACKAGESOURCE}" "${VERSION}" "${arch}")
-[ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve the T3 Code package source."
+mapfile -t resolution < <(python3 "${lib_dir}/resolve-package-source.py" "${VERSION}" "${arch}")
+[ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve T3 Code ${VERSION}."
 package_kind="${resolution[0]}"
 package_source="${resolution[1]}"
 resolved_version="${resolution[2]}"
 checksums_url="${resolution[3]}"
-
-# The Node Feature puts node and npm on the container PATH, which sudo replaces
-# with its secure_path. The update command adds this directory back so that an
-# npm runtime can be installed through sudo.
-node_dir=""
-if command -v node >/dev/null 2>&1; then
-    node_dir="$(dirname "$(command -v node)")"
-fi
 
 # The runtime tool and the update command read this file; the service wrapper
 # exports the server settings from it.
@@ -66,11 +58,9 @@ cat >"${lib_dir}/config.env" <<EOF
 T3CODE_SERVER_USER=$(printf '%q' "${service_user}")
 T3CODE_SERVER_HOME=$(printf '%q' "${service_home}")
 T3CODE_SERVER_ARCH=$(printf '%q' "${arch}")
-T3CODE_SERVER_PACKAGE_SOURCE=$(printf '%q' "${PACKAGESOURCE}")
 T3CODE_SERVER_PORT=$(printf '%q' "${PORT}")
 T3CODE_SERVER_HOST=$(printf '%q' "${HOST}")
 T3CODE_SERVER_MODE=$(printf '%q' "${SERVEMODE}")
-T3CODE_SERVER_NODE_DIR=$(printf '%q' "${node_dir}")
 EOF
 chmod 0644 "${lib_dir}/config.env"
 

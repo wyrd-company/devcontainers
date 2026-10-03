@@ -8,12 +8,7 @@
     "version": {
       "type": "string",
       "default": "latest",
-      "description": "T3 Code version to install. With upstream, `latest` follows GitHub's latest upstream release. With a GitHub source, `latest` selects the greatest stable `server/*-wyrd.*` tag by SemVer precedence."
-    },
-    "packageSource": {
-      "type": "string",
-      "default": "",
-      "description": "Optional GitHub repository source such as `github:wyrd-company/t3code`, or an npm package spec or tarball URL. Empty installs upstream T3 Code."
+      "description": "T3 Code version to install. An exact version or `latest` installs the upstream release archive, `latest` following GitHub's latest upstream release. Any other value is an npm range or dist-tag installed as `t3@<version>`."
     },
     "port": {
       "type": "string",

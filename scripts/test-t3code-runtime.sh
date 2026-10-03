@@ -4,18 +4,16 @@
 #
 # Two clean devcontainers are built from the Feature source and started:
 #
-# 1. The fork: packageSource github:wyrd-company/t3code with version latest.
-#    Proves the console is served by that installation as the service user,
-#    and that an s6 restart stops the server and brings the console back.
-# 2. Upstream: an exact release archive. Proves the service user can run the
-#    update command through sudo and nothing else, that the update moves the
-#    service to a newer release archive, and that the console comes back on
-#    it.
+# 1. npm: a version range installed through npm. Proves the console is served
+#    by that installation as the service user, and that an s6 restart stops
+#    the server rather than only the npm package's Node shim, and brings the
+#    console back.
+# 2. Release archive: an exact upstream version. Proves the service user can
+#    run the update command through sudo and nothing else, that the update
+#    moves the service to a newer release archive as the service user, and
+#    that the console comes back on it.
 #
-# Scope stops at the console. Whether a client can register its own MCP
-# endpoint and have an agent call it is proven by the fork's own consumer probe,
-# apps/server/scripts/consumer-live-probe.sh, which drives a session through the
-# server rather than running a harness beside it.
+# Scope stops at the console.
 
 set -euo pipefail
 
@@ -23,6 +21,8 @@ repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 base_image="${BASE_IMAGE:-$("${repo_root}/scripts/build-base-image.sh" noble)}"
 image_prefix="${1:-devcontainers-t3code-runtime}"
 port=3773
+npm_range="<=0.0.45"
+npm_version=0.0.45
 upstream_old_version=0.0.44
 upstream_new_version=0.0.45
 workspace="$(mktemp -d)"
@@ -161,34 +161,24 @@ assert_console_html() {
         || fail "Console root did not return an HTML document."
 }
 
-# --- Scenario 1: the fork, latest -------------------------------------------
+# --- Scenario 1: an npm range ----------------------------------------------
 
-# Resolve independently of the container so the assertion below can disagree
-# with what the Feature actually installed.
-mapfile -t resolution < <(
-    python3 "${repo_root}/src/features/t3code-server/resolve-package-source.py" \
-        github:wyrd-company/t3code latest x64
-)
-expected_version="${resolution[2]}"
-printf 'Fork latest resolves to %s (%s).\n' "${expected_version}" "${resolution[0]}"
-
-start_container fork "$(cat <<EOF
+start_container npm "$(cat <<EOF
 {
-    "packageSource": "github:wyrd-company/t3code",
-    "version": "latest",
+    "version": "${npm_range}",
     "serveMode": "web",
     "host": "127.0.0.1",
     "port": "${port}"
 }
 EOF
 )"
-wait_for_console "fork ${expected_version}"
+wait_for_console "npm ${npm_range}"
 
 installed_version="$(docker exec "${name}" /usr/local/bin/t3 --version)"
-[ "${installed_version}" = "t3 v${expected_version}" ] \
-    || fail "Feature installed '${installed_version}' but latest resolves to 't3 v${expected_version}'."
+[ "${installed_version}" = "t3 v${npm_version}" ] \
+    || fail "Feature installed '${installed_version}' but ${npm_range} resolves to 't3 v${npm_version}'."
 
-assert_serve "${expected_version}" web
+assert_serve "${npm_version}" web
 assert_console_html
 printf 'Console served by %s as vscode.\n' "${installed_version}"
 
@@ -204,27 +194,10 @@ while docker exec "${name}" test -d "/proc/${old_pid}"; do
     fi
     sleep 1
 done
-wait_for_console "fork after an s6 restart"
-
-# The fork publishes no archive yet, so an update reinstalls through npm. sudo
-# replaces the container PATH, so this proves the command still finds npm, and
-# that the service user, not root, writes the runtime tree.
-old_pid="$(serve_pid)"
-docker exec --user vscode "${name}" sudo -n /usr/local/bin/t3code-server-update --force "${expected_version}" \
-    || { report_container_state; fail "t3code-server-update --force ${expected_version} failed."; }
-deadline=$((SECONDS + 60))
-while ((SECONDS < deadline)) && docker exec "${name}" test -d "/proc/${old_pid}"; do
-    sleep 1
-done
-docker exec "${name}" test ! -d "/proc/${old_pid}" \
-    || fail "The previous T3 Code serve process (pid ${old_pid}) survived the reinstall restart."
-wait_for_console "fork after an npm reinstall through sudo"
-assert_serve "${expected_version}" web
-root_owned="$(docker exec "${name}" find /home/vscode/.t3/runtime -user root)"
-[ -z "${root_owned}" ] || fail "The update left root-owned files in the runtime tree: ${root_owned}"
+wait_for_console "npm after an s6 restart"
 stop_container
 
-# --- Scenario 2: upstream archive, then an in-container update ---------------
+# --- Scenario 2: release archive, then an in-container update ---------------
 
 start_container upstream "$(cat <<EOF
 {
@@ -274,6 +247,8 @@ printf '%s\n' "${status}" | grep -q "^selected version: ${upstream_new_version}$
     || fail "The update command does not report ${upstream_new_version} as selected: ${status}"
 assert_serve "${upstream_new_version}" web
 assert_console_html
+root_owned="$(docker exec "${name}" find /home/vscode/.t3/runtime -user root)"
+[ -z "${root_owned}" ] || fail "The update left root-owned files in the runtime tree: ${root_owned}"
 printf 'Console served by %s after the in-container update.\n' "${installed_version}"
 
 printf 'T3 Code runtime checks passed.\n'

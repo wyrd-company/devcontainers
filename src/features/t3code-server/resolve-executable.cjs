@@ -9,8 +9,8 @@
 // dependency and does not forward signals to it. Under s6 that shim is the
 // supervised process, so a restart kills the shim and orphans the server, which
 // keeps the port. For packages that declare those platform binaries the
-// launcher execs the binary directly. Packages without them, such as the
-// wyrd-company/t3code fork, run the server in-process from their own bin.
+// launcher execs the binary directly. A package without them runs the server
+// in-process from its own bin.
 
 const { dirname, join } = require("node:path");
 

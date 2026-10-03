@@ -27,30 +27,12 @@
       }
     }
   },
-  "t3code-server-fork-package-source": {
-    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
-    "features": {
-      "t3code-server": {
-        "packageSource": "github:wyrd-company/t3code",
-        "version": "0.0.42-wyrd.2"
-      }
-    }
-  },
-  "t3code-server-fork-latest": {
-    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
-    "features": {
-      "t3code-server": {
-        "packageSource": "github:wyrd-company/t3code",
-        "version": "latest",
-        "serveMode": "web"
-      }
-    }
-  },
   "t3code-server-npm-package": {
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "t3code-server": {
-        "packageSource": "t3@0.0.45"
+        "version": "<=0.0.45",
+        "serveMode": "web"
       }
     }
   }

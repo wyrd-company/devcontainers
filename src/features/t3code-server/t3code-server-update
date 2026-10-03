@@ -2,9 +2,9 @@
 #
 # Update the T3 Code service inside the container.
 #
-# Resolves a version from the package source the Feature was installed with,
-# installs it as a pinned runtime beside the running one, selects it, and
-# restarts the s6 service so it starts the new version.
+# Resolves an upstream release, installs it as a pinned runtime beside the
+# running one, selects it, and restarts the s6 service so it starts the new
+# version.
 #
 # Run through sudo, root does one thing: restart the service. Resolving,
 # installing, and selecting run as the service user, in the runtime tree that
@@ -16,9 +16,6 @@ lib_dir=/usr/local/lib/t3code-server
 config_file="${T3CODE_SERVER_CONFIG:-${lib_dir}/config.env}"
 # shellcheck disable=SC1090
 source "${config_file}"
-if [ -n "${T3CODE_SERVER_NODE_DIR:-}" ]; then
-    PATH="${T3CODE_SERVER_NODE_DIR}:${PATH}"
-fi
 runtime="${lib_dir}/t3code-runtime"
 service_dir=/run/service/t3code-server
 
@@ -27,14 +24,13 @@ usage() {
 usage: t3code-server-update [--force] [--no-restart] [VERSION|latest]
        t3code-server-update --status
 
-Installs VERSION (default: latest) from the package source the Feature was
-configured with and switches the service to it.
+Installs upstream T3 Code VERSION (default: latest) and switches the service
+to it.
 
   --force       Reinstall VERSION even when it is already installed.
   --no-restart  Select the version without restarting the service; it takes
                 effect on the next service start.
-  --status      Show the selected version, installed versions, and the
-                package source, then exit.
+  --status      Show the selected and installed versions, then exit.
 EOF
     exit 2
 }
@@ -69,7 +65,6 @@ done
 
 if [ "${status}" = true ]; then
     [ -z "${requested}" ] || usage
-    printf 'package source: %s\n' "${T3CODE_SERVER_PACKAGE_SOURCE:-t3 (upstream)}"
     printf 'selected version: %s\n' "$("${runtime}" selected-version 2>/dev/null || echo none)"
     printf 'installed versions:\n'
     "${runtime}" versions | sed 's/^/  /'
@@ -83,9 +78,9 @@ fi
 
 requested="${requested:-latest}"
 
-# The version must not reach npm as anything but an exact version: an npm spec
-# such as `npm:<package>` or a tarball URL names arbitrary code, and this
-# command runs through sudo.
+# Updates install release archives only, so the version must be `latest` or
+# exact. Anything else would resolve to an npm install, and through sudo an npm
+# spec can name arbitrary code.
 if [[ "${requested}" =~ ^[vV]([0-9].*)$ ]]; then
     requested="${BASH_REMATCH[1]}"
 fi
@@ -100,13 +95,13 @@ as_service_user() {
         "$@"
     else
         runuser --user "${T3CODE_SERVER_USER}" -- \
-            env HOME="${T3CODE_SERVER_HOME}" USER="${T3CODE_SERVER_USER}" LOGNAME="${T3CODE_SERVER_USER}" PATH="${PATH}" "$@"
+            env HOME="${T3CODE_SERVER_HOME}" USER="${T3CODE_SERVER_USER}" LOGNAME="${T3CODE_SERVER_USER}" "$@"
     fi
 }
 
 mapfile -t resolution < <(
     as_service_user python3 "${lib_dir}/resolve-package-source.py" \
-        "${T3CODE_SERVER_PACKAGE_SOURCE:-}" "${requested}" "${T3CODE_SERVER_ARCH}"
+        "${requested}" "${T3CODE_SERVER_ARCH}"
 )
 [ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve T3 Code ${requested}."
 kind="${resolution[0]}"
@@ -121,9 +116,6 @@ case "${kind}" in
         else
             as_service_user "${runtime}" install-archive "${version}" "${source}" "${checksums}"
         fi
-        ;;
-    npm)
-        version="$(as_service_user "${runtime}" install-npm "${source}")"
         ;;
     *)
         err "Unknown package kind '${kind}'."

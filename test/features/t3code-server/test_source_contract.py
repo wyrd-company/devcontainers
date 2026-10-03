@@ -107,6 +107,17 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn('"${runtime}" select', update)
         self.assertIn("/command/s6-svc -r", update)
 
+    def test_update_command_leaves_only_the_restart_to_root(self):
+        update = (FEATURE / "t3code-server-update").read_text()
+        after_root_check = update.split('err "Run this command as root, for example with sudo."', 1)[1]
+        for line in after_root_check.splitlines():
+            if '"${runtime}"' in line or "resolve-package-source.py" in line:
+                with self.subTest(line=line.strip()):
+                    self.assertIn("as_service_user", line)
+        self.assertIn('runuser --user "${T3CODE_SERVER_USER}"', update)
+        self.assertIn('PATH="${T3CODE_SERVER_NODE_DIR}:${PATH}"', update)
+        self.assertIn("T3CODE_SERVER_NODE_DIR=", (FEATURE / "install.sh").read_text())
+
     def test_npm_runtime_execs_the_platform_binary_from_its_own_prefix(self):
         installer = (FEATURE / "install.sh").read_text()
         runtime = (FEATURE / "t3code-runtime").read_text()

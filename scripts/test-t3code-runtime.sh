@@ -205,6 +205,23 @@ while docker exec "${name}" test -d "/proc/${old_pid}"; do
     sleep 1
 done
 wait_for_console "fork after an s6 restart"
+
+# The fork publishes no archive yet, so an update reinstalls through npm. sudo
+# replaces the container PATH, so this proves the command still finds npm, and
+# that the service user, not root, writes the runtime tree.
+old_pid="$(serve_pid)"
+docker exec --user vscode "${name}" sudo -n /usr/local/bin/t3code-server-update --force "${expected_version}" \
+    || { report_container_state; fail "t3code-server-update --force ${expected_version} failed."; }
+deadline=$((SECONDS + 60))
+while ((SECONDS < deadline)) && docker exec "${name}" test -d "/proc/${old_pid}"; do
+    sleep 1
+done
+docker exec "${name}" test ! -d "/proc/${old_pid}" \
+    || fail "The previous T3 Code serve process (pid ${old_pid}) survived the reinstall restart."
+wait_for_console "fork after an npm reinstall through sudo"
+assert_serve "${expected_version}" web
+root_owned="$(docker exec "${name}" find /home/vscode/.t3/runtime -user root)"
+[ -z "${root_owned}" ] || fail "The update left root-owned files in the runtime tree: ${root_owned}"
 stop_container
 
 # --- Scenario 2: upstream archive, then an in-container update ---------------

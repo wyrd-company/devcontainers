@@ -52,6 +52,14 @@ package_source="${resolution[1]}"
 resolved_version="${resolution[2]}"
 checksums_url="${resolution[3]}"
 
+# The Node Feature puts node and npm on the container PATH, which sudo replaces
+# with its secure_path. The update command adds this directory back so that an
+# npm runtime can be installed through sudo.
+node_dir=""
+if command -v node >/dev/null 2>&1; then
+    node_dir="$(dirname "$(command -v node)")"
+fi
+
 # The runtime tool and the update command read this file; the service wrapper
 # exports the server settings from it.
 cat >"${lib_dir}/config.env" <<EOF
@@ -62,6 +70,7 @@ T3CODE_SERVER_PACKAGE_SOURCE=$(printf '%q' "${PACKAGESOURCE}")
 T3CODE_SERVER_PORT=$(printf '%q' "${PORT}")
 T3CODE_SERVER_HOST=$(printf '%q' "${HOST}")
 T3CODE_SERVER_MODE=$(printf '%q' "${SERVEMODE}")
+T3CODE_SERVER_NODE_DIR=$(printf '%q' "${node_dir}")
 EOF
 chmod 0644 "${lib_dir}/config.env"
 

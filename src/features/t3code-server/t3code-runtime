@@ -56,6 +56,16 @@ EOF
     exit 2
 }
 
+# Runs a command as the service user. The update command already runs this
+# tool as that user; only the Feature installer runs it as root.
+as_service_user() {
+    if [ "$(id -u)" -eq 0 ]; then
+        runuser --user "${T3CODE_SERVER_USER}" -- env HOME="${T3CODE_SERVER_HOME}" "$@"
+    else
+        "$@"
+    fi
+}
+
 own_as_service_user() {
     if [ "$(id -u)" -eq 0 ]; then
         chown -R "${T3CODE_SERVER_USER}:$(id -gn "${T3CODE_SERVER_USER}")" "$@"
@@ -137,7 +147,6 @@ install_archive() {
 # a restart would kill that shim and orphan the server with the port bound.
 install_npm() {
     local spec="$1" version target executable
-    [ "$(id -u)" -eq 0 ] || err "install-npm must run as root."
     command -v npm >/dev/null 2>&1 || err "npm is required to install ${spec}."
     ensure_tree
 
@@ -150,12 +159,12 @@ install_npm() {
         npm install --global --prefix "${stage_dir}/npm" "${spec}" >&2
     [ -x "${stage_dir}/npm/bin/t3" ] || err "npm did not install a t3 executable."
 
-    version="$(runuser --user "${T3CODE_SERVER_USER}" -- env HOME="${T3CODE_SERVER_HOME}" "${stage_dir}/npm/bin/t3" --version)"
+    version="$(as_service_user "${stage_dir}/npm/bin/t3" --version)"
     version="${version#t3 v}"
     require_version "${version}"
 
-    # Everything is written inside the staging directory, which only root can
-    # write, before it moves into the service user's tree.
+    # Everything is written inside the staging directory before it moves into
+    # place, so a killed install never looks complete.
     target="$(version_dir "${version}")"
     executable="$(node "${resolver}" "${stage_dir}/npm/lib/node_modules/t3" "${stage_dir}/npm/bin/t3")"
     [ -x "${executable}" ] || err "T3 Code executable is not runnable: ${executable}."

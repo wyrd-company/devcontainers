@@ -5,6 +5,10 @@
 # Resolves a version from the package source the Feature was installed with,
 # installs it as a pinned runtime beside the running one, selects it, and
 # restarts the s6 service so it starts the new version.
+#
+# Run through sudo, root does one thing: restart the service. Resolving,
+# installing, and selecting run as the service user, in the runtime tree that
+# user owns, so root never writes where that user can redirect the write.
 
 set -euo pipefail
 
@@ -12,6 +16,9 @@ lib_dir=/usr/local/lib/t3code-server
 config_file="${T3CODE_SERVER_CONFIG:-${lib_dir}/config.env}"
 # shellcheck disable=SC1090
 source "${config_file}"
+if [ -n "${T3CODE_SERVER_NODE_DIR:-}" ]; then
+    PATH="${T3CODE_SERVER_NODE_DIR}:${PATH}"
+fi
 runtime="${lib_dir}/t3code-runtime"
 service_dir=/run/service/t3code-server
 
@@ -76,9 +83,9 @@ fi
 
 requested="${requested:-latest}"
 
-# The service user runs this through sudo, so the version must not reach npm as
-# anything but an exact version: an npm spec such as `npm:<package>` or a
-# tarball URL would install arbitrary code as root.
+# The version must not reach npm as anything but an exact version: an npm spec
+# such as `npm:<package>` or a tarball URL names arbitrary code, and this
+# command runs through sudo.
 if [[ "${requested}" =~ ^[vV]([0-9].*)$ ]]; then
     requested="${BASH_REMATCH[1]}"
 fi
@@ -88,8 +95,17 @@ fi
 
 [ "$(id -u)" -eq 0 ] || err "Run this command as root, for example with sudo."
 
+as_service_user() {
+    if [ "${T3CODE_SERVER_USER}" = root ]; then
+        "$@"
+    else
+        runuser --user "${T3CODE_SERVER_USER}" -- \
+            env HOME="${T3CODE_SERVER_HOME}" USER="${T3CODE_SERVER_USER}" LOGNAME="${T3CODE_SERVER_USER}" PATH="${PATH}" "$@"
+    fi
+}
+
 mapfile -t resolution < <(
-    python3 "${lib_dir}/resolve-package-source.py" \
+    as_service_user python3 "${lib_dir}/resolve-package-source.py" \
         "${T3CODE_SERVER_PACKAGE_SOURCE:-}" "${requested}" "${T3CODE_SERVER_ARCH}"
 )
 [ "${#resolution[@]}" -eq 4 ] || err "Unable to resolve T3 Code ${requested}."
@@ -100,26 +116,26 @@ checksums="${resolution[3]}"
 
 case "${kind}" in
     archive)
-        if [ "${force}" != true ] && "${runtime}" installed "${version}"; then
+        if [ "${force}" != true ] && as_service_user "${runtime}" installed "${version}"; then
             log "T3 Code ${version} is already installed."
         else
-            "${runtime}" install-archive "${version}" "${source}" "${checksums}"
+            as_service_user "${runtime}" install-archive "${version}" "${source}" "${checksums}"
         fi
         ;;
     npm)
-        version="$("${runtime}" install-npm "${source}")"
+        version="$(as_service_user "${runtime}" install-npm "${source}")"
         ;;
     *)
         err "Unknown package kind '${kind}'."
         ;;
 esac
 
-current="$("${runtime}" selected-version 2>/dev/null || true)"
+current="$(as_service_user "${runtime}" selected-version 2>/dev/null || true)"
 if [ "${current}" = "${version}" ] && [ "${force}" != true ]; then
     log "T3 Code ${version} is already the selected version."
     exit 0
 fi
-"${runtime}" select "${version}"
+as_service_user "${runtime}" select "${version}"
 
 if [ "${restart}" != true ]; then
     log "T3 Code ${version} starts on the next service restart."

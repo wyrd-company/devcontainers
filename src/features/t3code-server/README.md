@@ -85,7 +85,7 @@ Every installed version is a pinned runtime at `<home>/.t3/runtime/versions/<ver
 
 ## Updating
 
-`t3code-server-update` installs a version from the configured package source, selects it, and restarts the service. The service user may run it through `sudo` and nothing else; the grant lives in `/etc/sudoers.d/t3code-server`.
+`t3code-server-update` installs a version from the configured package source, selects it, and restarts the service. The service user may run it through `sudo` and nothing else; the grant lives in `/etc/sudoers.d/t3code-server`. Under sudo, root only restarts the service: resolving, installing, and selecting run as the service user in the runtime tree that user owns.
 
 ```bash
 sudo t3code-server-update            # latest from the package source
@@ -93,7 +93,7 @@ sudo t3code-server-update 0.0.42     # an exact version
 t3code-server-update --status        # selected and installed versions
 ```
 
-The version is `latest` or an exact version; a `v` prefix is accepted. npm ranges and dist-tags are not, because the command runs as root on the service user's behalf. `--no-restart` selects the version for the next service start. `--force` reinstalls a version that is already installed. As root, the service can also be restarted with `/command/s6-svc -r /run/service/t3code-server`.
+The version is `latest` or an exact version; a `v` prefix is accepted. npm ranges and dist-tags are not, because the command runs through sudo and an npm spec can name arbitrary code. `--no-restart` selects the version for the next service start. `--force` reinstalls a version that is already installed. As root, the service can also be restarted with `/command/s6-svc -r /run/service/t3code-server`.
 
 Changing `version` or `packageSource` and rebuilding the container installs that version fresh.
 

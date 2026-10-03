@@ -19,21 +19,19 @@
       "caddy": {}
     }
   },
-  "t3code-server-fork-package-source": {
+  "t3code-server-upstream-archive": {
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "t3code-server": {
-        "packageSource": "github:wyrd-company/t3code",
-        "version": "0.0.37-wyrd.1"
+        "version": "0.0.42"
       }
     }
   },
-  "t3code-server-fork-latest": {
+  "t3code-server-npm-package": {
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "t3code-server": {
-        "packageSource": "github:wyrd-company/t3code",
-        "version": "latest",
+        "version": "<=0.0.45",
         "serveMode": "web"
       }
     }

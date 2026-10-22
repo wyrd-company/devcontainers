@@ -1,6 +1,6 @@
 T3 Code's native update launcher runs under s6-overlay as the service user with `${HOME}/.t3` as its base directory. Connected clients can update compatible servers without sudo. T3 records the active version in `runtime/service-state.json`; the CLI follows that state. Legacy runtimes use `runtime/selected-version` and run directly.
 
-`sudo t3code-server-update [version]` updates the server and launcher locally. `--no-restart` queues a runtime for the next start; `--force` reinstalls it while stopped. `t3code-server-update --status` shows active, queued and installed versions. Pending native updates recover before local maintenance. Local updates and downgrades do not provide native database rollback.
+`sudo t3code-server-update [version]` updates the server and launcher locally. `--no-restart` queues a runtime for the next start; `--force` reinstalls it while stopped. `t3code-server-update --status` shows active, queued and installed versions. Pending native updates recover before local maintenance. A native version change expires an older queued request. Local maintenance leaves a stopped service stopped and reuses cached runtimes unless forced. Local updates and downgrades do not provide native database rollback.
 
 The native launcher passes host, port, mode and base directory through environment variables because it does not forward server flags. Release archives contain a standalone binary. npm runtimes exec the platform binary directly so s6 stops both launcher and server without leaving a Node shim's child behind.
 

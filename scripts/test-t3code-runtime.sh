@@ -28,6 +28,7 @@ upstream_old_version=0.0.42
 upstream_new_version=0.0.45
 workspace="$(mktemp -d)"
 name=""
+runtime_volume=""
 
 # Isolate the Docker config so the build resolves images anonymously and does
 # not inherit a host credential helper.
@@ -73,6 +74,9 @@ stop_container() {
 
 cleanup() {
     stop_container
+    if [ -n "${runtime_volume}" ]; then
+        docker volume rm "${runtime_volume}" >/dev/null
+    fi
     rm -rf "${workspace}"
 }
 trap cleanup EXIT
@@ -82,6 +86,7 @@ trap cleanup EXIT
 start_container() {
     local scenario="$1" options="$2"
     local image="${image_prefix}:${scenario}" project="${workspace}/${scenario}"
+    local -a mount_args=()
 
     mkdir -p "${project}/.devcontainer"
     cp -a "${repo_root}/src/features/t3code-server" "${project}/.devcontainer/t3code-server"
@@ -100,8 +105,13 @@ EOF
     "${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
 
     name="t3code-runtime-test-${scenario}-${RANDOM}-$$"
+    if [ "${scenario}" = native ]; then
+        runtime_volume="sample-t3code-runtime-${RANDOM}-$$"
+        docker volume create "${runtime_volume}" >/dev/null
+        mount_args=(--mount "type=volume,source=${runtime_volume},target=/home/vscode/.t3")
+    fi
     docker run --detach --name "${name}" \
-        --env T3CODE_MODE=desktop --env T3CODE_HOME=/tmp/sample-ignored "${image}" >/dev/null
+        "${mount_args[@]}" --env T3CODE_MODE=desktop --env T3CODE_HOME=/tmp/sample-ignored "${image}" >/dev/null
     printf 'Started T3 Code %s container.\n' "${scenario}"
 }
 
@@ -272,6 +282,8 @@ done
 docker exec --user vscode "${name}" node /tmp/native-update.cjs
 launcher_pid="$(docker exec "${name}" pgrep --full --exact '.*/service-launcher __service-launcher')"
 old_pid="$(serve_pid)"
+# A later successful native update must expire this deferred local selection.
+docker exec --user vscode "${name}" sudo -n t3code-server-update --force --no-restart 0.1.1
 docker exec --user vscode "${name}" node /tmp/native-update.cjs 0.1.2
 
 wait_for_outcome() {
@@ -296,6 +308,21 @@ docker exec "${name}" /command/s6-svc -wD -d /run/service/t3code-server
 docker exec "${name}" /command/s6-svc -u /run/service/t3code-server
 wait_for_console "native update after s6 restart"
 assert_serve 0.1.2 web
+
+docker exec "${name}" test ! -e /home/vscode/.t3/runtime/queued-runtime
+
+# Feature installation occurs during image build, before runtime mounts. A
+# persisted native selection must mask the older state in the pinned image.
+stop_container
+name="t3code-runtime-test-recreated-${RANDOM}-$$"
+docker run --detach --name "${name}" \
+    --mount "type=volume,source=${runtime_volume},target=/home/vscode/.t3" \
+    --env T3CODE_MODE=desktop --env T3CODE_HOME=/tmp/sample-ignored "${image_prefix}:native" >/dev/null
+wait_for_console "persisted native update with the pinned 0.1.1 image"
+assert_serve 0.1.2 web
+for file in native-update.cjs failed-runtime.cjs; do
+    docker cp "${repo_root}/test/features/t3code-server/${file}" "${name}:/tmp/${file}"
+done
 
 # The trial writes to SQLite, then exits before activation. Read back its
 # external marker and the restored database so a failed preflight cannot pass.
@@ -336,6 +363,15 @@ docker exec "${name}" /command/s6-svc -u /run/service/t3code-server
 wait_for_console "deferred local downgrade"
 assert_serve 0.1.1 web
 [ "$(docker exec "${name}" t3 --version)" = 't3 v0.1.1' ] || fail "Deferred maintenance was not applied."
+# Cached local maintenance selects the release without starting a stopped service.
+docker exec "${name}" /command/s6-svc -wD -d /run/service/t3code-server
+maintenance="$(docker exec --user vscode "${name}" sudo -n t3code-server-update 0.1.2)"
+[[ "${maintenance}" == *'Reusing the installed T3 Code 0.1.2 runtime.'* ]] || fail "Cached runtime was not reused."
+[ "$(docker exec "${name}" /command/s6-svstat -o wantedup /run/service/t3code-server)" = false ] || fail "Local maintenance started a stopped service."
+[ -z "$(serve_pid)" ] || fail "Local maintenance left a child running in the stopped service."
+docker exec "${name}" /command/s6-svc -u /run/service/t3code-server
+wait_for_console "cached local update after an explicit start"
+assert_serve 0.1.2 web
 root_owned="$(docker exec "${name}" find /home/vscode/.t3/runtime -user root)"
 [ -z "${root_owned}" ] || fail "Native update or maintenance left root-owned runtime files."
 # Status through sudo must read user-controlled links only as the service user.

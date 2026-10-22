@@ -46,6 +46,8 @@ usage: t3code-runtime <command> [arguments]
       Select VERSION while the service is stopped (installer/maintenance only).
   prepare-archive VERSION ARCHIVE_URL CHECKSUMS_URL
       Verify and queue a separate runtime for the next stopped-service start.
+  prepare-installed VERSION
+      Queue a copy of a completely installed runtime without downloading it.
   bootstrap
       Apply queued local maintenance before starting the service launcher.
   selected-version
@@ -104,15 +106,43 @@ cleanup_stage() {
     fi
 }
 
+is_stage_path() {
+    # A queued path must be one direct staging child, including through links.
+    local candidate="$1" canonical parent
+    [[ "${candidate##*/}" =~ ^\.staging-[[:alnum:]]+$ ]] || return 1
+    [ ! -L "${candidate}" ] || return 1
+    canonical="$(realpath -m -- "${candidate}")"
+    parent="$(realpath -- "${versions_dir}")"
+    [ "$(dirname -- "${canonical}")" = "${parent}" ]
+}
+
+queue_stage() {
+    local version="$1" origin="$2" previous=""
+    if [ -f "${runtime_dir}/queued-runtime" ]; then
+        previous="$(sed -n '2p' "${runtime_dir}/queued-runtime")"
+    fi
+    printf '%s\n' "${version}" >"${stage_dir}/.maintenance-version"
+    printf '%s\n%s\n%s\n' "${version}" "${stage_dir}" "${origin}" >"${runtime_dir}/.queued-runtime-next"
+    mv "${runtime_dir}/.queued-runtime-next" "${runtime_dir}/queued-runtime"
+    own_as_service_user "${stage_dir}" "${runtime_dir}/queued-runtime"
+    if is_stage_path "${previous}" && [ -f "${previous}/.maintenance-version" ]; then
+        rm -rf "${previous}"
+    fi
+    stage_dir=""
+}
+
 # Downloads, verifies, and unpacks an archive into a staging directory inside
 # the versions tree, then renames it into place. The sentinel is written last,
 # so a killed install never looks complete.
 install_archive() {
     local version="$1" archive_url="$2" checksums_url="$3"
-    local target archive_name expected actual previous=""
+    local target archive_name expected actual origin=""
     local prepare="${4:-false}"
     require_version "${version}"
     ensure_tree
+    if [ "${prepare}" = true ]; then
+        origin="$(selected_version)"
+    fi
     target="$(version_dir "${version}")"
     archive_name="${archive_url##*/}"
 
@@ -138,17 +168,7 @@ install_archive() {
     if [ "${prepare}" = true ]; then
         # Native pruning ignores staging directories. Keep maintenance separate
         # from published runtimes until the launcher and its child have stopped.
-        if [ -f "${runtime_dir}/queued-runtime" ]; then
-            previous="$(sed -n '2p' "${runtime_dir}/queued-runtime")"
-        fi
-        printf '%s\n' "${version}" >"${stage_dir}/.maintenance-version"
-        printf '%s\n%s\n' "${version}" "${stage_dir}" >"${runtime_dir}/.queued-runtime-next"
-        mv "${runtime_dir}/.queued-runtime-next" "${runtime_dir}/queued-runtime"
-        own_as_service_user "${stage_dir}" "${runtime_dir}/queued-runtime"
-        if [[ "${previous}" == "${versions_dir}/.staging-"* ]] && [ -f "${previous}/.maintenance-version" ]; then
-            rm -rf "${previous}"
-        fi
-        stage_dir=""
+        queue_stage "${version}" "${origin}"
         return
     fi
     rm -rf "${target}"
@@ -208,15 +228,17 @@ EOF
 # Detect the external launcher protocol, rather than selecting by version.
 # Older releases keep their direct-server path and exact pins remain usable.
 select_version() {
-    local version="$1" preflight protocol="legacy"
+    local version="$1" preflight protocol="legacy" preflight_status=0
     require_version "${version}"
     is_installed "${version}" || err "T3 Code ${version} is not completely installed."
     ensure_tree
     preflight="$(as_service_user "$(version_dir "${version}")/t3" __service-preflight \
-        --database-path "${base_dir}/userdata/statev2.sqlite" --launcher-protocol 3 2>/dev/null || true)"
-    if python3 -c 'import json,sys; p=json.load(sys.stdin); sys.exit(not (p.get("status")=="ready" and p.get("launcherProtocol")==3 and p.get("version")==sys.argv[1]))' \
+        --database-path "${base_dir}/userdata/statev2.sqlite" --launcher-protocol 3 2>&1)" || preflight_status=$?
+    if [ "${preflight_status}" -eq 0 ] && python3 -c 'import json,sys; p=json.load(sys.stdin); sys.exit(not (p.get("status")=="ready" and p.get("launcherProtocol")==3 and p.get("version")==sys.argv[1]))' \
         "${version}" <<<"${preflight}" 2>/dev/null; then
         protocol=3
+    else
+        log "Native launcher preflight did not pass for ${version} (exit ${preflight_status}); using direct startup: ${preflight:-no output}"
     fi
     as_service_user python3 "${state_tool}" "${runtime_dir}" select "${version}" "${protocol}"
     log "Selected T3 Code ${version} (${protocol}) for the service"
@@ -234,14 +256,23 @@ bootstrap() {
     flock 9
     selected_version >/dev/null
     if [ -f "${runtime_dir}/queued-runtime" ] && ! python3 "${state_tool}" "${runtime_dir}" pending; then
-        local stage version target
+        local stage version target origin current
         local -a queued
         mapfile -t queued <"${runtime_dir}/queued-runtime"
-        [ "${#queued[@]}" -eq 2 ] || err "Invalid queued runtime."
+        [ "${#queued[@]}" -eq 3 ] || err "Invalid queued runtime."
         version="${queued[0]}"
         stage="${queued[1]}"
-        [[ "${stage}" == "${versions_dir}/.staging-"* ]] || err "Invalid queued runtime path."
+        origin="${queued[2]}"
+        is_stage_path "${stage}" || err "Invalid queued runtime path."
         require_version "${version}"
+        require_version "${origin}"
+        current="$(selected_version)"
+        if [ "${current}" != "${origin}" ]; then
+            log "Discarding queued ${version}: active version changed from ${origin} to ${current}."
+            rm -rf "${stage}"
+            rm -f "${runtime_dir}/queued-runtime"
+            return
+        fi
         target="$(version_dir "${version}")"
         if [ -d "${stage}" ]; then
             [ "$(cat "${stage}/.maintenance-version")" = "${version}" ] || err "Queued version mismatch."
@@ -285,6 +316,22 @@ case "${command}" in
         exec 9>"${runtime_dir}/maintenance.lock"
         flock 9
         install_archive "$1" "$2" "$3" true
+        ;;
+    prepare-installed)
+        [ $# -eq 1 ] || usage
+        require_version "$1"
+        ensure_tree
+        exec 9>"${runtime_dir}/maintenance.lock"
+        flock 9
+        is_installed "$1" || err "T3 Code $1 is not completely installed."
+        origin="$(selected_version)"
+        stage_dir="$(mktemp -d "${versions_dir}/.staging-XXXXXX")"
+        trap cleanup_stage EXIT
+        cp -a "$(version_dir "$1")/." "${stage_dir}/"
+        queue_stage "$1" "${origin}"
+        ;;
+    pending-update)
+        python3 "${state_tool}" "${runtime_dir}" pending
         ;;
     bootstrap)
         [ $# -eq 0 ] || usage

@@ -54,7 +54,7 @@ For runtimes that pass upstream's launcher protocol preflight, s6 supervises `<h
 
 `/usr/local/bin/t3` reads the native active version, so the CLI follows successful updates and rollbacks. Older runtimes without the compatible launcher protocol run `t3 serve` directly and use `runtime/selected-version`. Exact pins and npm ranges support both paths.
 
-`/usr/local/bin/t3code-server` resolves the configured host, port, mode and base directory. The native launcher accepts no server flags, so the wrapper supplies `T3CODE_HOST`, `T3CODE_PORT`, `T3CODE_MODE` and `T3CODE_HOME` to its children. This is an exception to the service flags convention. The existing `T3CODE_HOST`, `T3CODE_PORT` and `T3CODE_SERVE_MODE` runtime overrides are supported; `T3CODE_HOME` remains the configured service user's `.t3` directory. Direct-server runtimes receive command-line flags.
+`/usr/local/bin/t3code-server` resolves the configured host, port, mode and base directory. The native launcher accepts no server flags, so the wrapper supplies `T3CODE_HOST`, `T3CODE_PORT`, `T3CODE_MODE` and `T3CODE_HOME` to its children. This is an exception to the service flags convention. The existing `T3CODE_HOST`, `T3CODE_PORT` and `T3CODE_SERVE_MODE` runtime overrides are supported; `T3CODE_HOME` remains the configured service user's `.t3` directory. Direct-server runtimes receive command-line flags. T3's user-owned `service.env` may override host and port; upstream reserves its managed home and launcher context.
 
 ## Updating
 
@@ -68,15 +68,15 @@ sudo t3code-server-update 0.0.42     # an exact version, including a downgrade
 t3code-server-update --status        # active, queued and installed versions
 ```
 
-The version is `latest` or an exact version; a `v` prefix is accepted. Local updates install release archives only, so npm ranges and dist-tags are not accepted. Changing the Feature's `version` and rebuilding also installs that version.
+The version is `latest` or an exact version; a `v` prefix is accepted. Local updates install release archives only, so npm ranges and dist-tags are not accepted. Changing the Feature's `version` and rebuilding installs that version into the image. A persisted `.t3` mount masks the image's runtime files and retains its active version; use local maintenance to change that selection.
 
 Local maintenance downloads and verifies a separate staged runtime before stopping the service. It queues that runtime, waits for the launcher and child to stop, then starts the service. Startup publishes the runtime and selects its matching launcher before running it. The CLI and status continue to show the native active version until maintenance is applied. Local maintenance deliberately selects the requested version; it does not use the remote update's database trial or rollback. Downgrades must be compatible with the stored database.
 
-`--no-restart` queues the runtime for the next service start without changing the live server or CLI. `--force` downloads and replaces even an already installed runtime, while the service is stopped. A pending native update recovers before queued local maintenance; restart again after recovery to apply the queued version. Superseded queued downloads are removed during preparation.
+`--no-restart` queues the runtime for the next service start without changing the live server or CLI. The queue records the originating active version. If a native update changes that version before maintenance applies, startup discards the stale request rather than selecting an older server. Installed runtimes are reused unless `--force` requests a fresh download and replacement while the service is stopped. Local maintenance leaves an operator-stopped service stopped. A pending native update recovers before queued local maintenance; restart again after recovery to apply the queue if its originating version remains active. The stop wait uses s6's default with no deadline; T3's launcher owns graceful child termination. Superseded queued downloads are removed during preparation.
 
 The service user may run `t3code-server-update` through `sudo`; the grant is limited to that command in `/etc/sudoers.d/t3code-server`. Downloads, staging and runtime selection run as the service user. Root controls s6 only. As root, restart manually with `/command/s6-svc -r /run/service/t3code-server`.
 
-To preserve state across rebuilds, configure a mount for the service user's entire `<home>/.t3` directory, including `runtime` and `userdata`. The Feature declares no persistent mount.
+To preserve state across rebuilds, configure a mount for the service user's entire `<home>/.t3` directory, including `runtime` and `userdata`. A named volume is populated from the image on its first use. A bind mount must already contain an initialized runtime tree. The Feature declares no persistent mount.
 
 ## Caddy
 

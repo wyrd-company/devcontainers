@@ -129,7 +129,12 @@ fi
 # Prepare away from native runtimes: neither --force nor a concurrent remote
 # update can overwrite a running executable. Startup applies the queue only
 # while the launcher is stopped, so there is one native state writer at a time.
-as_service_user "${runtime}" prepare-archive "${version}" "${source}" "${checksums}"
+if [ "${force}" != true ] && as_service_user "${runtime}" installed "${version}"; then
+    log "Reusing the installed T3 Code ${version} runtime."
+    as_service_user "${runtime}" prepare-installed "${version}"
+else
+    as_service_user "${runtime}" prepare-archive "${version}" "${source}" "${checksums}"
+fi
 if [ "${restart}" != true ]; then
     log "T3 Code ${version} is queued for the next service start."
     exit 0
@@ -141,6 +146,19 @@ fi
 
 # Wait for the launcher to finish terminating its child before changing state.
 # s6's default wait has no deadline; the upstream launcher owns graceful stop.
+wanted_up="$(/command/s6-svstat -o wantedup "${service_dir}")"
 /command/s6-svc -wD -d "${service_dir}"
-/command/s6-svc -u "${service_dir}"
-log "Restarted the T3 Code service; queued ${version} applies after native recovery."
+pending=false
+if as_service_user "${runtime}" pending-update; then
+    pending=true
+fi
+if [ "${wanted_up}" = true ]; then
+    /command/s6-svc -u "${service_dir}"
+    log "Restarted the T3 Code service."
+else
+    as_service_user "${runtime}" bootstrap
+    log "Updated the stopped service; it remains stopped."
+fi
+if [ "${pending}" = true ]; then
+    log "Native recovery takes priority. After recovery, restart once more to apply the queue if its originating version is still active."
+fi

@@ -86,7 +86,8 @@ class RuntimeStateTests(unittest.TestCase):
         stage = directory.parent / '.staging-sample'
         directory.rename(stage)
         (stage / '.maintenance-version').write_text(version)
-        (self.runtime / 'queued-runtime').write_text(f'{version}\n{stage}\n')
+        origin = self.run_runtime('selected-version').stdout.strip()
+        (self.runtime / 'queued-runtime').write_text(f'{version}\n{stage}\n{origin}\n')
         return stage
 
     def test_deferred_runtime_applies_only_at_boot_and_recovers_interrupted_move(self):
@@ -125,11 +126,11 @@ class RuntimeStateTests(unittest.TestCase):
         self.run_runtime('select', '1.2.3')
         stage = self.queue('1.2.4')
         queue = self.runtime / 'queued-runtime'
-        for contents in ('1.2.4\n', f'../../sample\n{stage}\n', f'1.2.4\n{self.home}/sample\n'):
+        for contents in ('1.2.4\n', f'../../sample\n{stage}\n1.2.3\n', f'1.2.4\n{self.home}/sample\n1.2.3\n', f'1.2.4\n{stage}\n1.2.3\nsample-extra\n'):
             queue.write_text(contents)
             self.run_runtime('bootstrap', success=False)
             self.assertEqual(self.run_runtime('selected-version').stdout.strip(), '1.2.3')
-        queue.write_text(f'1.2.4\n{stage}\n')
+        queue.write_text(f'1.2.4\n{stage}\n1.2.3\n')
         (stage / '.maintenance-version').write_text('1.2.5')
         self.run_runtime('bootstrap', success=False)
         self.assertEqual(self.run_runtime('selected-version').stdout.strip(), '1.2.3')
@@ -140,10 +141,51 @@ class RuntimeStateTests(unittest.TestCase):
         stage = self.queue('1.2.4')
         external = self.home / 'sample-runtime'
         stage.rename(external)
-        (self.runtime / 'queued-runtime').write_text(f'1.2.4\n{external}\n')
+        (self.runtime / 'queued-runtime').write_text(f'1.2.4\n{external}\n1.2.3\n')
         self.run_runtime('bootstrap', success=False)
         self.assertTrue(external.exists())
         self.assertEqual(self.run_runtime('selected-version').stdout.strip(), '1.2.3')
+
+    def test_queue_rejects_traversal_even_with_a_valid_staging_prefix(self):
+        self.install('1.2.3')
+        self.run_runtime('select', '1.2.3')
+        stage = self.queue('1.2.4')
+        external = self.runtime / 'sample-runtime'
+        stage.rename(external)
+        (self.runtime / 'versions/.staging-sample').mkdir()
+        traversal = self.runtime / 'versions/.staging-sample/../../sample-runtime'
+        (self.runtime / 'queued-runtime').write_text(f'1.2.4\n{traversal}\n1.2.3\n')
+        self.run_runtime('bootstrap', success=False)
+        self.assertTrue(external.exists())
+
+    def test_native_commit_expires_a_deferred_local_downgrade(self):
+        self.install('1.2.3')
+        self.install('1.2.4')
+        self.run_runtime('select', '1.2.3')
+        stage = self.queue('1.2.2')
+        state = {'protocol': 3, 'activeVersion': '1.2.4', 'update': {'id': 'sample-update', 'status': 'committed', 'fromVersion': '1.2.3', 'targetVersion': '1.2.4'}}
+        path = self.runtime / 'service-state.json'
+        path.write_text(json.dumps(state))
+        result = self.run_runtime('bootstrap')
+        self.assertIn('Discarding queued 1.2.2', result.stderr)
+        self.assertEqual(json.loads(path.read_text()), state)
+        self.assertFalse(stage.exists())
+        self.assertFalse((self.runtime / 'queued-runtime').exists())
+
+    def test_cached_runtime_preparation_keeps_live_files_untouched(self):
+        directory = self.install('1.2.3')
+        self.run_runtime('select', '1.2.3')
+        before = (directory / 't3').read_bytes()
+        self.run_runtime('prepare-installed', '1.2.3')
+        self.assertEqual((directory / 't3').read_bytes(), before)
+        self.run_runtime('bootstrap')
+        self.assertEqual(self.run_runtime('selected-version').stdout.strip(), '1.2.3')
+
+    def test_legacy_preflight_failure_is_explained(self):
+        self.install('1.2.3', native=False)
+        result = self.run_runtime('select', '1.2.3')
+        self.assertIn('preflight did not pass', result.stderr)
+        self.assertIn('exit 1', result.stderr)
 
     def test_preparation_never_replaces_live_runtime_and_cleans_superseded_queue(self):
         directory = self.install('1.2.3')

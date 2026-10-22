@@ -111,7 +111,8 @@ class RuntimeStateTests(unittest.TestCase):
         self.run_runtime('bootstrap')
         self.assertEqual(json.loads(path.read_text()), state)
         self.assertTrue((self.runtime / 'queued-runtime').exists())
-        self.run_runtime('select', '1.2.5', success=False)
+        self.install('1.2.6')
+        self.run_runtime('select', '1.2.6', success=False)
 
     def test_incomplete_runtime_cannot_be_selected(self):
         directory = self.install('1.2.3')
@@ -131,6 +132,17 @@ class RuntimeStateTests(unittest.TestCase):
         queue.write_text(f'1.2.4\n{stage}\n')
         (stage / '.maintenance-version').write_text('1.2.5')
         self.run_runtime('bootstrap', success=False)
+        self.assertEqual(self.run_runtime('selected-version').stdout.strip(), '1.2.3')
+
+    def test_queue_path_guard_has_an_otherwise_valid_runtime(self):
+        self.install('1.2.3')
+        self.run_runtime('select', '1.2.3')
+        stage = self.queue('1.2.4')
+        external = self.home / 'sample-runtime'
+        stage.rename(external)
+        (self.runtime / 'queued-runtime').write_text(f'1.2.4\n{external}\n')
+        self.run_runtime('bootstrap', success=False)
+        self.assertTrue(external.exists())
         self.assertEqual(self.run_runtime('selected-version').stdout.strip(), '1.2.3')
 
     def test_preparation_never_replaces_live_runtime_and_cleans_superseded_queue(self):

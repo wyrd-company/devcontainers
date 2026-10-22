@@ -100,7 +100,8 @@ EOF
     "${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
 
     name="t3code-runtime-test-${scenario}-${RANDOM}-$$"
-    docker run --detach --name "${name}" "${image}" >/dev/null
+    docker run --detach --name "${name}" \
+        --env T3CODE_MODE=desktop --env T3CODE_HOME=/tmp/sample-ignored "${image}" >/dev/null
     printf 'Started T3 Code %s container.\n' "${scenario}"
 }
 
@@ -130,7 +131,7 @@ serve_pid() {
 }
 
 assert_serve() {
-    local expected_version="$1" expected_mode="$2" t3_pid service_user cmdline
+    local expected_version="$1" expected_mode="$2" t3_pid service_user cmdline environment
 
     t3_pid="$(serve_pid)"
     [ -n "${t3_pid}" ] || fail "No T3 Code serve process is running in the container."
@@ -146,11 +147,15 @@ assert_serve() {
     printf '%s' "${cmdline}" | grep -q -- "/.t3/runtime/versions/${expected_version}/" \
         || fail "T3 Code serve is not running the ${expected_version} runtime: ${cmdline}"
 
+    environment="$(docker exec --user vscode "${name}" sh -c "tr '\\0' '\\n' </proc/${t3_pid}/environ" | sed -n '/^HOME=/p; /^USER=/p; /^LOGNAME=/p; /^T3CODE_MODE=/p; /^T3CODE_HOME=/p; /^T3CODE_HOST=/p; /^T3CODE_PORT=/p')"
+    for expected in HOME=/home/vscode USER=vscode LOGNAME=vscode; do
+        grep -qx "${expected}" <<<"${environment}" || fail "Service environment lacks ${expected}."
+    done
     if [ -n "${expected_mode}" ]; then
         if [[ "${cmdline}" != *"--mode=${expected_mode}"* ]]; then
-            docker exec --user vscode "${name}" sh -c "tr '\\0' '\\n' </proc/${t3_pid}/environ" \
-                | grep -qx "T3CODE_MODE=${expected_mode}" \
-                || fail "T3 Code serve is not running the ${expected_mode} runtime mode."
+            for expected in "T3CODE_MODE=${expected_mode}" T3CODE_HOME=/home/vscode/.t3 T3CODE_HOST=127.0.0.1 "T3CODE_PORT=${port}"; do
+                grep -qx "${expected}" <<<"${environment}" || fail "Native service environment lacks ${expected}."
+            done
         fi
     fi
 }

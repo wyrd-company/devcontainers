@@ -6,6 +6,7 @@ import json
 import hashlib
 import os
 import shlex
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -199,8 +200,14 @@ class RuntimeStateTests(unittest.TestCase):
     def test_status_reports_installed_versions_despite_missing_or_corrupt_selection(self):
         self.install('1.2.3')
         script = self.home / 'sample-update'
+        library = self.home / 'sample-library'
+        library.mkdir()
+        for file in ('t3code-runtime', 'service-state.py'):
+            shutil.copyfile(FEATURE / file, library / file)
+        # Match the executable mode assigned by install.sh, not the source mode.
+        (library / 't3code-runtime').chmod(0o755)
         source = (FEATURE / 't3code-server-update').read_text()
-        script.write_text(source.replace('lib_dir=/usr/local/lib/t3code-server', f'lib_dir={shlex.quote(str(FEATURE))}'))
+        script.write_text(source.replace('lib_dir=/usr/local/lib/t3code-server', f'lib_dir={shlex.quote(str(library))}'))
         for state in (None, '{'):
             if state is not None:
                 (self.runtime / 'service-state.json').write_text(state)

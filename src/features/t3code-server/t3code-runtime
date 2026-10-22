@@ -5,8 +5,8 @@
 # A pinned runtime is one T3 Code version unpacked into
 # <home>/.t3/runtime/versions/<version>/ with its executable at t3 and an
 # .install-complete sentinel naming the version. The service runs the version
-# named in <home>/.t3/runtime/selected-version. This tool creates runtimes and
-# selects the one the service and the `t3` command run.
+# recorded by the native service-state.json, or selected-version for a legacy
+# runtime. The fixed service-launcher survives native child updates.
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ source "${config_file}"
 base_dir="${T3CODE_SERVER_HOME}/.t3"
 runtime_dir="${base_dir}/runtime"
 versions_dir="${runtime_dir}/versions"
-selected_file="${runtime_dir}/selected-version"
+state_tool="$(dirname "$(readlink -f "$0")")/service-state.py"
 resolver="$(dirname "$(readlink -f "$0")")/resolve-executable.cjs"
 
 log() {
@@ -43,7 +43,11 @@ usage: t3code-runtime <command> [arguments]
       Install an npm package spec or tarball URL and expose its executable as a
       pinned runtime. Prints the installed version.
   select VERSION
-      Select VERSION as the version the service and the t3 command run.
+      Select VERSION while the service is stopped (installer/maintenance only).
+  prepare-archive VERSION ARCHIVE_URL CHECKSUMS_URL
+      Verify and queue a separate runtime for the next stopped-service start.
+  bootstrap
+      Apply queued local maintenance before starting the service launcher.
   selected-version
       Print the selected version.
   selected-entry
@@ -105,7 +109,8 @@ cleanup_stage() {
 # so a killed install never looks complete.
 install_archive() {
     local version="$1" archive_url="$2" checksums_url="$3"
-    local target archive_name expected actual
+    local target archive_name expected actual previous=""
+    local prepare="${4:-false}"
     require_version "${version}"
     ensure_tree
     target="$(version_dir "${version}")"
@@ -130,6 +135,22 @@ install_archive() {
     [ -x "${stage_dir}/t3" ] || err "The archive does not contain an executable t3."
 
     printf '%s\n' "${version}" >"${stage_dir}/.install-complete"
+    if [ "${prepare}" = true ]; then
+        # Native pruning ignores staging directories. Keep maintenance separate
+        # from published runtimes until the launcher and its child have stopped.
+        if [ -f "${runtime_dir}/queued-runtime" ]; then
+            previous="$(sed -n '2p' "${runtime_dir}/queued-runtime")"
+        fi
+        printf '%s\n' "${version}" >"${stage_dir}/.maintenance-version"
+        printf '%s\n%s\n' "${version}" "${stage_dir}" >"${runtime_dir}/.queued-runtime-next"
+        mv "${runtime_dir}/.queued-runtime-next" "${runtime_dir}/queued-runtime"
+        own_as_service_user "${stage_dir}" "${runtime_dir}/queued-runtime"
+        if [[ "${previous}" == "${versions_dir}/.staging-"* ]] && [ -f "${previous}/.maintenance-version" ]; then
+            rm -rf "${previous}"
+        fi
+        stage_dir=""
+        return
+    fi
     rm -rf "${target}"
     mv "${stage_dir}" "${target}"
     stage_dir=""
@@ -184,25 +205,54 @@ EOF
     printf '%s\n' "${version}"
 }
 
+# Detect the external launcher protocol, rather than selecting by version.
+# Older releases keep their direct-server path and exact pins remain usable.
 select_version() {
-    local version="$1" temp
+    local version="$1" preflight protocol="legacy"
     require_version "${version}"
     is_installed "${version}" || err "T3 Code ${version} is not completely installed."
     ensure_tree
-    temp="$(mktemp "${runtime_dir}/.selected-version.XXXXXX")"
-    printf '%s\n' "${version}" >"${temp}"
-    chmod 0644 "${temp}"
-    mv "${temp}" "${selected_file}"
-    own_as_service_user "${selected_file}"
-    log "Selected T3 Code ${version} for the service"
+    preflight="$(as_service_user "$(version_dir "${version}")/t3" __service-preflight \
+        --database-path "${base_dir}/userdata/statev2.sqlite" --launcher-protocol 3 2>/dev/null || true)"
+    if python3 -c 'import json,sys; p=json.load(sys.stdin); sys.exit(not (p.get("status")=="ready" and p.get("launcherProtocol")==3 and p.get("version")==sys.argv[1]))' \
+        "${version}" <<<"${preflight}" 2>/dev/null; then
+        protocol=3
+    fi
+    as_service_user python3 "${state_tool}" "${runtime_dir}" select "${version}" "${protocol}"
+    log "Selected T3 Code ${version} (${protocol}) for the service"
 }
 
 selected_version() {
-    local version
-    [ -r "${selected_file}" ] || err "No T3 Code version is selected; ${selected_file} is missing or unreadable."
-    version="$(tr -d '[:space:]' <"${selected_file}")"
-    [ -n "${version}" ] || err "No T3 Code version is selected; ${selected_file} is empty."
-    printf '%s\n' "${version}"
+    python3 "${state_tool}" "${runtime_dir}" selected
+}
+
+bootstrap() {
+    ensure_tree
+    # Local preparation and startup share a lock; native state is only written
+    # here before the launcher starts. Pending native updates recover first.
+    exec 9>"${runtime_dir}/maintenance.lock"
+    flock 9
+    selected_version >/dev/null
+    if [ -f "${runtime_dir}/queued-runtime" ] && ! python3 "${state_tool}" "${runtime_dir}" pending; then
+        local stage version target
+        local -a queued
+        mapfile -t queued <"${runtime_dir}/queued-runtime"
+        [ "${#queued[@]}" -eq 2 ] || err "Invalid queued runtime."
+        version="${queued[0]}"
+        stage="${queued[1]}"
+        [[ "${stage}" == "${versions_dir}/.staging-"* ]] || err "Invalid queued runtime path."
+        require_version "${version}"
+        target="$(version_dir "${version}")"
+        if [ -d "${stage}" ]; then
+            [ "$(cat "${stage}/.maintenance-version")" = "${version}" ] || err "Queued version mismatch."
+            rm -rf "${target}"
+            mv "${stage}" "${target}"
+        fi
+        select_version "${version}"
+        rm -f "${runtime_dir}/queued-runtime"
+    fi
+    flock -u 9
+    exec 9>&-
 }
 
 list_versions() {
@@ -229,6 +279,17 @@ case "${command}" in
         [ $# -eq 1 ] || usage
         install_npm "$1"
         ;;
+    prepare-archive)
+        [ $# -eq 3 ] || usage
+        ensure_tree
+        exec 9>"${runtime_dir}/maintenance.lock"
+        flock 9
+        install_archive "$1" "$2" "$3" true
+        ;;
+    bootstrap)
+        [ $# -eq 0 ] || usage
+        bootstrap
+        ;;
     select)
         [ $# -eq 1 ] || usage
         select_version "$1"
@@ -237,7 +298,8 @@ case "${command}" in
         selected_version
         ;;
     selected-entry)
-        printf '%s/t3\n' "$(version_dir "$(selected_version)")"
+        selected="$(selected_version)"
+        printf '%s/t3\n' "$(version_dir "${selected}")"
         ;;
     versions)
         list_versions

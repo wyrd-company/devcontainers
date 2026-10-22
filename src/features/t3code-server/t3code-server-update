@@ -6,7 +6,7 @@
 # running one, selects it, and restarts the s6 service so it starts the new
 # version.
 #
-# Run through sudo, root does one thing: restart the service. Resolving,
+# Run through sudo, root controls the s6 service only. Resolving,
 # installing, and selecting run as the service user, in the runtime tree that
 # user owns, so root never writes where that user can redirect the write.
 
@@ -28,7 +28,7 @@ Installs upstream T3 Code VERSION (default: latest) and switches the service
 to it.
 
   --force       Reinstall VERSION even when it is already installed.
-  --no-restart  Select the version without restarting the service; it takes
+  --no-restart  Queue the version without restarting the service; it takes
                 effect on the next service start.
   --status      Show the selected and installed versions, then exit.
 EOF
@@ -42,6 +42,15 @@ log() {
 err() {
     echo "[t3code-server-update] ERROR: $*" >&2
     exit 1
+}
+
+as_service_user() {
+    if [ "$(id -u)" -ne 0 ] || [ "${T3CODE_SERVER_USER}" = root ]; then
+        "$@"
+    else
+        runuser --user "${T3CODE_SERVER_USER}" -- \
+            env HOME="${T3CODE_SERVER_HOME}" USER="${T3CODE_SERVER_USER}" LOGNAME="${T3CODE_SERVER_USER}" "$@"
+    fi
 }
 
 force=false
@@ -65,9 +74,14 @@ done
 
 if [ "${status}" = true ]; then
     [ -z "${requested}" ] || usage
-    printf 'selected version: %s\n' "$("${runtime}" selected-version 2>/dev/null || echo none)"
+    selected="$(as_service_user "${runtime}" selected-version)"
+    printf 'selected version: %s\n' "${selected}"
+    if [ -f "${T3CODE_SERVER_HOME}/.t3/runtime/queued-runtime" ]; then
+        queued="$(as_service_user head -n 1 "${T3CODE_SERVER_HOME}/.t3/runtime/queued-runtime")"
+        printf 'queued version: %s\n' "${queued}"
+    fi
     printf 'installed versions:\n'
-    "${runtime}" versions | sed 's/^/  /'
+    as_service_user "${runtime}" versions | sed 's/^/  /'
     if [ -d "${service_dir}" ]; then
         printf 'service: %s\n' "$(/command/s6-svstat "${service_dir}" 2>/dev/null || echo unknown)"
     else
@@ -90,14 +104,6 @@ fi
 
 [ "$(id -u)" -eq 0 ] || err "Run this command as root, for example with sudo."
 
-as_service_user() {
-    if [ "${T3CODE_SERVER_USER}" = root ]; then
-        "$@"
-    else
-        runuser --user "${T3CODE_SERVER_USER}" -- \
-            env HOME="${T3CODE_SERVER_HOME}" USER="${T3CODE_SERVER_USER}" LOGNAME="${T3CODE_SERVER_USER}" "$@"
-    fi
-}
 
 mapfile -t resolution < <(
     as_service_user python3 "${lib_dir}/resolve-package-source.py" \
@@ -109,33 +115,32 @@ source="${resolution[1]}"
 version="${resolution[2]}"
 checksums="${resolution[3]}"
 
-case "${kind}" in
-    archive)
-        if [ "${force}" != true ] && as_service_user "${runtime}" installed "${version}"; then
-            log "T3 Code ${version} is already installed."
-        else
-            as_service_user "${runtime}" install-archive "${version}" "${source}" "${checksums}"
-        fi
-        ;;
-    *)
-        err "Unknown package kind '${kind}'."
-        ;;
-esac
-
-current="$(as_service_user "${runtime}" selected-version 2>/dev/null || true)"
-if [ "${current}" = "${version}" ] && [ "${force}" != true ]; then
+# Serialize local updaters without giving root any write in the user's tree.
+exec 9>/run/t3code-server-update.lock
+flock 9
+[ "${kind}" = archive ] || err "Unknown package kind '${kind}'."
+current="$(as_service_user "${runtime}" selected-version)"
+if [ "${current}" = "${version}" ] && [ "${force}" != true ] \
+    && [ ! -f "${T3CODE_SERVER_HOME}/.t3/runtime/queued-runtime" ]; then
     log "T3 Code ${version} is already the selected version."
     exit 0
 fi
-as_service_user "${runtime}" select "${version}"
 
+# Prepare away from native runtimes: neither --force nor a concurrent remote
+# update can overwrite a running executable. Startup applies the queue only
+# while the launcher is stopped, so there is one native state writer at a time.
+as_service_user "${runtime}" prepare-archive "${version}" "${source}" "${checksums}"
 if [ "${restart}" != true ]; then
-    log "T3 Code ${version} starts on the next service restart."
+    log "T3 Code ${version} is queued for the next service start."
     exit 0
 fi
 if [ ! -d "${service_dir}" ]; then
-    log "The service is not supervised in this context; T3 Code ${version} starts with the service."
+    log "The service is not supervised; T3 Code ${version} is queued for its next start."
     exit 0
 fi
-/command/s6-svc -r "${service_dir}"
-log "Restarted the T3 Code service on ${version}."
+
+# Wait for the launcher to finish terminating its child before changing state.
+# s6's default wait has no deadline; the upstream launcher owns graceful stop.
+/command/s6-svc -wD -d "${service_dir}"
+/command/s6-svc -u "${service_dir}"
+log "Restarted the T3 Code service; queued ${version} applies after native recovery."

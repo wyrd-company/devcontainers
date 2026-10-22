@@ -2,7 +2,7 @@
 
 # Runtime acceptance for the t3code-server Feature.
 #
-# Two clean devcontainers are built from the Feature source and started:
+# Three clean devcontainers are built from the Feature source and started:
 #
 # 1. npm: a version range installed through npm. Proves the console is served
 #    by that installation as the service user, and that an s6 restart stops
@@ -13,7 +13,8 @@
 #    moves the service to a newer release archive as the service user, and
 #    that the console comes back on it.
 #
-# Scope stops at the console.
+# 3. Native launcher: authenticated client RPC updates, SQLite rollback,
+#    persistent selection across s6 restart, and deferred local maintenance.
 
 set -euo pipefail
 
@@ -23,7 +24,7 @@ image_prefix="${1:-devcontainers-t3code-runtime}"
 port=3773
 npm_range="<=0.0.45"
 npm_version=0.0.45
-upstream_old_version=0.0.44
+upstream_old_version=0.0.42
 upstream_new_version=0.0.45
 workspace="$(mktemp -d)"
 name=""
@@ -125,7 +126,7 @@ wait_for_console() {
 # 's6-supervise t3code-server' and the probing shell itself also mention t3,
 # so match the whole command line.
 serve_pid() {
-    docker exec "${name}" pgrep --full --exact -- '.*/t3 serve .*' | head -n 1 || true
+    docker exec "${name}" pgrep --full --exact -- '.*/t3 serve( .*)?' | head -n 1 || true
 }
 
 assert_serve() {
@@ -141,13 +142,16 @@ assert_serve() {
     # Both kinds of runtime run from their own version directory: an archive
     # runtime's executable sits at its top, and an npm runtime's sits inside
     # its own npm prefix there.
-    cmdline="$(docker exec "${name}" sh -c "tr '\\0' ' ' </proc/${t3_pid}/cmdline")"
+    cmdline="$(docker exec --user vscode "${name}" sh -c "tr '\\0' ' ' </proc/${t3_pid}/cmdline")"
     printf '%s' "${cmdline}" | grep -q -- "/.t3/runtime/versions/${expected_version}/" \
         || fail "T3 Code serve is not running the ${expected_version} runtime: ${cmdline}"
 
     if [ -n "${expected_mode}" ]; then
-        printf '%s' "${cmdline}" | grep -q -- "--mode=${expected_mode}" \
-            || fail "T3 Code serve is not running the ${expected_mode} runtime mode: ${cmdline}"
+        if [[ "${cmdline}" != *"--mode=${expected_mode}"* ]]; then
+            docker exec --user vscode "${name}" sh -c "tr '\\0' '\\n' </proc/${t3_pid}/environ" \
+                | grep -qx "T3CODE_MODE=${expected_mode}" \
+                || fail "T3 Code serve is not running the ${expected_mode} runtime mode."
+        fi
     fi
 }
 
@@ -251,4 +255,91 @@ root_owned="$(docker exec "${name}" find /home/vscode/.t3/runtime -user root)"
 [ -z "${root_owned}" ] || fail "The update left root-owned files in the runtime tree: ${root_owned}"
 printf 'Console served by %s after the in-container update.\n' "${installed_version}"
 
-printf 'T3 Code runtime checks passed.\n'
+stop_container
+
+# --- Scenario 3: authenticated native update, rollback and local maintenance ---
+start_container native '{"version":"0.1.1","serveMode":"web","host":"127.0.0.1","port":"3773"}'
+wait_for_console "native launcher"
+assert_serve 0.1.1 web
+for file in native-update.cjs failed-runtime.cjs; do
+    docker cp "${repo_root}/test/features/t3code-server/${file}" "${name}:/tmp/${file}"
+done
+docker exec --user vscode "${name}" node /tmp/native-update.cjs
+launcher_pid="$(docker exec "${name}" pgrep --full --exact '.*/service-launcher __service-launcher')"
+old_pid="$(serve_pid)"
+docker exec --user vscode "${name}" node /tmp/native-update.cjs 0.1.2
+
+wait_for_outcome() {
+    local expected="$1" deadline=$((SECONDS + 120))
+    while ((SECONDS < deadline)); do
+        if docker exec "${name}" python3 -c 'import json,sys; s=json.load(open("/home/vscode/.t3/runtime/service-state.json")); sys.exit(s.get("update", {}).get("status") != sys.argv[1])' "${expected}"; then
+            return
+        fi
+        sleep 1
+    done
+    report_container_state
+    fail "Native update did not reach ${expected}."
+}
+wait_for_outcome committed
+wait_for_console "native update"
+assert_serve 0.1.2 web
+[ "$(docker exec "${name}" /usr/local/bin/t3 --version)" = 't3 v0.1.2' ] || fail "CLI did not follow native state."
+docker exec "${name}" test ! -d "/proc/${old_pid}" || fail "Old child survived native update."
+[ "$(docker exec "${name}" pgrep --full --exact '.*/service-launcher __service-launcher')" = "${launcher_pid}" ] || fail "Native update replaced the stable launcher."
+# The stable launcher and newly committed version must survive an s6 restart.
+docker exec "${name}" /command/s6-svc -wD -d /run/service/t3code-server
+docker exec "${name}" /command/s6-svc -u /run/service/t3code-server
+wait_for_console "native update after s6 restart"
+assert_serve 0.1.2 web
+
+# The trial writes to SQLite, then exits before activation. Read back its
+# external marker and the restored database so a failed preflight cannot pass.
+docker exec --user vscode "${name}" bash -c '
+    dir=/home/vscode/.t3/runtime/versions/0.1.3-sample.0
+    mkdir -p "$dir"
+    cp /tmp/failed-runtime.cjs "$dir/t3"
+    chmod +x "$dir/t3"
+    echo 0.1.3-sample.0 >"$dir/.install-complete"
+'
+docker exec --user vscode "${name}" node -e '
+    const {DatabaseSync}=require("node:sqlite");
+    const db=new DatabaseSync("/home/vscode/.t3/userdata/statev2.sqlite");
+    db.exec("CREATE TABLE sample_restore (value INTEGER); INSERT INTO sample_restore VALUES (1)");
+    db.close();
+'
+docker exec --user vscode "${name}" node /tmp/native-update.cjs 0.1.3-sample.0
+wait_for_outcome rolled-back
+wait_for_console "native rollback"
+docker exec "${name}" test -f /home/vscode/.t3/sample-trial-started
+docker exec --user vscode "${name}" node -e '
+    const {DatabaseSync}=require("node:sqlite");
+    const db=new DatabaseSync("/home/vscode/.t3/userdata/statev2.sqlite");
+    require("node:assert/strict").equal(db.prepare("SELECT value FROM sample_restore").get().value,1);
+    db.close();
+'
+assert_serve 0.1.2 web
+
+# Deferred local maintenance must not replace the live runtime or native state.
+old_pid="$(serve_pid)"
+docker exec --user vscode "${name}" sudo -n t3code-server-update --force --no-restart 0.1.1
+docker exec "${name}" test -d "/proc/${old_pid}"
+[ "$(docker exec "${name}" t3 --version)" = 't3 v0.1.2' ] || fail "Deferred maintenance changed the live selection."
+status="$(docker exec "${name}" t3code-server-update --status)"
+[[ "${status}" == *'queued version: 0.1.1'* ]] || fail "Deferred version is absent from status."
+docker exec "${name}" /command/s6-svc -wD -d /run/service/t3code-server
+docker exec "${name}" /command/s6-svc -u /run/service/t3code-server
+wait_for_console "deferred local downgrade"
+assert_serve 0.1.1 web
+[ "$(docker exec "${name}" t3 --version)" = 't3 v0.1.1' ] || fail "Deferred maintenance was not applied."
+root_owned="$(docker exec "${name}" find /home/vscode/.t3/runtime -user root)"
+[ -z "${root_owned}" ] || fail "Native update or maintenance left root-owned runtime files."
+# Status through sudo must read user-controlled links only as the service user.
+# This is synthetic permission-fixture data, not a credential.
+docker exec "${name}" sh -c 'echo sample-private-value >/root/sample-private-status; chmod 0600 /root/sample-private-status'
+docker exec --user vscode "${name}" ln -s /root/sample-private-status /home/vscode/.t3/runtime/queued-runtime
+if status="$(docker exec --user vscode "${name}" sudo -n t3code-server-update --status 2>&1)"; then
+    fail "Privileged status accepted an unreadable queued-runtime link."
+fi
+[[ "${status}" != *sample-private-value* ]] || fail "Privileged status disclosed protected fixture data."
+docker exec --user vscode "${name}" rm /home/vscode/.t3/runtime/queued-runtime
+printf 'T3 Code runtime checks passed.\n' 

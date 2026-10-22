@@ -60,7 +60,7 @@ For runtimes that pass upstream's launcher protocol preflight, s6 supervises `<h
 
 A connected T3 client offers **Update server** when the launcher supports it. T3 downloads a release archive, verifies its checksum and preflight, then asks its launcher to replace the server. The launcher snapshots SQLite, starts the replacement as a trial, and commits after successful startup. A failed trial restores the database and previous server. Files outside SQLite are outside that rollback boundary. Remote updates run as the service user without sudo and remain selected after an s6 or container restart.
 
-Remote updates require a newer server version and a compatible launcher protocol. If an update requires a newer launcher, run the local maintenance command on the container. Legacy direct-server runtimes require local maintenance as well.
+Remote updates require a newer server version and a compatible launcher protocol. If an update requires a newer launcher, run the local maintenance command on the container. Legacy direct-server runtimes require local maintenance as well. To enable the native launcher for an existing persisted installation whose version is already current, run `sudo t3code-server-update --force`. This explicitly reinstalls and selects the runtime; ordinary startup preserves its existing selector.
 
 ```bash
 sudo t3code-server-update            # the latest upstream release, including its launcher
@@ -73,6 +73,8 @@ The version is `latest` or an exact version; a `v` prefix is accepted. Local upd
 Local maintenance downloads and verifies a separate staged runtime before stopping the service. It queues that runtime, waits for the launcher and child to stop, then starts the service. Startup publishes the runtime and selects its matching launcher before running it. The CLI and status continue to show the native active version until maintenance is applied. Local maintenance deliberately selects the requested version; it does not use the remote update's database trial or rollback. Downgrades must be compatible with the stored database.
 
 `--no-restart` queues the runtime for the next service start without changing the live server or CLI. The queue records the originating active version. If a native update changes that version before maintenance applies, startup discards the stale request rather than selecting an older server. Installed runtimes are reused unless `--force` requests a fresh download and replacement while the service is stopped. Local maintenance leaves an operator-stopped service stopped. A pending native update recovers before queued local maintenance; restart again after recovery to apply the queue if its originating version remains active. The stop wait uses s6's default with no deadline; T3's launcher owns graceful child termination. Superseded queued downloads are removed during preparation.
+
+`--status` reports installed runtimes and service supervision even when selection is missing or invalid. It returns a nonzero status and reports the selection as unavailable rather than selecting a fallback.
 
 The service user may run `t3code-server-update` through `sudo`; the grant is limited to that command in `/etc/sudoers.d/t3code-server`. Downloads, staging and runtime selection run as the service user. Root controls s6 only. As root, restart manually with `/command/s6-svc -r /run/service/t3code-server`.
 

@@ -5,6 +5,7 @@
 import json
 import hashlib
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -186,6 +187,28 @@ class RuntimeStateTests(unittest.TestCase):
         result = self.run_runtime('select', '1.2.3')
         self.assertIn('preflight did not pass', result.stderr)
         self.assertIn('exit 1', result.stderr)
+
+    def test_ready_preflight_with_stderr_warning_still_uses_launcher(self):
+        directory = self.install('1.2.3')
+        entry = directory / 't3'
+        entry.write_text(entry.read_text().replace('#!/bin/sh\n', '#!/bin/sh\necho sample-warning >&2\n'))
+        result = self.run_runtime('select', '1.2.3')
+        self.assertEqual(json.loads((self.runtime / 'service-state.json').read_text())['activeVersion'], '1.2.3')
+        self.assertIn('sample-warning', result.stderr)
+
+    def test_status_reports_installed_versions_despite_missing_or_corrupt_selection(self):
+        self.install('1.2.3')
+        script = self.home / 'sample-update'
+        source = (FEATURE / 't3code-server-update').read_text()
+        script.write_text(source.replace('lib_dir=/usr/local/lib/t3code-server', f'lib_dir={shlex.quote(str(FEATURE))}'))
+        for state in (None, '{'):
+            if state is not None:
+                (self.runtime / 'service-state.json').write_text(state)
+            result = subprocess.run(['bash', str(script), '--status'], env=self.env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('selected version: unavailable', result.stdout)
+            self.assertIn('installed versions:\n  1.2.3', result.stdout)
+            self.assertIn('service:', result.stdout)
 
     def test_preparation_never_replaces_live_runtime_and_cleans_superseded_queue(self):
         directory = self.install('1.2.3')

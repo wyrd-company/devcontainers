@@ -74,10 +74,17 @@ done
 
 if [ "${status}" = true ]; then
     [ -z "${requested}" ] || usage
-    selected="$(as_service_user "${runtime}" selected-version)"
+    status_result=0
+    if ! selected="$(as_service_user "${runtime}" selected-version)"; then
+        selected=unavailable
+        status_result=1
+    fi
     printf 'selected version: %s\n' "${selected}"
     if [ -f "${T3CODE_SERVER_HOME}/.t3/runtime/queued-runtime" ]; then
-        queued="$(as_service_user head -n 1 "${T3CODE_SERVER_HOME}/.t3/runtime/queued-runtime")"
+        if ! queued="$(as_service_user head -n 1 "${T3CODE_SERVER_HOME}/.t3/runtime/queued-runtime")"; then
+            queued=unavailable
+            status_result=1
+        fi
         printf 'queued version: %s\n' "${queued}"
     fi
     printf 'installed versions:\n'
@@ -87,7 +94,7 @@ if [ "${status}" = true ]; then
     else
         printf 'service: not supervised\n'
     fi
-    exit 0
+    exit "${status_result}"
 fi
 
 requested="${requested:-latest}"
@@ -157,7 +164,11 @@ if [ "${wanted_up}" = true ]; then
     log "Restarted the T3 Code service."
 else
     as_service_user "${runtime}" bootstrap
-    log "Updated the stopped service; it remains stopped."
+    if [ "${pending}" != true ]; then
+        log "Updated the stopped service; it remains stopped."
+    else
+        log "The service remains stopped with local maintenance queued."
+    fi
 fi
 if [ "${pending}" = true ]; then
     log "Native recovery takes priority. After recovery, restart once more to apply the queue if its originating version is still active."

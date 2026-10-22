@@ -228,18 +228,23 @@ EOF
 # Detect the external launcher protocol, rather than selecting by version.
 # Older releases keep their direct-server path and exact pins remain usable.
 select_version() {
-    local version="$1" preflight protocol="legacy" preflight_status=0
+    local version="$1" preflight preflight_errors protocol="legacy" preflight_status=0
     require_version "${version}"
     is_installed "${version}" || err "T3 Code ${version} is not completely installed."
     ensure_tree
+    preflight_errors="$(mktemp)"
     preflight="$(as_service_user "$(version_dir "${version}")/t3" __service-preflight \
-        --database-path "${base_dir}/userdata/statev2.sqlite" --launcher-protocol 3 2>&1)" || preflight_status=$?
+        --database-path "${base_dir}/userdata/statev2.sqlite" --launcher-protocol 3 2>"${preflight_errors}")" || preflight_status=$?
     if [ "${preflight_status}" -eq 0 ] && python3 -c 'import json,sys; p=json.load(sys.stdin); sys.exit(not (p.get("status")=="ready" and p.get("launcherProtocol")==3 and p.get("version")==sys.argv[1]))' \
         "${version}" <<<"${preflight}" 2>/dev/null; then
         protocol=3
     else
         log "Native launcher preflight did not pass for ${version} (exit ${preflight_status}); using direct startup: ${preflight:-no output}"
     fi
+    if [ -s "${preflight_errors}" ]; then
+        log "Preflight diagnostics: $(cat "${preflight_errors}")"
+    fi
+    rm -f "${preflight_errors}"
     as_service_user python3 "${state_tool}" "${runtime_dir}" select "${version}" "${protocol}"
     log "Selected T3 Code ${version} (${protocol}) for the service"
 }

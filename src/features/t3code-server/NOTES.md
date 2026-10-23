@@ -1,6 +1,10 @@
-T3 Code runs under s6-overlay with `${HOME}/.t3` as its base directory. `sudo t3code-server-update [version]` updates it from inside the container; `t3code-server-update --status` shows the selected and installed versions.
+T3 Code's native update launcher runs under s6-overlay as the service user with `${HOME}/.t3` as its base directory. Connected clients can update compatible servers without sudo. T3 records the active version in `runtime/service-state.json`; the CLI follows that state. Legacy runtimes use `runtime/selected-version` and run directly.
 
-Release archives carry the platform binary itself. When a version is installed through npm and its `t3` package ships platform binaries (`@t3code/t3-<platform>-<arch>`), the runtime execs that binary directly instead of the package's `t3` Node shim. The shim does not forward signals, so supervising it would orphan the server on restart and leave the port bound.
+`sudo t3code-server-update [version]` updates the server and launcher locally. `--no-restart` queues a runtime for the next start; `--force` reinstalls it while stopped. `t3code-server-update --status` shows active, queued and installed versions. Pending native updates recover before local maintenance. A native version change expires an older queued request. Local maintenance leaves a stopped service stopped and reuses cached runtimes unless forced. Local updates and downgrades do not provide native database rollback.
+
+The native launcher passes host, port, mode and base directory through environment variables because it does not forward server flags. Release archives contain a standalone binary. npm runtimes exec the platform binary directly so s6 stops both launcher and server without leaving a Node shim's child behind.
+
+Mount the service user's whole `${HOME}/.t3` directory to preserve runtime and application state across rebuilds. No mount is declared automatically.
 
 Mint a pairing code manually under the service user's home context:
 

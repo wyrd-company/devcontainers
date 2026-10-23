@@ -15,7 +15,7 @@ TEST = ROOT / "test/features/t3code-server"
 class SourceContractTests(unittest.TestCase):
     def test_metadata_documents_upstream_versions_and_in_place_update(self):
         metadata = json.loads((FEATURE / "devcontainer-feature.json").read_text())
-        self.assertEqual(metadata["version"], "2.0.0")
+        self.assertEqual(metadata["version"], "2.1.0")
         self.assertIn("upstream release archive", metadata["options"]["version"]["description"])
         self.assertIn("t3code-server-update", metadata["description"])
         self.assertNotIn("packageSource", metadata["options"])
@@ -89,9 +89,9 @@ class SourceContractTests(unittest.TestCase):
     def test_update_command_uses_the_installed_resolver_and_runtime_tool(self):
         update = (FEATURE / "t3code-server-update").read_text()
         self.assertIn('"${lib_dir}/resolve-package-source.py"', update)
-        self.assertIn('"${runtime}" install-archive', update)
-        self.assertIn('"${runtime}" select', update)
-        self.assertIn("/command/s6-svc -r", update)
+        self.assertIn('"${runtime}" prepare-archive', update)
+        self.assertIn("/command/s6-svc -wD -d", update)
+        self.assertIn("/command/s6-svc -u", update)
 
     def test_update_command_leaves_only_the_restart_to_root(self):
         update = (FEATURE / "t3code-server-update").read_text()

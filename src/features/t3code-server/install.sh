@@ -8,7 +8,7 @@ source "$(dirname "$0")/common.sh"
 require_root
 check_debian_family
 ensure_s6_overlay
-ensure_apt_packages ca-certificates curl python3 tar
+ensure_apt_packages ca-certificates curl python3 tar util-linux
 
 [[ "${PORT}" =~ ^[0-9]+$ ]] || err "port must be an integer between 1 and 65535."
 [ "${#PORT}" -le 5 ] || err "port must be an integer between 1 and 65535."
@@ -40,6 +40,7 @@ service_home="$(user_home_dir "${service_user}")"
 
 lib_dir=/usr/local/lib/t3code-server
 install -d -m 0755 "${lib_dir}"
+install -m 0755 "$(dirname "$0")/service-state.py" "${lib_dir}/service-state.py"
 install -m 0755 "$(dirname "$0")/t3code-runtime" "${lib_dir}/t3code-runtime"
 install -m 0755 "$(dirname "$0")/resolve-executable.cjs" "${lib_dir}/resolve-executable.cjs"
 install -m 0755 "$(dirname "$0")/resolve-package-source.py" "${lib_dir}/resolve-package-source.py"
@@ -102,6 +103,8 @@ cat >/usr/local/bin/t3code-server <<EOF
 set -euo pipefail
 
 export HOME=${quoted_home}
+export USER=${service_user@Q}
+export LOGNAME=${service_user@Q}
 export T3CODE_NO_BROWSER=1
 
 default_port=${quoted_port}
@@ -110,6 +113,19 @@ default_mode=${quoted_mode}
 port="\${T3CODE_PORT:-\${default_port}}"
 host="\${T3CODE_HOST:-\${default_host}}"
 mode="\${T3CODE_SERVE_MODE:-\${default_mode}}"
+${lib_dir@Q}/t3code-runtime bootstrap
+if [ -f "\${HOME}/.t3/runtime/service-state.json" ]; then
+    # Upstream's launcher starts children with only the serve subcommand, so pass the same
+    # resolved settings through its supported environment instead of flags.
+    export T3CODE_HOME="\${HOME}/.t3"
+    export T3CODE_HOST="\${host}" T3CODE_PORT="\${port}"
+    if [ -n "\${mode}" ]; then
+        export T3CODE_MODE="\${mode}"
+    else
+        unset T3CODE_MODE
+    fi
+    exec "\${HOME}/.t3/runtime/service-launcher" __service-launcher "\$@"
+fi
 args=(serve --host="\${host}" --port="\${port}" --base-dir "\${HOME}/.t3")
 if [ -n "\${mode}" ]; then
     args+=(--mode="\${mode}")

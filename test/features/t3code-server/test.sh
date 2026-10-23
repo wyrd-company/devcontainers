@@ -15,7 +15,8 @@ check "a version is selected for the service" test -n "${selected}"
 check "selected runtime is completely installed" /usr/local/lib/t3code-server/t3code-runtime installed "${selected}"
 check "selected runtime executable is present" test -x "${RUNTIME}/versions/${selected}/t3"
 check "selected runtime is owned by the service user" test "$(stat -c %U "${RUNTIME}/versions/${selected}/t3")" = vscode
-check "selected version file names the selected version" test "$(cat "${RUNTIME}/selected-version")" = "${selected}"
+check "native service state exists" test -f "${RUNTIME}/service-state.json"
+check "fixed service launcher exists" test -x "${RUNTIME}/service-launcher"
 check "t3 runs the selected runtime" test "$(env HOME="${T3_HOME}" /usr/local/bin/t3 --version)" = "t3 v${selected}"
 check "update command is installed" test -x /usr/local/bin/t3code-server-update
 check "update command reports status without sudo" bash -c "/usr/local/bin/t3code-server-update --status | grep -q 'selected version: ${selected}'"

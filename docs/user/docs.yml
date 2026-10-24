@@ -1,0 +1,135 @@
+# yaml-language-server: $schema=https://wyrd.foo/schemas/docs/v1.json
+schemaVersion: 1
+assets:
+  - assets/base-image.gif
+products:
+  base:
+    name: Wyrd base image
+    version: 1.0.0
+    docs-version: 0.1.0
+    tagline: Microsoft's Ubuntu Dev Container base with s6-overlay as PID 1.
+    blurb: >-
+      A Dev Container image that keeps the tools, non-root vscode user and
+      metadata of Microsoft's Ubuntu base, adds s6-overlay as PID 1 for
+      long-running services, and limits the vscode user's sudo to package
+      installs and service control.
+    status: stable
+    category: Dev Containers
+    highlights:
+      - s6-overlay 3 runs as PID 1, so services start, restart and stop under supervision.
+      - Ubuntu 24.04 LTS and 26.04 LTS variants, each for amd64 and arm64.
+      - Rolling tags name the Ubuntu release, so a tag never silently moves to another release.
+      - Every build also gets a dated immutable tag, and twelve are kept for rollback.
+      - The vscode user may use sudo only to install packages and control s6 services.
+      - Images are published with provenance and SBOM attestations.
+    media:
+      - src: assets/base-image.gif
+        caption: >-
+          Inside the noble image as vscode, s6-overlay is PID 1, sudo installs a
+          package and lists s6 services, and other sudo commands are denied.
+        alt: >-
+          A terminal shows s6-svscan as PID 1, a sudo apt-get install of jq, a
+          list of s6-rc services, and sudo id refused for want of a password.
+    nav:
+      - section: Guide
+        groups:
+          - group: Start
+            pages:
+              - overview
+              - devcontainer
+          - group: Reference
+            pages:
+              - services
+              - sudo
+    kinds:
+      - kind: devcontainer-image
+        ref: ghcr.io/wyrd-company/devcontainers/base
+        tags:
+          - tag: noble
+            base: Ubuntu 24.04 LTS
+            architectures:
+              - amd64
+              - arm64
+          - tag: ubuntu24.04
+            base: Ubuntu 24.04 LTS
+            architectures:
+              - amd64
+              - arm64
+          - tag: resolute
+            base: Ubuntu 26.04 LTS
+            architectures:
+              - amd64
+              - arm64
+          - tag: ubuntu26.04
+            base: Ubuntu 26.04 LTS
+            architectures:
+              - amd64
+              - arm64
+  caddy:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/caddy
+  claude-code-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/claude-code-cli
+  codex-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/codex-cli
+  cursor-agent-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/cursor-agent-cli
+  dagu:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/dagu
+  docker-in-docker:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/docker-in-docker
+  docker-outside-of-docker:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/docker-outside-of-docker
+  go:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/go
+  grok-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/grok-cli
+  openbao-agent:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/openbao-agent
+  opencode-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/opencode-cli
+  opencodex:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/opencodex
+  openobserve:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/openobserve
+  opentelemetry-collector:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/opentelemetry-collector
+  pi-coding-agent-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/pi-coding-agent-cli
+  sshd:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/sshd
+  t3code-server:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/t3code-server

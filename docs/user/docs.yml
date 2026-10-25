@@ -69,6 +69,7 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/caddy
+    logo: logo.svg
   claude-code-cli:
     kinds:
       - kind: devcontainer-feature
@@ -77,14 +78,17 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/codex-cli
+    logo: logo.svg
   cursor-agent-cli:
     kinds:
       - kind: devcontainer-feature
     source: src/features/cursor-agent-cli
+    logo: logo.svg
   dagu:
     kinds:
       - kind: devcontainer-feature
     source: src/features/dagu
+    logo: logo.svg
   docker-in-docker:
     kinds:
       - kind: devcontainer-feature
@@ -101,30 +105,37 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/grok-cli
+    logo: logo.svg
   openbao-agent:
     kinds:
       - kind: devcontainer-feature
     source: src/features/openbao-agent
+    logo: logo.svg
   opencode-cli:
     kinds:
       - kind: devcontainer-feature
     source: src/features/opencode-cli
+    logo: logo.svg
   opencodex:
     kinds:
       - kind: devcontainer-feature
     source: src/features/opencodex
+    logo: logo.svg
   openobserve:
     kinds:
       - kind: devcontainer-feature
     source: src/features/openobserve
+    logo: logo.svg
   opentelemetry-collector:
     kinds:
       - kind: devcontainer-feature
     source: src/features/opentelemetry-collector
+    logo: logo.svg
   pi-coding-agent-cli:
     kinds:
       - kind: devcontainer-feature
     source: src/features/pi-coding-agent-cli
+    logo: logo.svg
   sshd:
     kinds:
       - kind: devcontainer-feature
@@ -133,3 +144,4 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/t3code-server
+    logo: logo.svg

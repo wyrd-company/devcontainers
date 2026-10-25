@@ -39,6 +39,15 @@ jobs:
           path: ci-changes.env
           retention-days: 7
 
+  check-logos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check that every logo matches its frame and mark
+        run: python3 scripts/build-logos.py --check
+
   test-t3code-package-source-resolver:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.targets), 't3code-server')

@@ -13,3 +13,5 @@ sudo -u vscode t3 auth pairing create --base-dir /home/vscode/.t3
 ```
 
 Codex is intentionally not installed by this Feature. Add `ghcr.io/wyrd-company/devcontainers/codex-cli:1` separately when needed.
+
+Logo: the T3 mark from [T3Mark.svg](https://github.com/pingdotgg/t3code/blob/d414cb51032f302c268ebd11a486240139dfd3c0/apps/mobile/assets/widget/T3Mark.svg) (MIT). No trademark terms are published. Used here only to identify the upstream project.

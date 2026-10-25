@@ -11,3 +11,5 @@ Example usage:
   }
 }
 ```
+
+Logo: the Grok logomark from the [xAI brand guidelines](https://x.ai/legal/brand-guidelines) (`Grok_Logomark_Dark.svg`). The guidelines allow its unaltered use to refer accurately to xAI's services, without implied endorsement. Used here only to identify the upstream project.

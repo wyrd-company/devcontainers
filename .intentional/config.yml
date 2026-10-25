@@ -1,0 +1,275 @@
+$schema: https://intentional.foo/schemas/config.yml
+contract: contract-1
+settings:
+  internal-dependency-bump: patch
+  pre-1-0-bump-mapping: compatibility
+discovery:
+  managed-paths:
+    - detector: devcontainer-feature
+      path: src/features/caddy/devcontainer-feature.json
+      release-unit: caddy
+    - detector: devcontainer-feature
+      path: src/features/claude-code-cli/devcontainer-feature.json
+      release-unit: claude-code-cli
+    - detector: devcontainer-feature
+      path: src/features/codex-cli/devcontainer-feature.json
+      release-unit: codex-cli
+    - detector: devcontainer-feature
+      path: src/features/cursor-agent-cli/devcontainer-feature.json
+      release-unit: cursor-agent-cli
+    - detector: devcontainer-feature
+      path: src/features/dagu/devcontainer-feature.json
+      release-unit: dagu
+    - detector: devcontainer-feature
+      path: src/features/docker-in-docker/devcontainer-feature.json
+      release-unit: docker-in-docker
+    - detector: devcontainer-feature
+      path: src/features/docker-outside-of-docker/devcontainer-feature.json
+      release-unit: docker-outside-of-docker
+    - detector: devcontainer-feature
+      path: src/features/go/devcontainer-feature.json
+      release-unit: go
+    - detector: devcontainer-feature
+      path: src/features/grok-cli/devcontainer-feature.json
+      release-unit: grok-cli
+    - detector: devcontainer-feature
+      path: src/features/openbao-agent/devcontainer-feature.json
+      release-unit: openbao-agent
+    - detector: devcontainer-feature
+      path: src/features/opencode-cli/devcontainer-feature.json
+      release-unit: opencode-cli
+    - detector: devcontainer-feature
+      path: src/features/opencodex/devcontainer-feature.json
+      release-unit: opencodex
+    - detector: devcontainer-feature
+      path: src/features/openobserve/devcontainer-feature.json
+      release-unit: openobserve
+    - detector: devcontainer-feature
+      path: src/features/opentelemetry-collector/devcontainer-feature.json
+      release-unit: opentelemetry-collector
+    - detector: devcontainer-feature
+      path: src/features/pi-coding-agent-cli/devcontainer-feature.json
+      release-unit: pi-coding-agent-cli
+    - detector: devcontainer-feature
+      path: src/features/sshd/devcontainer-feature.json
+      release-unit: sshd
+    - detector: devcontainer-feature
+      path: src/features/t3code-server/devcontainer-feature.json
+      release-unit: t3code-server
+    - detector: devcontainer-template
+      path: src/templates/ubuntu/devcontainer-template.json
+      release-unit: ubuntu
+  excluded-paths:
+    - detector: npm-package
+      path: src/features/codex-cli/arguments/package.json
+      evidence-digest: sha256:151c48b63c71ef247e9d48d13cb852789fb6d643ef917c987d5214a9f26bedbd
+release-units:
+  caddy:
+    path: src/features/caddy
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  claude-code-cli:
+    path: src/features/claude-code-cli
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  codex-cli:
+    path: src/features/codex-cli
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  cursor-agent-cli:
+    path: src/features/cursor-agent-cli
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  dagu:
+    path: src/features/dagu
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  docker-in-docker:
+    path: src/features/docker-in-docker
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  docker-outside-of-docker:
+    path: src/features/docker-outside-of-docker
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  go:
+    path: src/features/go
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  grok-cli:
+    path: src/features/grok-cli
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  openbao-agent:
+    path: src/features/openbao-agent
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  opencode-cli:
+    path: src/features/opencode-cli
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  opencodex:
+    path: src/features/opencodex
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  openobserve:
+    path: src/features/openobserve
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  opentelemetry-collector:
+    path: src/features/opentelemetry-collector
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  pi-coding-agent-cli:
+    path: src/features/pi-coding-agent-cli
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  sshd:
+    path: src/features/sshd
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  t3code-server:
+    path: src/features/t3code-server
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  ubuntu:
+    path: src/templates/ubuntu
+    projections:
+      - adapter: json
+        file: devcontainer-template.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  base:
+    path: src/images/base-ubuntu
+    projections:
+      - adapter: json
+        file: manifest.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'

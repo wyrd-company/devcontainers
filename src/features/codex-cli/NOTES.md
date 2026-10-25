@@ -9,3 +9,5 @@ The TUI and `async-codex-mcp` use the private control socket under the same `COD
 `dnsName` integrates with Caddy. App-server uses `/`, retaining the shared private Unix socket through a same-user S6 socket bridge. Exec-server uses `/exec-server`. Listeners bind to IPv4 loopback; `appServerPort` defaults to 4500 and `execServerPort` to 4501. The Caddy and DNS readiness directories are required.
 
 The app-server Caddy route permits unauthenticated command execution. Exec-server authentication protects only its own route. The installer warns about each unauthenticated enabled route. Restrict access through Caddy or the network; `dnsName` does not authenticate clients.
+
+Logo: the OpenAI Blossom from the [OpenAI brand page](https://openai.com/brand/) (`Blossom_Light.svg`), without the construction guides. OpenAI's brand guidelines allow its unaltered use where it relates to OpenAI services. Used here only to identify the upstream project.

@@ -273,3 +273,16 @@ release-units:
       primary:
         role: primary
         template: '{id}@{version}'
+  base-docs:
+    path: docs/user
+    depends-on:
+      - base
+    projections:
+      - adapter: yaml
+        file: docs.yml
+        mode: committed
+        pointer: /products/base/docs-version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'

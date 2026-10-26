@@ -38,8 +38,12 @@ SHARED = (
 # Paths that no test reads.
 IGNORED = (
     ".github/",
+    ".intentional/",
     "LICENSES/",
+    "docs/",
+    "scripts/build-logos.py",
     "scripts/cleanup-ghcr-images.sh",
+    "scripts/logos/",
 )
 
 # Paths whose change requires publishing the base image.

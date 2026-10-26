@@ -4,14 +4,7 @@ Dev Container images, Templates, and Features published by Wyrd Company to GitHu
 
 ## Ubuntu image
 
-`ghcr.io/wyrd-company/devcontainers/base` derives from Microsoft's Ubuntu Dev Container base and adds s6-overlay as PID 1.
-
-Supported rolling tags:
-
-- `noble` and `ubuntu24.04`
-- `resolute` and `ubuntu26.04`
-
-Both variants support `amd64` and `arm64`.
+`ghcr.io/wyrd-company/devcontainers/base` derives from Microsoft's Ubuntu Dev Container base and adds s6-overlay as PID 1. Its variants, tags, services and sudo policy are documented in [docs/user](docs/user/overview.md).
 
 ## T3 Code web client image
 
@@ -36,7 +29,7 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 - `ghcr.io/wyrd-company/devcontainers/opencode-cli:1`
 - `ghcr.io/wyrd-company/devcontainers/pi-coding-agent-cli:1`
 - `ghcr.io/wyrd-company/devcontainers/opencodex:2`
-- `ghcr.io/wyrd-company/devcontainers/t3code-server:1`
+- `ghcr.io/wyrd-company/devcontainers/t3code-server:2`
 - `ghcr.io/wyrd-company/devcontainers/dagu:1`
 - `ghcr.io/wyrd-company/devcontainers/openobserve:1`
 - `ghcr.io/wyrd-company/devcontainers/opentelemetry-collector:1`
@@ -45,6 +38,7 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 - `ghcr.io/wyrd-company/devcontainers/sshd:1`
 - `ghcr.io/wyrd-company/devcontainers/docker-outside-of-docker:1`
 - `ghcr.io/wyrd-company/devcontainers/docker-in-docker:1`
+- `ghcr.io/wyrd-company/devcontainers/caddy:1`
 
 The service Features require the Ubuntu base image above, or another image that uses s6-overlay 3 with `/init` as its entrypoint. Set `"overrideCommand": false` in `devcontainer.json` so the image command remains active. Docker CE is the default for both Docker Features; Microsoft-packaged Moby is available only as an explicit opt-in where its complete package set exists.
 
@@ -56,5 +50,7 @@ src/
 ├── images/
 └── templates/
 ```
+
+Each Feature, the image and the Template is an independent release unit with its own `CHANGELOG.md`. Versions, changelogs and `<unit>@<version>` tags are owned by [intentional](https://github.com/wyrd-company/intentional) (`.intentional/config.yml`). A push of a release tag publishes the docs to [wyrd.foo](https://wyrd.foo): the image docs come from `docs/user/`, and each Feature page from the Feature's `README.md`.
 
 Feature and Template releases use the official Dev Container publishing action. Ubuntu images are rebuilt weekly and on relevant changes, published with provenance and Software Bill of Materials attestations, and retained with twelve dated rollback builds per variant.

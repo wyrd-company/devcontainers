@@ -4,4 +4,4 @@ The OpenTelemetry Collector runs under s6-overlay as the selected devcontainer u
 
 This feature is not affiliated with or endorsed by The Linux Foundation. OpenTelemetry and its logo are trademarks of The Linux Foundation. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
 
-Logo: the OpenTelemetry icon from [opentelemetry-icon-color.svg](https://github.com/cncf/artwork/blob/b4b5989332c822ef09d5b38a512e2b39c63e32f2/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg). The CNCF artwork is offered under the [Linux Foundation trademark usage guidelines](https://www.linuxfoundation.org/legal/trademark-usage), which allow its use without implied endorsement.
+Logo: the OpenTelemetry icon from [opentelemetry-icon-color.svg](https://github.com/cncf/artwork/blob/b4b5989332c822ef09d5b38a512e2b39c63e32f2/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg).

@@ -1,0 +1,48 @@
+name: Publish to wyrd.foo
+
+# Publishes the image, its docs and every Feature page to wyrd.foo when a
+# release tag is pushed, and on a manual run. Every release unit uses the tag
+# template `{id}@{version}` (`.intentional/config.yml`), so one pattern covers
+# the image (`base@*`), its docs (`base-docs@*`), each Feature (`caddy@*`) and
+# the Template (`ubuntu@*`). The `feature_<id>_<version>` tags that
+# devcontainers/action pushes do not match. A plain push to main does not
+# publish.
+
+on:
+  push:
+    tags:
+      - "*@*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag or commit to publish
+        required: true
+      feature:
+        description: Feature a product on the front page
+        type: boolean
+        default: false
+      feature-product:
+        description: The product key to feature
+        default: ""
+      feature-days:
+        description: How long the feature lasts, in days
+        default: "14"
+      feature-reason:
+        description: For example "New image"; default "New release"
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: wyrd-company/wyrd.foo/.github/workflows/publish-docs.yml@v2
+    with:
+      ref: ${{ inputs.ref || github.ref_name }}
+      feature: ${{ inputs.feature || false }}
+      feature-product: ${{ inputs.feature-product || '' }}
+      feature-days: ${{ inputs.feature-days || '14' }}
+      feature-reason: ${{ inputs.feature-reason || '' }}
+    secrets:
+      WYRD_TOOLS_DOCS_PUBLISHER_APP_ID: ${{ secrets.WYRD_TOOLS_DOCS_PUBLISHER_APP_ID }}
+      WYRD_TOOLS_DOCS_PUBLISHER_PRIVATE_KEY: ${{ secrets.WYRD_TOOLS_DOCS_PUBLISHER_PRIVATE_KEY }}

@@ -14,6 +14,6 @@ Example usage:
 
 ## Trademarks
 
-This feature is not affiliated with or endorsed by Anysphere, Inc.. Cursor and its logo are trademarks of Anysphere, Inc.. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+This feature is not affiliated with or endorsed by Anysphere, Inc. Cursor and its logo are trademarks of Anysphere, Inc. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
 
 Logo: the Cursor cube from the [Cursor brand assets](https://cursor.com/brand) (`CUBE_2D_LIGHT.svg`). Cursor publishes the assets to represent Cursor accurately and states no other terms.

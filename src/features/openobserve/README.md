@@ -118,3 +118,9 @@ Accepted values start with a letter or digit, then letters, digits, `.`, `_`, `/
 - **Latest version resolution:** When `version` is set to `latest`, the installer queries GitHub releases for the latest stable, non-prerelease tag (ignoring `-rc` candidates). If the GitHub API is unavailable or rate-limited, it falls back to the known stable release `v0.92.2`.
 - **Archive source:** OpenObserve publishes OSS binaries at `downloads.openobserve.ai/releases/openobserve/v<version>/openobserve-v<version>-linux-<arch>.tar.gz`.
 - **Integrity verification:** Upstream OpenObserve does not serve machine-readable checksum files for OSS releases from its download CDN (endpoints return 403), and the public download page does not publish Linux OSS checksums. When `sha256` is configured, the installer verifies the archive using `sha256sum --check`. When omitted, checksum verification is skipped.
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by OpenObserve Inc.. OpenObserve and its logo are trademarks of OpenObserve Inc.. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the OpenObserve mark from [o2_logo.svg](https://github.com/openobserve/openobserve/blob/38f00688dbfd2e87b7064139f93656e057188f94/web/src/assets/images/common/o2_logo.svg) (AGPL-3.0 repository), the same mark as the openobserve.ai favicon. No trademark terms are published.

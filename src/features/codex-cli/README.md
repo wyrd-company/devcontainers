@@ -83,3 +83,9 @@ Example with both routes:
   }
 }
 ```
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by OpenAI OpCo, LLC. OpenAI Codex and its logo are trademarks of OpenAI OpCo, LLC. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the OpenAI Blossom from the [OpenAI brand page](https://openai.com/brand/) (`Blossom_Light.svg`), without the construction guides. OpenAI's brand guidelines allow its unaltered use where it relates to OpenAI services.

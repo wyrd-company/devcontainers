@@ -41,3 +41,9 @@ The policy lives in `/etc/sudoers.d/vscode`. `apt-get install` accepts local `.d
 ## Upstream
 
 The image preserves the tools, non-root `vscode` user, and Dev Container metadata supplied by [`mcr.microsoft.com/devcontainers/base`](https://github.com/devcontainers/images/tree/main/src/base-ubuntu). Microsoft and other upstream components retain their respective copyright and license notices.
+
+## Trademarks
+
+This image is not affiliated with or endorsed by Canonical Ltd. Ubuntu and its logo are trademarks of Canonical Ltd. All trademarks and copyrights belong to their holders. The logo is used only to identify the operating system that this image is based on.
+
+Logo: the Ubuntu Circle of Friends from Canonical's design assets ([CoF_white.svg](https://assets.ubuntu.com/v1/82818827-CoF_white.svg)), in Ubuntu orange.

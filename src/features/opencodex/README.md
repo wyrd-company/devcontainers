@@ -96,3 +96,9 @@ In client mode, `ocx update` runs the user-owned installation directly. In stand
 OpenCodex accepts management requests only with a loopback `Host` and a loopback or absent `Origin`. The Caddy fragment supplies the loopback `Host` and rewrites the dashboard's own origin to the loopback origin. Other origins pass through and OpenCodex rejects them.
 
 The proxy keeps its loopback bind, so it treats requests through Caddy as local. Anyone who can reach the configured HTTPS name can use the dashboard without a token. Limit who can resolve and reach the name.
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by the OpenCodex contributors. OpenCodex and its logo are trademarks of the OpenCodex contributors. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the OpenCodex mark from [icon.svg](https://github.com/lidge-jun/opencodex/blob/9f0d40a25f8b842c33ab233d466d0bd991d86052/desktop/src-tauri/icons/icon.svg) (MIT), without its app-icon backdrop. No trademark terms are published.

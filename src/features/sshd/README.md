@@ -99,3 +99,9 @@ This Feature should work on recent versions of Debian/Ubuntu-based distributions
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/devcontainers/features/blob/main/src/sshd/devcontainer-feature.json). Add additional notes to a `NOTES.md`._
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by the OpenBSD project. OpenSSH and its logo are trademarks of the OpenBSD project. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: a simplified vector rendering of the OpenSSH Puffy "Top Secret" artwork from the [OpenSSH banner](https://www.openssh.com/images/openssh.gif), without the riveted backdrop. OpenSSH publishes no vector logo.

@@ -69,3 +69,9 @@ For a service user whose home is `/home/vscode`, Dagu defaults to:
 | s6 service               | `/etc/s6-overlay/s6-rc.d/dagu`   |
 
 Dagu's built-in authentication presents its first-administrator setup flow when no user store exists.
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by Yota Hamada. Dagu and its logo are trademarks of Yota Hamada. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the Dagu mark from [dagu.sh/icon.svg](https://dagu.sh/icon.svg), without its white backdrop. No trademark terms are published.

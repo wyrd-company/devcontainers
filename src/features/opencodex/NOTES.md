@@ -2,4 +2,8 @@ OpenCodex version 2 defaults to Remote Hub client mode; version 1 ran a local pr
 
 Set `mode=standalone` to run the local proxy and dashboard under s6-overlay. In standalone mode, `ocx update` holds the supervised proxy while it replaces the user-owned package, then s6 restarts it.
 
-Logo: the OpenCodex mark from [icon.svg](https://github.com/lidge-jun/opencodex/blob/9f0d40a25f8b842c33ab233d466d0bd991d86052/desktop/src-tauri/icons/icon.svg) (MIT), without its app-icon backdrop. No trademark terms are published. Used here only to identify the upstream project.
+## Trademarks
+
+This feature is not affiliated with or endorsed by the OpenCodex contributors. OpenCodex and its logo are trademarks of the OpenCodex contributors. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the OpenCodex mark from [icon.svg](https://github.com/lidge-jun/opencodex/blob/9f0d40a25f8b842c33ab233d466d0bd991d86052/desktop/src-tauri/icons/icon.svg) (MIT), without its app-icon backdrop. No trademark terms are published.

@@ -2,6 +2,6 @@ OpenObserve runs under s6-overlay as the selected devcontainer user. Configurati
 
 ## Trademarks
 
-This feature is not affiliated with or endorsed by OpenObserve Inc.. OpenObserve and its logo are trademarks of OpenObserve Inc.. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+This feature is not affiliated with or endorsed by OpenObserve Inc. OpenObserve and its logo are trademarks of OpenObserve Inc. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
 
 Logo: the OpenObserve mark from [o2_logo.svg](https://github.com/openobserve/openobserve/blob/38f00688dbfd2e87b7064139f93656e057188f94/web/src/assets/images/common/o2_logo.svg) (AGPL-3.0 repository), the same mark as the openobserve.ai favicon. No trademark terms are published.

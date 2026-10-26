@@ -38,6 +38,6 @@ Because both volumes are scoped to `${devcontainerId}`, each dev container gets 
 
 ## Trademarks
 
-This feature is not affiliated with or endorsed by Docker, Inc.. Docker and its logo are trademarks of Docker, Inc.. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+This feature is not affiliated with or endorsed by Docker, Inc. Docker and its logo are trademarks of Docker, Inc. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
 
 Logo: the Docker mark from the [Docker media resources](https://www.docker.com/company/newsroom/media-resources/) (`docker-mark-ocean-blue.svg`).

@@ -269,6 +269,11 @@ release-units:
         file: manifest.json
         mode: committed
         pointer: /version
+      # The wyrd.foo product page shows the image version.
+      - adapter: yaml
+        file: /docs/user/docs.yml
+        mode: committed
+        pointer: /products/base/version
     tags:
       primary:
         role: primary
@@ -279,7 +284,7 @@ release-units:
       - base
     projections:
       - adapter: yaml
-        file: docs.yml
+        file: /docs/user/docs.yml
         mode: committed
         pointer: /products/base/docs-version
     tags:

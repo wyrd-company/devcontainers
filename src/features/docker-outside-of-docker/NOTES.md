@@ -66,3 +66,5 @@ services:
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
 `bash` is required to execute the `install.sh` script.
+
+Logo: the Docker mark from the [Docker media resources](https://www.docker.com/company/newsroom/media-resources/) (`docker-mark-ocean-blue.svg`).

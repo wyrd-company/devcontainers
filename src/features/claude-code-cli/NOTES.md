@@ -9,3 +9,5 @@ Example usage:
   }
 }
 ```
+
+Logo: the Claude spark from the [Anthropic press kit](https://www.anthropic.com/press-kit) (`Claude Spark - Clay.svg`).

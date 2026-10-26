@@ -94,3 +94,5 @@ docker volume rm sshd-etc-ssh-host-keys-<devcontainerId>
 ```
 
 Because the fingerprint becomes stable, the `-o StrictHostKeyChecking=no` flags in the usage examples above are no longer required for reconnecting to the same dev container and can be dropped once you have accepted its host key.
+
+Logo: a simplified vector rendering of the OpenSSH Puffy "Top Secret" artwork from the [OpenSSH banner](https://www.openssh.com/images/openssh.gif), without the riveted backdrop. OpenSSH publishes no vector logo.

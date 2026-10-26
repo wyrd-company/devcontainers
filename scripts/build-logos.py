@@ -3,12 +3,14 @@
 
 Each upstream mark is stored once in scripts/logos/marks/<name>.svg: the
 project's official SVG with editor metadata, backdrops and wordmarks removed
-and the viewBox trimmed to the drawing. The frame for each artifact kind is
+and the viewBox trimmed to the drawing, or a vector drawing of the official
+raster when the project publishes no SVG. The frame for each artifact kind is
 defined here, so every logo of a kind has the same frame.
 
 To give a new artifact a logo, add its mark (if it is new), add one LOGOS
-entry, run this script, and record the mark's source and terms in the
-artifact's NOTES.md. An artifact without a logo needs a NO_LOGO entry.
+entry, run this script, and record the mark's source in the Trademarks
+section of the artifact's README.md and NOTES.md. An artifact without a logo
+needs a NO_LOGO entry.
 
 Usage: build-logos.py          write every logo
        build-logos.py --check  fail when a logo is missing, stale or invalid
@@ -59,9 +61,13 @@ FRAMES = {
 # optical size of marks that fill their box (solid squares) or barely do.
 LOGOS = {
     "src/features/caddy/logo.svg": ("src/features/caddy", "feature", "caddy", 1.0),
+    "src/features/claude-code-cli/logo.svg": ("src/features/claude-code-cli", "feature", "claude", 0.95),
     "src/features/codex-cli/logo.svg": ("src/features/codex-cli", "feature", "openai", 1.0),
     "src/features/cursor-agent-cli/logo.svg": ("src/features/cursor-agent-cli", "feature", "cursor", 0.95),
     "src/features/dagu/logo.svg": ("src/features/dagu", "feature", "dagu", 0.9),
+    "src/features/docker-in-docker/logo.svg": ("src/features/docker-in-docker", "feature", "docker", 1.0),
+    "src/features/docker-outside-of-docker/logo.svg": ("src/features/docker-outside-of-docker", "feature", "docker", 1.0),
+    "src/features/go/logo.svg": ("src/features/go", "feature", "gopher", 1.0),
     "src/features/grok-cli/logo.svg": ("src/features/grok-cli", "feature", "grok", 0.95),
     "src/features/openbao-agent/logo.svg": ("src/features/openbao-agent", "feature", "openbao", 1.0),
     "src/features/opencode-cli/logo.svg": ("src/features/opencode-cli", "feature", "opencode", 0.9),
@@ -69,19 +75,14 @@ LOGOS = {
     "src/features/openobserve/logo.svg": ("src/features/openobserve", "feature", "openobserve", 1.0),
     "src/features/opentelemetry-collector/logo.svg": ("src/features/opentelemetry-collector", "feature", "opentelemetry", 1.0),
     "src/features/pi-coding-agent-cli/logo.svg": ("src/features/pi-coding-agent-cli", "feature", "pi", 0.85),
+    "src/features/sshd/logo.svg": ("src/features/sshd", "feature", "openssh", 1.08),
     "src/features/t3code-server/logo.svg": ("src/features/t3code-server", "feature", "t3code", 1.0),
+    "docs/user/assets/base.svg": ("src/images/base-ubuntu", "image", "ubuntu", 1.0),
+    "src/templates/ubuntu/logo.svg": ("src/templates/ubuntu", "template", "devcontainers", 1.0),
 }
 
 # Artifact directory -> why it has no logo.
-NO_LOGO = {
-    "src/features/claude-code-cli": "Anthropic's trademark guidelines require written permission to use the Claude logo.",
-    "src/features/docker-in-docker": "Docker's trademark guidelines allow word marks, not logo marks, without authorization.",
-    "src/features/docker-outside-of-docker": "Docker's trademark guidelines allow word marks, not logo marks, without authorization.",
-    "src/features/go": "The Go brand guidelines require permission to use the Go logo.",
-    "src/features/sshd": "OpenSSH publishes no SVG logo.",
-    "src/images/base-ubuntu": "Canonical requires written permission to use the Ubuntu logo.",
-    "src/templates/ubuntu": "The Development Containers project publishes no SVG logo.",
-}
+NO_LOGO: dict[str, str] = {}
 
 FORBIDDEN = re.compile(r"<(script|image|foreignObject|style)\b|\son\w+\s*=|(?:xlink:)?href\s*=\s*\"(?!#)", re.I)
 

@@ -35,3 +35,5 @@ This Feature mounts two named Docker volumes into the dev container so that the 
 The `/var/lib/containerd` mount is required when the dev container's root filesystem is itself an overlayfs mount (the default in Kubernetes / containerd-backed hosts, GitHub Codespaces, and Docker with the containerd image store enabled). Without it, the standalone `containerd` started by this Feature would place its overlayfs snapshotter data on an overlay rootfs, causing overlay-on-overlay mounts to fail with `invalid argument`. See [issue #1639](https://github.com/devcontainers/features/issues/1639) for background.
 
 Because both volumes are scoped to `${devcontainerId}`, each dev container gets its own state and rebuilds preserve images and snapshots. Removing the dev container does not automatically remove these volumes; clean them up with `docker volume rm` if you want to reclaim space.
+
+Logo: the Docker mark from the [Docker media resources](https://www.docker.com/company/newsroom/media-resources/) (`docker-mark-ocean-blue.svg`).

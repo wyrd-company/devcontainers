@@ -2,6 +2,7 @@
 schemaVersion: 1
 assets:
   - assets/base-image.gif
+  - assets/base.svg
 products:
   base:
     name: Wyrd base image
@@ -15,6 +16,7 @@ products:
       installs and service control.
     status: stable
     category: Dev Containers
+    logo: assets/base.svg
     highlights:
       - s6-overlay 3 runs as PID 1, so services start, restart and stop under supervision.
       - Ubuntu 24.04 LTS and 26.04 LTS variants, each for amd64 and arm64.
@@ -74,6 +76,7 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/claude-code-cli
+    logo: logo.svg
   codex-cli:
     kinds:
       - kind: devcontainer-feature
@@ -93,14 +96,17 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/docker-in-docker
+    logo: logo.svg
   docker-outside-of-docker:
     kinds:
       - kind: devcontainer-feature
     source: src/features/docker-outside-of-docker
+    logo: logo.svg
   go:
     kinds:
       - kind: devcontainer-feature
     source: src/features/go
+    logo: logo.svg
   grok-cli:
     kinds:
       - kind: devcontainer-feature
@@ -140,6 +146,7 @@ products:
     kinds:
       - kind: devcontainer-feature
     source: src/features/sshd
+    logo: logo.svg
   t3code-server:
     kinds:
       - kind: devcontainer-feature

@@ -96,4 +96,4 @@ This feature is not affiliated with or endorsed by OpenBao a Series of LF Projec
 
 The OpenBao logo is from the [OpenBao artwork](https://github.com/openbao/artwork) and is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-Logo: the OpenBao icon from [favicon.svg](https://github.com/openbao/openbao/blob/1d58653b0c00e53484de5af18f20679d78b9fb28/website/public/img/favicon.svg) (MPL-2.0 repository). OpenBao is a Series of LF Projects, LLC; the [LF Projects trademark policy](https://lfprojects.org/policies/trademark-policy/) allows its use without implied endorsement.
+Logo: the OpenBao icon from [favicon.svg](https://github.com/openbao/openbao/blob/1d58653b0c00e53484de5af18f20679d78b9fb28/website/public/img/favicon.svg) (MPL-2.0 repository).

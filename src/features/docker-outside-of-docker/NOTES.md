@@ -67,4 +67,8 @@ This Feature should work on recent versions of Debian/Ubuntu-based distributions
 
 `bash` is required to execute the `install.sh` script.
 
+## Trademarks
+
+This feature is not affiliated with or endorsed by Docker, Inc.. Docker and its logo are trademarks of Docker, Inc.. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
 Logo: the Docker mark from the [Docker media resources](https://www.docker.com/company/newsroom/media-resources/) (`docker-mark-ocean-blue.svg`).

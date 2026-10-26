@@ -83,3 +83,9 @@ Values are literal text, so a value can contain spaces. A variable that the cont
 The selected upstream command is installed as `otelcol` or `otelcol-contrib`. The stable `opentelemetry-collector` command points to the selected binary.
 
 Release archives are downloaded from the official `open-telemetry/opentelemetry-collector-releases` repository and verified against the adjacent upstream SHA256 file.
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by The Linux Foundation. OpenTelemetry and its logo are trademarks of The Linux Foundation. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the OpenTelemetry icon from [opentelemetry-icon-color.svg](https://github.com/cncf/artwork/blob/b4b5989332c822ef09d5b38a512e2b39c63e32f2/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg). The CNCF artwork is offered under the [Linux Foundation trademark usage guidelines](https://www.linuxfoundation.org/legal/trademark-usage), which allow its use without implied endorsement.

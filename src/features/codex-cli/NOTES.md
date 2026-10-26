@@ -10,4 +10,8 @@ The TUI and `async-codex-mcp` use the private control socket under the same `COD
 
 The app-server Caddy route permits unauthenticated command execution. Exec-server authentication protects only its own route. The installer warns about each unauthenticated enabled route. Restrict access through Caddy or the network; `dnsName` does not authenticate clients.
 
-Logo: the OpenAI Blossom from the [OpenAI brand page](https://openai.com/brand/) (`Blossom_Light.svg`), without the construction guides. OpenAI's brand guidelines allow its unaltered use where it relates to OpenAI services. Used here only to identify the upstream project.
+## Trademarks
+
+This feature is not affiliated with or endorsed by OpenAI OpCo, LLC. OpenAI Codex and its logo are trademarks of OpenAI OpCo, LLC. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the OpenAI Blossom from the [OpenAI brand page](https://openai.com/brand/) (`Blossom_Light.svg`), without the construction guides. OpenAI's brand guidelines allow its unaltered use where it relates to OpenAI services.

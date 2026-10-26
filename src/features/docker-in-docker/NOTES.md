@@ -36,4 +36,8 @@ The `/var/lib/containerd` mount is required when the dev container's root filesy
 
 Because both volumes are scoped to `${devcontainerId}`, each dev container gets its own state and rebuilds preserve images and snapshots. Removing the dev container does not automatically remove these volumes; clean them up with `docker volume rm` if you want to reclaim space.
 
+## Trademarks
+
+This feature is not affiliated with or endorsed by Docker, Inc.. Docker and its logo are trademarks of Docker, Inc.. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
 Logo: the Docker mark from the [Docker media resources](https://www.docker.com/company/newsroom/media-resources/) (`docker-mark-ocean-blue.svg`).

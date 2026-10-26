@@ -12,4 +12,8 @@ Example usage:
 }
 ```
 
-Logo: the Grok logomark from the [xAI brand guidelines](https://x.ai/legal/brand-guidelines) (`Grok_Logomark_Dark.svg`). The guidelines allow its unaltered use to refer accurately to xAI's services, without implied endorsement. Used here only to identify the upstream project.
+## Trademarks
+
+This feature is not affiliated with or endorsed by SpaceXSI. Grok and its logo are trademarks of SpaceXSI. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the Grok logomark from the [xAI brand guidelines](https://x.ai/legal/brand-guidelines) (`Grok_Logomark_Dark.svg`). The guidelines allow its unaltered use to refer accurately to xAI's services, without implied endorsement.

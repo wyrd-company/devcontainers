@@ -91,6 +91,7 @@ docker run --detach --name "${git_server}" --network "${network}" --network-alia
     "ansible-runtime-git:${suffix}" >/dev/null
 docker cp "${fixtures}/playbooks" "${git_server}:/fixtures"
 docker cp "${fixtures}/role-fixture" "${git_server}:/role-fixture"
+docker cp "${fixtures}/dep-fixture" "${git_server}:/dep-fixture"
 
 # OpenSSH's own agent serves only its owner and root, so the simulated agent runs as the
 # vscode user. The real Wyrwood agent grants access through a group instead.
@@ -128,6 +129,15 @@ git_as_git '
     set -e
     git init -q --bare -b main /srv/git/sample-playbooks.git
     git init -q --bare -b main /srv/git/sample-role.git
+    git init -q --bare -b main /srv/git/sample-dep.git
+    git clone -q /srv/git/sample-dep.git /tmp/dep 2>/dev/null
+    cd /tmp/dep
+    git checkout -q -B main
+    cp -r /dep-fixture/. .
+    git add -A
+    git commit -qm "Add the sample dependency"
+    git tag dep-v1
+    git push -q origin main dep-v1
     git clone -q /srv/git/sample-role.git /tmp/role 2>/dev/null
     cd /tmp/role
     git checkout -q -B main
@@ -171,12 +181,20 @@ commit_requirements() {
     "
 }
 
-# publish_role <tag>: publish a new version of the sample role.
+# publish_role <role tag> <dependency tag>: publish new versions of the sample role and of the
+# dependency that the role requires.
 publish_role() {
     git_as_git "
         set -e
+        cd /tmp/dep
+        sed -i 's/dep-v[0-9]*/$2/' tasks/main.yml
+        git add -A
+        git commit -qm 'Release $2'
+        git tag $2
+        git push -q origin main $2
         cd /tmp/role
         sed -i 's/role-v[0-9]*/$1/' tasks/main.yml
+        sed -i 's/dep-v[0-9]*/$2/' meta/main.yml
         git add -A
         git commit -qm 'Release $1'
         git tag $1
@@ -227,7 +245,11 @@ assert_eq "extra arguments" on "$(state_value "${root_name}" extra)"
 role_version() {
     docker exec "$1" sh -c "tr -d '\n' <${state_dir}/role-ran"
 }
+dep_version() {
+    docker exec "$1" sh -c "tr -d '\n' <${state_dir}/dep-ran"
+}
 assert_eq "the role from the requirements file ran" role-v1 "$(role_version "${root_name}")"
+assert_eq "the role's dependency ran" dep-v1 "$(dep_version "${root_name}")"
 assert_eq "HOME of the service user" /root "$(state_value "${root_name}" home)"
 assert_eq "USER of the service user" root "$(state_value "${root_name}" login_user)"
 assert_eq "LOGNAME of the service user" root "$(state_value "${root_name}" logname)"
@@ -264,10 +286,11 @@ assert_eq "updated source" marker-2 "$(state_value "${root_name}" marker)"
 assert_eq "second run" 2 "$(run_count "${root_name}")"
 
 echo "== A changed requirements version replaces the installed role"
-publish_role role-v2
+publish_role role-v2 dep-v2
 commit_requirements role-v2
 docker exec --user root "${root_name}" ansible-sync >/dev/null
 assert_eq "role after the requirements change" role-v2 "$(role_version "${root_name}")"
+assert_eq "dependency after the requirements change" dep-v2 "$(dep_version "${root_name}")"
 
 echo "== ansible-sync is limited to the service user"
 if docker exec --user vscode "${root_name}" ansible-sync >/dev/null 2>&1; then
@@ -415,6 +438,8 @@ assert_install_rejected "a ref with a space" "ref must be" "REF=main branch"
 assert_install_rejected "a relative checkout directory" "checkoutDir must be an absolute path" CHECKOUTDIR=sample
 assert_install_rejected "a checkout directory that holds the lock" "must not contain /var/lib/ansible-setup/lock" \
     CHECKOUTDIR=/var/lib/ansible-setup
+assert_install_rejected "a checkout directory inside the lock path" "must not be /var/lib/ansible-setup/lock or inside it" \
+    CHECKOUTDIR=/var/lib/ansible-setup/lock/checkout
 assert_install_rejected "an unknown service user" "does not exist" SERVICEUSER=sample-missing-user
 
 printf 'Ansible s6 runtime checks passed.\n'

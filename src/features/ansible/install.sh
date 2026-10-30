@@ -134,6 +134,9 @@ state_dir=/var/lib/ansible-setup
 case "${state_dir}/lock/" in
     "${checkout_dir}/"*) err "checkoutDir must not contain ${state_dir}/lock; choose a directory outside ${state_dir}." ;;
 esac
+case "${checkout_dir}/" in
+    "${state_dir}/lock/"*) err "checkoutDir must not be ${state_dir}/lock or inside it." ;;
+esac
 
 service_user="$(pick_service_user "${SERVICEUSER:-root}")"
 service_group="$(id -gn "${service_user}")"

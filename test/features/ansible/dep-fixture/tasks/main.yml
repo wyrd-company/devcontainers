@@ -1,0 +1,5 @@
+- name: Record that the dependency ran
+  ansible.builtin.copy:
+    dest: /var/tmp/ansible-runtime/dep-ran
+    content: "dep-v1\n"
+    mode: "0644"

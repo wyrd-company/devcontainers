@@ -46,7 +46,7 @@ An absolute `source` path, such as a bind mount, is used in place. The Feature d
 ### Inventory, requirements and arguments
 
 - `inventory` is a path in the source. Empty runs against `localhost`, which is the container itself. The run always uses `--connection local`; an `args` value can override it.
-- `requirements` is a roles and collections file in the source. `ansible-galaxy install -r` runs before each playbook run and installs into Ansible's native locations under the service user's home. It runs with `--force`, so a changed version in the file replaces the installed one, and every run needs the role and collection sources to be reachable.
+- `requirements` is a roles and collections file in the source. `ansible-galaxy install -r` runs before each playbook run and installs into Ansible's native locations under the service user's home. It forces the listed roles and their dependencies to reinstall, so a changed version in the file replaces the installed one, and every run needs the role and collection sources to be reachable.
 - `args` holds extra `ansible-playbook` arguments, split on spaces, such as `--tags base -e sample_flag=true`. Quotes, braces and other shell characters are rejected. Use `-e @file.yml` for structured variables.
 - `ansible-playbook` runs with the source directory as its working directory, so an `ansible.cfg` there applies. The flags above take precedence over the container's `ANSIBLE_*` variables.
 
@@ -84,16 +84,16 @@ The `ansible-setup` oneshot depends on the `base` bundle and nothing else. This 
 
 ## Options
 
-| Option         | Type   | Default                           | Description                                                                                         |
-| -------------- | ------ | --------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `source`       | string | `""`                              | Git repository URL or absolute path of a local directory. Empty installs Ansible only.              |
-| `playbook`     | string | `site.yml`                        | Playbook path relative to the source.                                                               |
-| `ref`          | string | `""`                              | Branch, tag or commit to track. Empty tracks the remote's default branch.                           |
-| `inventory`    | string | `""`                              | Inventory path relative to the source. Empty runs against `localhost`.                              |
-| `requirements` | string | `""`                              | Roles and collections requirements file relative to the source.                                     |
-| `args`         | string | `""`                              | Extra `ansible-playbook` arguments, split on spaces.                                                |
-| `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout. It must not contain the lock file `/var/lib/ansible-setup/lock`. |
-| `serviceUser`  | string | `root`                            | User that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, `root`. |
+| Option         | Type   | Default                           | Description                                                                                                            |
+| -------------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `source`       | string | `""`                              | Git repository URL or absolute path of a local directory. Empty installs Ansible only.                                 |
+| `playbook`     | string | `site.yml`                        | Playbook path relative to the source.                                                                                  |
+| `ref`          | string | `""`                              | Branch, tag or commit to track. Empty tracks the remote's default branch.                                              |
+| `inventory`    | string | `""`                              | Inventory path relative to the source. Empty runs against `localhost`.                                                 |
+| `requirements` | string | `""`                              | Roles and collections requirements file relative to the source.                                                        |
+| `args`         | string | `""`                              | Extra `ansible-playbook` arguments, split on spaces.                                                                   |
+| `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout. It must not contain or sit inside the lock file path `/var/lib/ansible-setup/lock`. |
+| `serviceUser`  | string | `root`                            | User that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, `root`.                    |
 
 Option values are fixed when the container image is built, validated, and rejected when they hold newlines, quotes, braces or other characters that could break the generated settings.
 

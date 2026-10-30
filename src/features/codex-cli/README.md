@@ -1,6 +1,6 @@
 # Codex CLI
 
-Installs the OpenAI [Codex](https://github.com/openai/codex) CLI from npm in the selected user's `~/.local` directory. Node.js 24 LTS comes from the official Node Feature. [s6-overlay](https://github.com/just-containers/s6-overlay) runs a shared app-server with the user's environment, `HOME`, and `USER`.
+Installs the OpenAI [Codex](https://github.com/openai/codex) CLI from npm in the selected user's `~/.local` directory. [Node.js](https://nodejs.org/) 24 LTS comes from the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node). [s6-overlay](https://github.com/just-containers/s6-overlay) runs a shared app-server with the user's environment, `HOME`, and `USER`.
 
 ## Options
 

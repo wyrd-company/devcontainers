@@ -12,8 +12,9 @@
 #
 # - the Feature lists the Ansible Feature in `installsAfter`;
 # - with the fixture, exactly the expected services depend on `ansible-setup`,
-#   and nothing else in the service definitions differs from the install
-#   without it;
+#   and no other file under /etc/s6-overlay or /usr/local/bin differs in mode,
+#   owner, or content from the install without it;
+# - neither install grants unrestricted sudo;
 # - both service trees compile with s6-rc-compile;
 # - the expected services do not start before the oneshot finishes, and never
 #   start when it fails (read from the s6-rc transition log, which s6-rc keeps
@@ -103,14 +104,25 @@ edges() {
     inspect "$1" "cd ${s6_rc_dir} && find . -path '*/dependencies.d/*' -type f | grep -v '^./ansible-setup/' | sort"
 }
 
+# Mode, owner, and content hash of every service definition and generated
+# launcher, except the fixture and the edges to it.
+definitions() {
+    inspect "$1" "
+        find /etc/s6-overlay /usr/local/bin -type f ! -name ansible-setup ! -name ansible-setup-fixture \\
+            ! -path '${s6_rc_dir}/ansible-setup/*' -printf '%m %u:%g %p\\n' | sort
+        find /etc/s6-overlay /usr/local/bin -type f ! -name ansible-setup ! -name ansible-setup-fixture \\
+            ! -path '${s6_rc_dir}/ansible-setup/*' -exec sha256sum {} + | sort -k 2"
+}
+
+# Starts IMAGE and sets `container` to its name. It runs in the caller's shell
+# so that the exit trap sees the container.
 start() {
-    local image="$1" privileged="$2" mode="$3" container
+    local image="$1" privileged="$2" mode="$3"
     local args=(--detach)
     [ "${privileged}" = yes ] && args+=(--privileged)
     container="ansible-dependency-${feature}-${RANDOM}-$$"
     containers+=("${container}")
     docker run "${args[@]}" --name "${container}" --env "ANSIBLE_FIXTURE_MODE=${mode}" "${image}" >/dev/null
-    printf '%s\n' "${container}"
 }
 
 # Prints the time in nanoseconds at which s6-rc logged "service $2$3", or
@@ -161,6 +173,8 @@ while IFS='|' read -r name overrides privileged services_text; do
     build absent "${feature_env}" "${absent_image}"
 
     for image in "${present_image}" "${absent_image}"; do
+        "${repo_root}/scripts/check-sudo-no-all.sh" "${image}" >/dev/null \
+            || fail "[${label}] ${image} grants unrestricted sudo."
         inspect "${image}" "/command/s6-rc-compile /tmp/compiled ${s6_rc_sources}" >/dev/null \
             || fail "[${label}] The service definitions in ${image} do not compile."
     done
@@ -175,20 +189,22 @@ while IFS='|' read -r name overrides privileged services_text; do
     [ "${ansible_edges}" -eq "${#services[@]}" ] \
         || fail "[${label}] Expected ${#services[@]} ansible-setup dependencies, found ${ansible_edges}."
     [ "$(grep -v '/dependencies.d/ansible-setup$' <<<"${present_edges}")" = "${absent_edges}" ] \
-        || fail "[${label}] The installs differ beyond the ansible-setup dependency."
+        || fail "[${label}] The dependency edges differ beyond ansible-setup."
+    [ "$(definitions "${present_image}")" = "$(definitions "${absent_image}")" ] \
+        || fail "[${label}] The service definitions differ beyond the ansible-setup dependency."
     ! grep -q 'ansible-setup' <<<"${absent_edges}" \
         || fail "[${label}] A dependency on ansible-setup exists without the Ansible Feature."
     inspect "${absent_image}" "test ! -e ${s6_rc_dir}/ansible-setup" \
         || fail "[${label}] The install without the fixture contains ansible-setup."
 
     printf '[%s] Starting services without ansible-setup.\n' "${label}"
-    container="$(start "${absent_image}" "${privileged}" pass)"
+    start "${absent_image}" "${privileged}" pass
     wait_until 120 all_started "${container}" "${services[@]}" \
         || { docker logs "${container}" >&2; fail "[${label}] Services did not start without ansible-setup."; }
     docker rm --force "${container}" >/dev/null
 
     printf '[%s] Starting services after a successful ansible-setup.\n' "${label}"
-    container="$(start "${present_image}" "${privileged}" pass)"
+    start "${present_image}" "${privileged}" pass
     wait_until 240 all_started "${container}" "${services[@]}" \
         || { docker logs "${container}" >&2; fail "[${label}] Services did not start after ansible-setup finished."; }
     setup_began="$(logged_at "${container}" ansible-setup ': starting')"
@@ -205,7 +221,7 @@ while IFS='|' read -r name overrides privileged services_text; do
     docker rm --force "${container}" >/dev/null
 
     printf '[%s] Starting services after a failed ansible-setup.\n' "${label}"
-    container="$(start "${present_image}" "${privileged}" fail)"
+    start "${present_image}" "${privileged}" fail
     wait_until 240 docker exec "${container}" test -e /run/ansible-fixture/failed \
         || { docker logs "${container}" >&2; fail "[${label}] ansible-setup never failed."; }
     sleep 10

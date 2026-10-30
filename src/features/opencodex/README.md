@@ -1,8 +1,8 @@
 # OpenCodex
 
-Installs [OpenCodex](https://github.com/lidge-jun/opencodex) (`ocx`) for the service user. The default `client` mode connects local coding tools to an external Remote Hub. Optional `standalone` mode runs a local proxy and dashboard as a native [s6-overlay](https://github.com/just-containers/s6-overlay) 3 service.
+Installs [OpenCodex](https://opencodex.me/) (`ocx`) for the service user. The default `client` mode connects local coding tools to an external Remote Hub. Optional `standalone` mode runs a local proxy and dashboard as a native [s6-overlay](https://github.com/just-containers/s6-overlay) 3 service.
 
-The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. Node.js 24 is supplied through the official Dev Container Node Feature.
+The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. [Node.js](https://nodejs.org/) 24 is supplied through the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node).
 
 Version 2 defaults to client mode. Version 1 ran a local proxy by default. Set `mode` to `standalone` to keep that behavior when moving from version 1.
 

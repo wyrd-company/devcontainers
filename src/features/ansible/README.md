@@ -70,7 +70,7 @@ ansible-sync
 
 ## Service user
 
-The default is `root`, so a playbook can install packages and write system configuration: the `vscode` user's sudo rights in the Wyrd base image do not allow Ansible's `become`. A playbook that configures the `vscode` user can use `become_user: vscode`. `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. The command sets `HOME`, `USER` and `LOGNAME` for the service user. The Dev Containers CLI can change that user's ID to match the host user's after the Feature installs; each root run, including startup, gives the state directory and the Git checkout to the user's current ID.
+The default is `root`, so a playbook can install packages and write system configuration: the `vscode` user's sudo rights in the Wyrd base image do not allow Ansible's `become`. A playbook that configures the `vscode` user can use `become_user: vscode`. `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. The command sets `HOME`, `USER` and `LOGNAME` for the service user. The Dev Containers CLI can change that user's ID to match the host user's after the Feature installs; each root run, including startup, gives the lock directory and the top of the Git checkout (not their contents) to the user's current ID. For that, a non-root service user needs a `checkoutDir` below directories that only root can change, which the installer enforces.
 
 ## Wyrwood and the Vault socket
 
@@ -84,16 +84,16 @@ The `ansible-setup` oneshot depends on the `base` bundle and nothing else. This 
 
 ## Options
 
-| Option         | Type   | Default                           | Description                                                                                                            |
-| -------------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `source`       | string | `""`                              | Git repository URL or absolute path of a local directory. Empty installs Ansible only.                                 |
-| `playbook`     | string | `site.yml`                        | Playbook path relative to the source.                                                                                  |
-| `ref`          | string | `""`                              | Branch, tag or commit to track. Empty tracks the remote's default branch.                                              |
-| `inventory`    | string | `""`                              | Inventory path relative to the source. Empty runs against `localhost`.                                                 |
-| `requirements` | string | `""`                              | Roles and collections requirements file relative to the source.                                                        |
-| `args`         | string | `""`                              | Extra `ansible-playbook` arguments, split on spaces.                                                                   |
-| `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout. It must not contain or sit inside the lock file path `/var/lib/ansible-setup/lock`. |
-| `serviceUser`  | string | `root`                            | User that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, `root`.                    |
+| Option         | Type   | Default                           | Description                                                                                                              |
+| -------------- | ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `source`       | string | `""`                              | Git repository URL or absolute path of a local directory. Empty installs Ansible only.                                   |
+| `playbook`     | string | `site.yml`                        | Playbook path relative to the source.                                                                                    |
+| `ref`          | string | `""`                              | Branch, tag or commit to track. Empty tracks the remote's default branch.                                                |
+| `inventory`    | string | `""`                              | Inventory path relative to the source. Empty runs against `localhost`.                                                   |
+| `requirements` | string | `""`                              | Roles and collections requirements file relative to the source.                                                          |
+| `args`         | string | `""`                              | Extra `ansible-playbook` arguments, split on spaces.                                                                     |
+| `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout. It must not contain or sit inside the lock directory `/var/lib/ansible-setup/lock.d`. |
+| `serviceUser`  | string | `root`                            | User that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, `root`.                      |
 
 Option values are fixed when the container image is built, validated, and rejected when they hold newlines, quotes, braces or other characters that could break the generated settings.
 
@@ -102,7 +102,7 @@ Option values are fixed when the container image is built, validated, and reject
 | Purpose                   | Location                                                      |
 | ------------------------- | ------------------------------------------------------------- |
 | Settings                  | `/etc/ansible-setup/settings`                                 |
-| Lock                      | `/var/lib/ansible-setup/lock`                                 |
+| Lock                      | `/var/lib/ansible-setup/lock.d/lock`                          |
 | Default checkout          | `/var/lib/ansible-setup/checkout`                             |
 | s6 service                | `/etc/s6-overlay/s6-rc.d/ansible-setup`                       |
 | Startup and sync commands | `/usr/local/bin/ansible-setup`, `/usr/local/bin/ansible-sync` |

@@ -21,6 +21,35 @@ usage() {
     echo "Updates the configured playbook source and applies the playbook."
 }
 
+# True when only root can change the directories above $1, so that a non-root user cannot
+# redirect a root-run command by replacing a path component with a symlink.
+protected_ancestry() {
+    local dir mode
+    dir="$(dirname -- "$(realpath -m -- "$1")")"
+    while :; do
+        [ -d "${dir}" ] || return 1
+        [ "$(stat -c %u "${dir}")" = 0 ] || return 1
+        mode="$(stat -c %a "${dir}")"
+        (( (8#${mode} & 8#022) == 0 )) || return 1
+        [ "${dir}" != / ] || return 0
+        dir="$(dirname -- "${dir}")"
+    done
+}
+
+# Gives one directory, and nothing inside it, to the service user's current ID.
+repair_owner() {
+    local dir="$1"
+    local owner="$2"
+
+    [ -d "${dir}" ] && [ ! -L "${dir}" ] || return 0
+    [ "$(stat -c %u:%g "${dir}")" != "${owner}" ] || return 0
+    if protected_ancestry "${dir}"; then
+        chown -h "${owner}" "${dir}"
+    else
+        log "Not changing the owner of ${dir}: a non-root user can change its parent directories."
+    fi
+}
+
 startup=false
 case "${1:-}" in
     '') ;;
@@ -44,16 +73,11 @@ if [ "$(id -un)" != "${SETUP_USER}" ]; then
     fi
     # The installer gave these directories to the service user by number. A remapped user ID
     # (the Dev Containers updateRemoteUserUID) leaves them with the old number, so hand them back.
-    service_uid="$(id -u "${SETUP_USER}")"
-    service_gid="$(id -g "${SETUP_USER}")"
-    chown "${service_uid}:${service_gid}" "${SETUP_STATE_DIR}"
+    service_owner="$(id -u "${SETUP_USER}"):$(id -g "${SETUP_USER}")"
+    repair_owner "${SETUP_LOCK_DIR}" "${service_owner}"
     case "${SETUP_SOURCE}" in
         /*) ;;
-        *)
-            if [ -d "${SETUP_CHECKOUT}" ] && [ "$(stat -c %u "${SETUP_CHECKOUT}")" != "${service_uid}" ]; then
-                chown -R "${service_uid}:${service_gid}" "${SETUP_CHECKOUT}"
-            fi
-            ;;
+        *) repair_owner "${SETUP_CHECKOUT}" "${service_owner}" ;;
     esac
     forwarded=()
     if "${startup}"; then
@@ -69,7 +93,7 @@ service_home="$(getent passwd "${SETUP_USER}" | cut -d: -f6)"
 export HOME="${service_home}" USER="${SETUP_USER}" LOGNAME="${SETUP_USER}"
 
 # The startup oneshot and every ansible-sync call wait for each other here.
-lock_file="${SETUP_STATE_DIR}/lock"
+lock_file="${SETUP_LOCK_DIR}/lock"
 exec 9>>"${lock_file}" || err "Unable to open ${lock_file}."
 flock 9
 

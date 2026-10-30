@@ -21,7 +21,8 @@ check "default service user is root" grep -qx 'SETUP_USER=root' /etc/ansible-set
 check "default playbook is site.yml" grep -qx 'SETUP_PLAYBOOK=site.yml' /etc/ansible-setup/settings
 check "default checkout directory" grep -qx 'SETUP_CHECKOUT=/var/lib/ansible-setup/checkout' /etc/ansible-setup/settings
 check "settings hold no source by default" grep -qx "SETUP_SOURCE=''" /etc/ansible-setup/settings
-check "state directory is owned by the service user" test "$(stat -c %U /var/lib/ansible-setup)" = root
+check "state directory is owned by root" test "$(stat -c %U /var/lib/ansible-setup)" = root
+check "lock directory is owned by the service user" test "$(stat -c %U /var/lib/ansible-setup/lock.d)" = root
 check "startup without a source succeeds" /usr/local/bin/ansible-sync --startup
 check_fails() { ! "$@"; }
 check "ansible-sync without a source fails" check_fails /usr/local/bin/ansible-sync

@@ -135,21 +135,46 @@ fi
     || err "args contains characters that are not allowed: quotes, braces and other shell characters."
 validate_absolute_path checkoutDir "${checkout_dir}"
 state_dir=/var/lib/ansible-setup
-case "${state_dir}/lock/" in
-    "${checkout_dir}/"*) err "checkoutDir must not contain ${state_dir}/lock; choose a directory outside ${state_dir}." ;;
+lock_dir="${state_dir}/lock.d"
+case "${lock_dir}/" in
+    "${checkout_dir}/"*) err "checkoutDir must not contain ${lock_dir}; choose a directory outside ${state_dir} or below it." ;;
 esac
 case "${checkout_dir}/" in
-    "${state_dir}/lock/"*) err "checkoutDir must not be ${state_dir}/lock or inside it." ;;
+    "${lock_dir}/"*) err "checkoutDir must not be ${lock_dir} or inside it." ;;
 esac
 
 service_user="$(pick_service_user "${SERVICEUSER:-root}")"
 service_group="$(id -gn "${service_user}")"
 
+# A root-run command repairs the checkout directory's owner after a user ID change, so a
+# non-root service user must not be able to redirect that path through a symlink.
+if [ "${service_user}" != root ] && [ -n "${source_value}" ]; then
+    case "${source_value}" in
+        /*) ;;
+        *)
+            ancestor="$(dirname -- "$(realpath -m -- "${checkout_dir}")")"
+            while [ ! -d "${ancestor}" ]; do
+                ancestor="$(dirname -- "${ancestor}")"
+            done
+            while :; do
+                ancestor_mode="$(stat -c %a "${ancestor}")"
+                if [ "$(stat -c %u "${ancestor}")" != 0 ] || (( (8#${ancestor_mode} & 8#022) != 0 )); then
+                    err "checkoutDir must be below directories that only root can change; ${ancestor} is not."
+                fi
+                [ "${ancestor}" != / ] || break
+                ancestor="$(dirname -- "${ancestor}")"
+            done
+            ;;
+    esac
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y --no-install-recommends ansible-core ca-certificates git openssh-client util-linux
 
-install -d -m 0755 -o "${service_user}" -g "${service_group}" "${state_dir}"
+# The state directory stays with root so that no one else can redirect a path below it.
+install -d -m 0755 "${state_dir}"
+install -d -m 0755 -o "${service_user}" -g "${service_group}" "${lock_dir}"
 if [ -n "${source_value}" ]; then
     case "${source_value}" in
         /*) ;;
@@ -165,7 +190,7 @@ printf -v q_requirements '%q' "${requirements}"
 printf -v q_args '%q' "${extra_args}"
 printf -v q_checkout '%q' "${checkout_dir}"
 printf -v q_user '%q' "${service_user}"
-printf -v q_state '%q' "${state_dir}"
+printf -v q_lock_dir '%q' "${lock_dir}"
 
 # Non-secret settings. The command reads them; nothing here is a credential.
 install -d -m 0755 /etc/ansible-setup
@@ -178,7 +203,7 @@ SETUP_REQUIREMENTS=${q_requirements}
 SETUP_ARGS=${q_args}
 SETUP_CHECKOUT=${q_checkout}
 SETUP_USER=${q_user}
-SETUP_STATE_DIR=${q_state}
+SETUP_LOCK_DIR=${q_lock_dir}
 EOF
 chmod 0644 /etc/ansible-setup/settings
 

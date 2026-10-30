@@ -366,8 +366,12 @@ start_container "${user_name}" "${user_image}"
 wait_for "ansible-setup for the non-root user" setup_done "${user_name}"
 assert_eq "service user" vscode "$(state_value "${user_name}" user)"
 assert_eq "Git reached the repository through the agent socket" marker-4 "$(state_value "${user_name}" marker)"
-docker exec "${user_name}" sh -c 'test "$(stat -c %u /var/lib/ansible-setup/checkout)" = 1234 && test "$(stat -c %u /var/lib/ansible-setup)" = 1234' \
-    || fail "The checkout or state directory is not owned by the remapped service user."
+docker exec "${user_name}" sh -c 'test "$(stat -c %u:%g /var/lib/ansible-setup/checkout)" = 1234:1234 && test "$(stat -c %u:%g /var/lib/ansible-setup/lock.d)" = 1234:1234' \
+    || fail "The checkout or lock directory is not owned by the remapped service user."
+docker exec "${user_name}" sh -c 'test "$(stat -c %u /var/lib/ansible-setup)" = 0' \
+    || fail "The state directory is not owned by root."
+docker restart "${user_name}" >/dev/null
+wait_for "ansible-setup after restarting the non-root user's container" setup_done "${user_name}"
 docker exec --user vscode --env HOME=/tmp/sample-wrong-home --env USER=sample-wrong --env LOGNAME=sample-wrong \
     "${user_name}" ansible-sync >/dev/null
 assert_eq "HOME of a direct call" /home/vscode "$(state_value "${user_name}" home)"
@@ -439,10 +443,12 @@ assert_install_rejected "quotes in args" "args contains characters" "ARGS=-e 'sa
 assert_install_rejected "braces in args" "args contains characters" 'ARGS=-e {sample:1}'
 assert_install_rejected "a ref with a space" "ref must be" "REF=main branch"
 assert_install_rejected "a relative checkout directory" "checkoutDir must be an absolute path" CHECKOUTDIR=sample
-assert_install_rejected "a checkout directory that holds the lock" "must not contain /var/lib/ansible-setup/lock" \
+assert_install_rejected "a checkout directory that holds the lock" "must not contain /var/lib/ansible-setup/lock.d" \
     CHECKOUTDIR=/var/lib/ansible-setup
-assert_install_rejected "a checkout directory inside the lock path" "must not be /var/lib/ansible-setup/lock or inside it" \
-    CHECKOUTDIR=/var/lib/ansible-setup/lock/checkout
+assert_install_rejected "a checkout directory inside the lock path" "must not be /var/lib/ansible-setup/lock.d or inside it" \
+    CHECKOUTDIR=/var/lib/ansible-setup/lock.d/checkout
+assert_install_rejected "a checkout below a directory the service user controls" "only root can change" \
+    SERVICEUSER=vscode SOURCE=https://example.test/sample/repo.git CHECKOUTDIR=/home/vscode/cache/checkout
 assert_install_rejected "an unknown service user" "does not exist" SERVICEUSER=sample-missing-user
 
 printf 'Ansible s6 runtime checks passed.\n'

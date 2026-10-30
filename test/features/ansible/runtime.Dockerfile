@@ -24,7 +24,8 @@ RUN SOURCE="${SOURCE}" \
 # The Dev Containers CLI remaps the remote user's ID to the host user's after the Features
 # are installed, and gives the home directory to the new ID.
 RUN if [ -n "${REMAP_UID}" ]; then \
-        usermod -u "${REMAP_UID}" vscode && chown -R "${REMAP_UID}" /home/vscode; \
+        groupmod -g "${REMAP_UID}" vscode && usermod -u "${REMAP_UID}" -g "${REMAP_UID}" vscode \
+        && chown -R "${REMAP_UID}:${REMAP_UID}" /home/vscode; \
     fi
 
 # A service that follows the repository convention: it depends on ansible-setup

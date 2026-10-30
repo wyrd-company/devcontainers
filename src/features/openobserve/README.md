@@ -2,7 +2,7 @@
 
 Installs the official [OpenObserve](https://openobserve.ai/) OSS single binary and runs it as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
-OpenObserve runs as the selected devcontainer user so that service state, logs, and SQLite metadata use that user's permissions, home directory, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
+OpenObserve runs as the selected devcontainer user so that service state, logs, and [SQLite](https://sqlite.org/) metadata use that user's permissions, home directory, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
 
 The Feature uses OpenObserve's native per-user configuration and state paths. It does not create configuration files, mount volumes, or create directories outside the service user's paths. Configure bind mounts and their permissions in each `devcontainer.json` when configuration or state must survive a rebuild.
 

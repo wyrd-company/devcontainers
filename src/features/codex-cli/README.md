@@ -8,7 +8,7 @@ Installs the OpenAI [Codex](https://github.com/openai/codex) CLI from [npm](http
 | ---------------- | ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `version`        | string  | `latest`    | Codex CLI version from npm.                                                                                                             |
 | `startAppServer` | boolean | `true`      | Run the shared app-server under S6.                                                                                                     |
-| `remoteControl`  | boolean | `false`     | Enable remote control on the shared app-server. Requires `startAppServer` and ChatGPT sign-in.                                          |
+| `remoteControl`  | boolean | `false`     | Enable remote control on the shared app-server. Requires `startAppServer` and [ChatGPT](https://chatgpt.com/) sign-in.                  |
 | `execServer`     | string  | `false`     | `false` disables exec-server; `true` enables it without authentication; any other value supplies additional CLI arguments.              |
 | `execServerPort` | string  | `4501`      | Exec-server IPv4 loopback port.                                                                                                         |
 | `dnsName`        | string  | empty       | Fully qualified DNS name served by the [Caddy](https://caddyserver.com/) Feature. App-server uses `/`; exec-server uses `/exec-server`. |
@@ -42,7 +42,7 @@ All clients share the server's startup environment. Set `CODEX_HOME` in `contain
 
 The optional S6 service runs `codex exec-server --listen ws://127.0.0.1:<execServerPort>` as the selected user. It uses Codex's exec-specific protocol, separately from the app-server thread/turn API. It can run with `startAppServer=false`.
 
-Use string values for `execServer`. `"false"` or an empty value disables it; `"true"` starts it without authentication. Other values are parsed as quoted CLI arguments. Use single quotes around arguments with spaces: the devcontainers CLI writes option values inside double-quoted shell assignments. Arguments are appended after the Feature's listener argument. Codex validates flag combinations at startup. Shell commands, operators, glob expansion, and environment substitution are not supported. Supply literal arguments; the installer parser does not expand environment variables. Use absolute paths for secret files, including runtime mounts; the installer does not read those files.
+Use string values for `execServer`. `"false"` or an empty value disables it; `"true"` starts it without authentication. Other values are parsed as quoted CLI arguments. Use single quotes around arguments with spaces: the [devcontainers CLI](https://github.com/devcontainers/cli) writes option values inside double-quoted shell assignments. Arguments are appended after the Feature's listener argument. Codex validates flag combinations at startup. Shell commands, operators, glob expansion, and environment substitution are not supported. Supply literal arguments; the installer parser does not expand environment variables. Use absolute paths for secret files, including runtime mounts; the installer does not read those files.
 
 Capability-token example:
 

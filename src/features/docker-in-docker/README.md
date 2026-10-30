@@ -18,18 +18,18 @@ Creates child containers using [Docker](https://www.docker.com/) daemons supervi
 | moby                       | Install Microsoft-packaged Moby instead of Docker CE when the complete package set is available                                                                                                                                                                            | boolean | false         |
 | mobyBuildxVersion          | Install a specific version of moby-buildx when using Moby                                                                                                                                                                                                                  | string  | latest        |
 | dockerDashComposeVersion   | Default version of [Docker Compose](https://docs.docker.com/compose/) (v1, v2, latest or none)                                                                                                                                                                             | string  | latest        |
-| azureDnsAutoDetection      | Allow automatically setting the dockerd DNS server when the installation script detects it is running in Azure                                                                                                                                                             | boolean | true          |
+| azureDnsAutoDetection      | Allow automatically setting the dockerd DNS server when the installation script detects it is running in [Azure](https://azure.microsoft.com/)                                                                                                                             | boolean | true          |
 | dockerDefaultAddressPool   | Define default address pools for Docker networks. e.g. base=192.168.0.0/16,size=24                                                                                                                                                                                         | string  | -             |
 | installDockerBuildx        | Install [Docker Buildx](https://github.com/docker/buildx)                                                                                                                                                                                                                  | boolean | true          |
 | installDockerComposeSwitch | Install [Compose Switch](https://github.com/docker/compose-switch) (provided docker compose is available) which is a replacement to the Compose V1 docker-compose (python) executable. It translates the command line into Compose V2 docker compose then runs the latter. | boolean | false         |
 | disableIp6tables           | Disable ip6tables (this option is only applicable for Docker versions 27 and greater)                                                                                                                                                                                      | boolean | false         |
-| iptablesSwitchAtRuntime    | If true, the iptables alternative is selected by the s6 preparation service at container start. Useful when the desired iptables backend depends on the host kernel at runtime rather than at build time.                                                                  | boolean | true          |
+| iptablesSwitchAtRuntime    | If true, the [iptables](https://www.netfilter.org/projects/iptables/) alternative is selected by the s6 preparation service at container start. Useful when the desired iptables backend depends on the host kernel at runtime rather than at build time.                  | boolean | true          |
 
 ## Customizations
 
-### VS Code Extensions
+### [VS Code](https://code.visualstudio.com/) Extensions
 
-- `ms-azuretools.vscode-containers`
+- [`ms-azuretools.vscode-containers`](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-containers)
 
 ## Limitations
 
@@ -48,7 +48,7 @@ This docker-in-docker Dev Container Feature is roughly based on the [official do
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 ---
 

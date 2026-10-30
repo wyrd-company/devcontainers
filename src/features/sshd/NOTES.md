@@ -6,9 +6,9 @@ This Feature derives from Microsoft's [Dev Container SSHD Feature](https://githu
 
 ## Usage
 
-While the some services automates SSH setup (e.g., when using the GitHub CLI for GitHub Codespaces), this may not be the case for other tools and services. Follow these directions to connect to the dev container from these other tools:
+While the some services automates SSH setup (e.g., when using the [GitHub CLI](https://cli.github.com/) for [GitHub Codespaces](https://github.com/features/codespaces)), this may not be the case for other tools and services. Follow these directions to connect to the dev container from these other tools:
 
-1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., VS Code client).
+1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., [VS Code](https://code.visualstudio.com/) client).
 
 2. Put your public key in the container user's `authorized_keys` file. Password and root login are disabled, so this is the only way in. Either mount the file from `devcontainer.json`:
 
@@ -51,7 +51,7 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 2. Install a SSHFS client.
 
    - **Windows:** Install [WinFsp](https://github.com/billziss-gh/winfsp/releases) and [SSHFS-Win](https://github.com/billziss-gh/sshfs-win/releases).
-   - **macOS**: Use [Homebrew](https://brew.sh/) to install: `brew install macfuse gromgit/fuse/sshfs-mac`
+   - **macOS**: Use [Homebrew](https://brew.sh/) to install [macFUSE](https://macfuse.github.io/) and [sshfs-mac](https://github.com/gromgit/homebrew-fuse): `brew install macfuse gromgit/fuse/sshfs-mac`
    - **Linux:** Use your native package manager to install your distribution's copy of the sshfs package. e.g. `sudo apt-get update && sudo apt-get install sshfs`
 
 3. Mount the remote filesystem.
@@ -79,7 +79,7 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 ## Persisted state
 

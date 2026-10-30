@@ -1,6 +1,6 @@
 Installs the [npm](https://www.npmjs.com/)-distributed [Codex](https://github.com/openai/codex) CLI in the selected user's `~/.local` directory and runs a shared app-server under [s6-overlay](https://github.com/just-containers/s6-overlay) 3 by default.
 
-`serviceUser` defaults to the remote user, container user, `vscode`, then `root`. Set both `startAppServer=false` and `execServer="false"` for CLI-only installation. `remoteControl=true` adds remote control to the shared server and requires ChatGPT sign-in with `codex login`.
+`serviceUser` defaults to the remote user, container user, `vscode`, then `root`. Set both `startAppServer=false` and `execServer="false"` for CLI-only installation. `remoteControl=true` adds remote control to the shared server and requires [ChatGPT](https://chatgpt.com/) sign-in with `codex login`.
 
 The TUI and [`async-codex-mcp`](https://github.com/wyrd-company/async-codex-mcp) use the private control socket under the same `CODEX_HOME` (default `~/.codex`). Set custom profile paths in `containerEnv`. Mount that native state directory to retain sign-in and history across rebuilds; this Feature declares no mounts.
 

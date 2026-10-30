@@ -58,7 +58,7 @@ For runtimes that pass upstream's launcher protocol preflight, s6 supervises `<h
 
 ## Updating
 
-A connected T3 client offers **Update server** when the launcher supports it. T3 downloads a release archive, verifies its checksum and preflight, then asks its launcher to replace the server. The launcher snapshots SQLite, starts the replacement as a trial, and commits after successful startup. A failed trial restores the database and previous server. Files outside SQLite are outside that rollback boundary. Remote updates run as the service user without sudo and remain selected after an s6 or container restart.
+A connected T3 client offers **Update server** when the launcher supports it. T3 downloads a release archive, verifies its checksum and preflight, then asks its launcher to replace the server. The launcher snapshots [SQLite](https://sqlite.org/), starts the replacement as a trial, and commits after successful startup. A failed trial restores the database and previous server. Files outside SQLite are outside that rollback boundary. Remote updates run as the service user without sudo and remain selected after an s6 or container restart.
 
 Remote updates require a newer server version and a compatible launcher protocol. If an update requires a newer launcher, run the local maintenance command on the container. Legacy direct-server runtimes require local maintenance as well. To enable the native launcher for an existing persisted installation whose version is already current, run `sudo t3code-server-update --force`. This explicitly reinstalls and selects the runtime; ordinary startup preserves its existing selector.
 

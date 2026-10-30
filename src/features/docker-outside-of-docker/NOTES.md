@@ -59,13 +59,13 @@ services:
 3. When the container first started with this settings, select the Workspace with the absolute path to the working directory inside the container
 4. Docker commands with bind mount should work as they did outside of the devcontainer
 
-> **Note:** There is no `${localWorkspaceFolder}` when using the **Clone Repository in Container Volume** command in the VS Code Dev Containers extension ([info](https://github.com/microsoft/vscode-remote-release/issues/6160#issuecomment-1014701007)).
+> **Note:** There is no `${localWorkspaceFolder}` when using the **Clone Repository in Container Volume** command in the [VS Code](https://code.visualstudio.com/) [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) ([info](https://github.com/microsoft/vscode-remote-release/issues/6160#issuecomment-1014701007)).
 
 ## OS Support
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 When the [Ansible](https://www.ansible.com/) Feature is installed, the socket access service starts only after the `ansible-setup` s6-rc oneshot finishes, and does not start if it fails. Without Ansible, startup does not change.
 

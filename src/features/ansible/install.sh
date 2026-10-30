@@ -130,7 +130,10 @@ fi
 [[ "${extra_args}" =~ ^[A-Za-z0-9_@%+=:,./\ -]*$ ]] \
     || err "args contains characters that are not allowed: quotes, braces and other shell characters."
 validate_absolute_path checkoutDir "${checkout_dir}"
-[ "${checkout_dir}" != / ] || err "checkoutDir must not be the root directory."
+state_dir=/var/lib/ansible-setup
+case "${state_dir}/lock/" in
+    "${checkout_dir}/"*) err "checkoutDir must not contain ${state_dir}/lock; choose a directory outside ${state_dir}." ;;
+esac
 
 service_user="$(pick_service_user "${SERVICEUSER:-root}")"
 service_group="$(id -gn "${service_user}")"
@@ -139,7 +142,6 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y --no-install-recommends ansible-core ca-certificates git openssh-client util-linux
 
-state_dir=/var/lib/ansible-setup
 install -d -m 0755 -o "${service_user}" -g "${service_group}" "${state_dir}"
 if [ -n "${source_value}" ]; then
     case "${source_value}" in

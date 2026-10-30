@@ -48,6 +48,9 @@
           ssh_auth_sock={{ lookup('env', 'SSH_AUTH_SOCK') | default('unset', true) }}
           ssh_agent_sock={{ lookup('env', 'SSH_AGENT_SOCK') | default('unset', true) }}
           bao_addr={{ lookup('env', 'BAO_ADDR') | default('unset', true) }}
+          home={{ lookup('env', 'HOME') | default('unset', true) }}
+          login_user={{ lookup('env', 'USER') | default('unset', true) }}
+          logname={{ lookup('env', 'LOGNAME') | default('unset', true) }}
           sample={{ lookup('env', 'SAMPLE_RUNTIME_VALUE') | default('unset', true) }}
           inventory_env={{ lookup('env', 'ANSIBLE_INVENTORY') | default('unset', true) }}
           vault_health={{ health.json.initialized }}

@@ -42,15 +42,18 @@ if [ "$(id -un)" != "${SETUP_USER}" ]; then
     if [ "$(id -u)" -ne 0 ]; then
         err "Run ansible-sync as ${SETUP_USER}$([ "${SETUP_USER}" = root ] || echo ' or root')."
     fi
-    service_home="$(getent passwd "${SETUP_USER}" | cut -d: -f6)"
     forwarded=()
     if "${startup}"; then
         forwarded=(--startup)
     fi
     exec setpriv --reuid="${SETUP_USER}" --regid="$(id -gn "${SETUP_USER}")" --init-groups \
-        env HOME="${service_home}" USER="${SETUP_USER}" LOGNAME="${SETUP_USER}" \
         /usr/local/bin/ansible-sync "${forwarded[@]}"
 fi
+
+# Every run gets the service user's identity, whoever started it.
+service_home="$(getent passwd "${SETUP_USER}" | cut -d: -f6)"
+[ -n "${service_home}" ] || err "Unable to resolve the home directory for ${SETUP_USER}."
+export HOME="${service_home}" USER="${SETUP_USER}" LOGNAME="${SETUP_USER}"
 
 # The startup oneshot and every ansible-sync call wait for each other here.
 lock_file="${SETUP_STATE_DIR}/lock"
@@ -95,7 +98,8 @@ cd "${workdir}"
 if [ -n "${SETUP_REQUIREMENTS}" ]; then
     [ -f "${SETUP_REQUIREMENTS}" ] || err "Requirements file ${SETUP_REQUIREMENTS} does not exist in ${workdir}."
     log "Installing requirements from ${SETUP_REQUIREMENTS}."
-    ansible-galaxy install -r "${SETUP_REQUIREMENTS}" || err "ansible-galaxy failed."
+    # --force reinstalls what is listed, so that a changed version replaces the installed one.
+    ansible-galaxy install --force -r "${SETUP_REQUIREMENTS}" || err "ansible-galaxy failed."
 fi
 
 inventory=(-i 'localhost,')

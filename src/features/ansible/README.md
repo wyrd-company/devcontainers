@@ -46,7 +46,7 @@ An absolute `source` path, such as a bind mount, is used in place. The Feature d
 ### Inventory, requirements and arguments
 
 - `inventory` is a path in the source. Empty runs against `localhost`, which is the container itself. The run always uses `--connection local`; an `args` value can override it.
-- `requirements` is a roles and collections file in the source. `ansible-galaxy install -r` runs before each playbook run and installs into Ansible's native locations under the service user's home. It does not upgrade an installed version that still satisfies the file.
+- `requirements` is a roles and collections file in the source. `ansible-galaxy install -r` runs before each playbook run and installs into Ansible's native locations under the service user's home. It runs with `--force`, so a changed version in the file replaces the installed one, and every run needs the role and collection sources to be reachable.
 - `args` holds extra `ansible-playbook` arguments, split on spaces, such as `--tags base -e sample_flag=true`. Quotes, braces and other shell characters are rejected. Use `-e @file.yml` for structured variables.
 - `ansible-playbook` runs with the source directory as its working directory, so an `ansible.cfg` there applies. The flags above take precedence over the container's `ANSIBLE_*` variables.
 
@@ -60,7 +60,7 @@ The oneshot and `ansible-sync` stop and fail when:
 - the playbook, inventory or requirements file is missing;
 - `ansible-galaxy` or `ansible-playbook` fails.
 
-A failed oneshot does not stop the container. Services that depend on `ansible-setup` do not start until a later run succeeds. A failed startup does not retry by itself; run `ansible-sync` after you fix the cause, or restart the container. The Feature sets no timeout, so an unreachable but not refusing repository waits on Git's own network timeouts.
+A failed oneshot does not stop the container. Services that depend on `ansible-setup` do not start until a later run succeeds. A failed startup does not retry by itself. After you fix the cause, run `ansible-sync` to check the result. It does not mark the oneshot as up, so services that wait for `ansible-setup` stay down until you run `s6-rc -u change user` as root, which retries `ansible-setup` and starts its dependents, or restart the container. The Feature sets no timeout, so an unreachable but not refusing repository waits on Git's own network timeouts.
 
 `ansible-sync` runs as the service user. Called by root it changes to that user, and called by any other user it fails. With the default `serviceUser` of `root`, run it as root, for example with `docker exec --user root <container> ansible-sync`.
 
@@ -92,7 +92,7 @@ The `ansible-setup` oneshot depends on the `base` bundle and nothing else. This 
 | `inventory`    | string | `""`                              | Inventory path relative to the source. Empty runs against `localhost`.                              |
 | `requirements` | string | `""`                              | Roles and collections requirements file relative to the source.                                     |
 | `args`         | string | `""`                              | Extra `ansible-playbook` arguments, split on spaces.                                                |
-| `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout.                                                                  |
+| `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout. It must not contain the lock file `/var/lib/ansible-setup/lock`. |
 | `serviceUser`  | string | `root`                            | User that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, `root`. |
 
 Option values are fixed when the container image is built, validated, and rejected when they hold newlines, quotes, braces or other characters that could break the generated settings.

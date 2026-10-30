@@ -134,7 +134,8 @@ git_as_git '
     cp -r /role-fixture/. .
     git add -A
     git commit -qm "Add the sample role"
-    git push -q origin main
+    git tag role-v1
+    git push -q origin main role-v1
     git clone -q /srv/git/sample-playbooks.git /tmp/work 2>/dev/null
     cd /tmp/work
     git checkout -q -B main
@@ -155,6 +156,31 @@ commit_playbook() {
         git add -A
         git commit -qm 'Change to $1'
         git push -q origin main
+    "
+}
+
+# commit_requirements <role tag>: publish a requirements file that selects another role version.
+commit_requirements() {
+    git_as_git "
+        set -e
+        cd /tmp/work
+        sed -i 's/^    version: .*/    version: $1/' requirements.yml
+        git add -A
+        git commit -qm 'Require $1'
+        git push -q origin main
+    "
+}
+
+# publish_role <tag>: publish a new version of the sample role.
+publish_role() {
+    git_as_git "
+        set -e
+        cd /tmp/role
+        sed -i 's/role-v[0-9]*/$1/' tasks/main.yml
+        git add -A
+        git commit -qm 'Release $1'
+        git tag $1
+        git push -q origin main $1
     "
 }
 
@@ -198,7 +224,13 @@ assert_eq "service user" root "$(state_value "${root_name}" user)"
 assert_eq "playbook ran against the container" localhost "$(state_value "${root_name}" host)"
 assert_eq "playbook source" marker-1 "$(state_value "${root_name}" marker)"
 assert_eq "extra arguments" on "$(state_value "${root_name}" extra)"
-assert_eq "the role from the requirements file ran" yes "$(docker exec "${root_name}" sh -c "tr -d '\n' <${state_dir}/role-ran")"
+role_version() {
+    docker exec "$1" sh -c "tr -d '\n' <${state_dir}/role-ran"
+}
+assert_eq "the role from the requirements file ran" role-v1 "$(role_version "${root_name}")"
+assert_eq "HOME of the service user" /root "$(state_value "${root_name}" home)"
+assert_eq "USER of the service user" root "$(state_value "${root_name}" login_user)"
+assert_eq "LOGNAME of the service user" root "$(state_value "${root_name}" logname)"
 assert_eq "startup runs once" 1 "$(run_count "${root_name}")"
 server_head="$(git_as_git 'git -C /srv/git/sample-playbooks.git rev-parse --short HEAD')"
 assert_eq "checkout commit" "${server_head}" "$(docker exec "${root_name}" git -C /var/lib/ansible-setup/checkout rev-parse --short HEAD)"
@@ -230,6 +262,12 @@ commit_playbook marker-2 good
 docker exec --user root "${root_name}" ansible-sync >/dev/null
 assert_eq "updated source" marker-2 "$(state_value "${root_name}" marker)"
 assert_eq "second run" 2 "$(run_count "${root_name}")"
+
+echo "== A changed requirements version replaces the installed role"
+publish_role role-v2
+commit_requirements role-v2
+docker exec --user root "${root_name}" ansible-sync >/dev/null
+assert_eq "role after the requirements change" role-v2 "$(role_version "${root_name}")"
 
 echo "== ansible-sync is limited to the service user"
 if docker exec --user vscode "${root_name}" ansible-sync >/dev/null 2>&1; then
@@ -271,6 +309,14 @@ echo "== A fixed playbook recovers"
 commit_playbook marker-4 good
 docker exec --user root "${root_name}" ansible-sync >/dev/null
 assert_eq "recovered source" marker-4 "$(state_value "${root_name}" marker)"
+if setup_done "${root_name}"; then
+    fail "ansible-sync alone marked ansible-setup up."
+fi
+echo "== The documented recovery starts ansible-setup and its dependents"
+docker exec --user root "${root_name}" /command/s6-rc -u change user >/dev/null
+wait_for "ansible-setup after s6-rc recovery" setup_done "${root_name}"
+wait_for "the dependent service after s6-rc recovery" docker exec "${root_name}" test -e /var/tmp/sample-dependent-started
+echo "== A restart applies the playbook again"
 docker restart "${root_name}" >/dev/null
 wait_for "ansible-setup after the restart" setup_done "${root_name}"
 wait_for "the dependent service after the restart" docker exec "${root_name}" test -e /var/tmp/sample-dependent-started
@@ -296,7 +342,11 @@ assert_eq "service user" vscode "$(state_value "${user_name}" user)"
 assert_eq "Git reached the repository through the agent socket" marker-4 "$(state_value "${user_name}" marker)"
 docker exec "${user_name}" sh -c 'test "$(stat -c %U /var/lib/ansible-setup/checkout)" = vscode' \
     || fail "The checkout is not owned by the service user."
-docker exec --user vscode "${user_name}" ansible-sync >/dev/null
+docker exec --user vscode --env HOME=/tmp/sample-wrong-home --env USER=sample-wrong --env LOGNAME=sample-wrong \
+    "${user_name}" ansible-sync >/dev/null
+assert_eq "HOME of a direct call" /home/vscode "$(state_value "${user_name}" home)"
+assert_eq "USER of a direct call" vscode "$(state_value "${user_name}" login_user)"
+assert_eq "LOGNAME of a direct call" vscode "$(state_value "${user_name}" logname)"
 docker exec --user root "${user_name}" ansible-sync >/dev/null
 assert_eq "service user after root called ansible-sync" vscode "$(state_value "${user_name}" user)"
 if docker exec --user nobody "${user_name}" ansible-sync >/dev/null 2>&1; then
@@ -363,6 +413,8 @@ assert_install_rejected "quotes in args" "args contains characters" "ARGS=-e 'sa
 assert_install_rejected "braces in args" "args contains characters" 'ARGS=-e {sample:1}'
 assert_install_rejected "a ref with a space" "ref must be" "REF=main branch"
 assert_install_rejected "a relative checkout directory" "checkoutDir must be an absolute path" CHECKOUTDIR=sample
+assert_install_rejected "a checkout directory that holds the lock" "must not contain /var/lib/ansible-setup/lock" \
+    CHECKOUTDIR=/var/lib/ansible-setup
 assert_install_rejected "an unknown service user" "does not exist" SERVICEUSER=sample-missing-user
 
 printf 'Ansible s6 runtime checks passed.\n'

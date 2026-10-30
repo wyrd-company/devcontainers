@@ -70,7 +70,7 @@ ansible-sync
 
 ## Service user
 
-The default is `root`, so a playbook can install packages and write system configuration: the `vscode` user's sudo rights in the Wyrd base image do not allow Ansible's `become`. A playbook that configures the `vscode` user can use `become_user: vscode`. `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. The command sets `HOME`, `USER` and `LOGNAME` for the service user.
+The default is `root`, so a playbook can install packages and write system configuration: the `vscode` user's sudo rights in the Wyrd base image do not allow Ansible's `become`. A playbook that configures the `vscode` user can use `become_user: vscode`. `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. The command sets `HOME`, `USER` and `LOGNAME` for the service user. The Dev Containers CLI can change that user's ID to match the host user's after the Feature installs; each root run, including startup, gives the state directory and the Git checkout to the user's current ID.
 
 ## Wyrwood and the Vault socket
 

@@ -42,6 +42,19 @@ if [ "$(id -un)" != "${SETUP_USER}" ]; then
     if [ "$(id -u)" -ne 0 ]; then
         err "Run ansible-sync as ${SETUP_USER}$([ "${SETUP_USER}" = root ] || echo ' or root')."
     fi
+    # The installer gave these directories to the service user by number. A remapped user ID
+    # (the Dev Containers updateRemoteUserUID) leaves them with the old number, so hand them back.
+    service_uid="$(id -u "${SETUP_USER}")"
+    service_gid="$(id -g "${SETUP_USER}")"
+    chown "${service_uid}:${service_gid}" "${SETUP_STATE_DIR}"
+    case "${SETUP_SOURCE}" in
+        /*) ;;
+        *)
+            if [ -d "${SETUP_CHECKOUT}" ] && [ "$(stat -c %u "${SETUP_CHECKOUT}")" != "${service_uid}" ]; then
+                chown -R "${service_uid}:${service_gid}" "${SETUP_CHECKOUT}"
+            fi
+            ;;
+    esac
     forwarded=()
     if "${startup}"; then
         forwarded=(--startup)

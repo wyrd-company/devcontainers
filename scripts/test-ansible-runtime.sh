@@ -76,7 +76,9 @@ root_image="ansible-runtime:root-${suffix}"
 user_image="ansible-runtime:user-${suffix}"
 local_image="ansible-runtime:local-${suffix}"
 build_image "${root_image}" --build-arg "SOURCE=${git_url}"
-build_image "${user_image}" --build-arg "SOURCE=${git_url}" --build-arg SERVICEUSER=vscode
+# The user image remaps the vscode user ID the way the Dev Containers CLI does on a host whose
+# user ID is not 1000.
+build_image "${user_image}" --build-arg "SOURCE=${git_url}" --build-arg SERVICEUSER=vscode --build-arg REMAP_UID=1234
 build_image "${local_image}" --build-arg SOURCE=/srv/sample-playbooks
 docker build --quiet --file "${fixtures}/git-server.Dockerfile" --tag "ansible-runtime-git:${suffix}" "${fixtures}" >/dev/null
 
@@ -97,7 +99,7 @@ docker cp "${fixtures}/dep-fixture" "${git_server}:/dep-fixture"
 # vscode user. The real Wyrwood agent grants access through a group instead.
 docker create --name "${helper}" --entrypoint /bin/bash \
     --mount "type=volume,src=${socket_volume},dst=/run/wyrwood" \
-    "${root_image}" -c '
+    "${user_image}" -c '
         set -e
         chmod 0777 /run/wyrwood
         setpriv --reuid=vscode --regid=vscode --init-groups bash -c "
@@ -364,8 +366,8 @@ start_container "${user_name}" "${user_image}"
 wait_for "ansible-setup for the non-root user" setup_done "${user_name}"
 assert_eq "service user" vscode "$(state_value "${user_name}" user)"
 assert_eq "Git reached the repository through the agent socket" marker-4 "$(state_value "${user_name}" marker)"
-docker exec "${user_name}" sh -c 'test "$(stat -c %U /var/lib/ansible-setup/checkout)" = vscode' \
-    || fail "The checkout is not owned by the service user."
+docker exec "${user_name}" sh -c 'test "$(stat -c %u /var/lib/ansible-setup/checkout)" = 1234 && test "$(stat -c %u /var/lib/ansible-setup)" = 1234' \
+    || fail "The checkout or state directory is not owned by the remapped service user."
 docker exec --user vscode --env HOME=/tmp/sample-wrong-home --env USER=sample-wrong --env LOGNAME=sample-wrong \
     "${user_name}" ansible-sync >/dev/null
 assert_eq "HOME of a direct call" /home/vscode "$(state_value "${user_name}" home)"

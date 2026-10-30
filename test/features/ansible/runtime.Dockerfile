@@ -5,6 +5,7 @@ ARG SOURCE=
 ARG SERVICEUSER=root
 ARG REQUIREMENTS=
 ARG ARGS=
+ARG REMAP_UID=
 
 COPY src/features/ansible /tmp/ansible-feature
 
@@ -19,6 +20,12 @@ RUN SOURCE="${SOURCE}" \
     _REMOTE_USER=vscode \
     /tmp/ansible-feature/install.sh \
     && rm -rf /tmp/ansible-feature
+
+# The Dev Containers CLI remaps the remote user's ID to the host user's after the Features
+# are installed, and gives the home directory to the new ID.
+RUN if [ -n "${REMAP_UID}" ]; then \
+        usermod -u "${REMAP_UID}" vscode && chown -R "${REMAP_UID}" /home/vscode; \
+    fi
 
 # A service that follows the repository convention: it depends on ansible-setup
 # because Ansible is present.

@@ -12,8 +12,6 @@ check "inventory is recorded" grep -qx 'SETUP_INVENTORY=inventory/local.ini' /et
 check "requirements are recorded" grep -qx 'SETUP_REQUIREMENTS=requirements.yml' /etc/ansible-setup/settings
 check "arguments are recorded as one value" grep -qx 'SETUP_ARGS=--tags\\ base\\ -e\\ sample_flag=true' /etc/ansible-setup/settings
 check "automatic service user is the remote user" grep -qx 'SETUP_USER=vscode' /etc/ansible-setup/settings
-check "checkout directory is owned by the service user" test "$(stat -c %U /opt/sample-checkout)" = vscode
-check "state directory is owned by the service user" test "$(stat -c %U /var/lib/ansible-setup)" = vscode
 check "settings are not writable by the service user" test ! -w /etc/ansible-setup/settings
 
 reportResults

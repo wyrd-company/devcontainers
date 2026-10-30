@@ -39,7 +39,7 @@ See the [OpenBao Agent documentation](https://openbao.org/docs/agent-and-proxy/a
 
 ## Secret files for other Features
 
-The `opentelemetry-collector` and `dagu` Features load `/run/openbao/secrets/<feature-id>.env` before they start their service. The Agent configuration decides which files exist: add one `template` whose `destination` is that path.
+The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) (`opentelemetry-collector`) and [Dagu](https://dagu.sh/) (`dagu`) Features load `/run/openbao/secrets/<feature-id>.env` before they start their service. The Agent configuration decides which files exist: add one `template` whose `destination` is that path.
 
 ```hcl
 template {

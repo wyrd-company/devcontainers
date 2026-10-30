@@ -83,7 +83,7 @@ This Feature should work on recent versions of Debian/Ubuntu-based distributions
 
 ## Persisted state
 
-This Feature mounts a named Docker volume into the dev container so the SSH server fingerprint is stable across rebuilds:
+This Feature mounts a named [Docker](https://www.docker.com/) volume into the dev container so the SSH server fingerprint is stable across rebuilds:
 
 - `sshd-etc-ssh-host-keys-${devcontainerId}` → `/etc/ssh/keys`
 

@@ -21,11 +21,12 @@ usage() {
     echo "Updates the configured playbook source and applies the playbook."
 }
 
-# True when only root can change the directories above $1, so that a non-root user cannot
-# redirect a root-run command by replacing a path component with a symlink.
+# True when $1 passes through no symbolic link and only root can change the directories above
+# it, so that a non-root user cannot redirect a root-run command by replacing a path component.
 protected_ancestry() {
     local dir mode
-    dir="$(dirname -- "$(realpath -m -- "$1")")"
+    [ "$(realpath -m -- "$1")" = "$1" ] || return 1
+    dir="$(dirname -- "$1")"
     while :; do
         [ -d "${dir}" ] || return 1
         [ "$(stat -c %u "${dir}")" = 0 ] || return 1

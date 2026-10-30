@@ -152,7 +152,9 @@ if [ "${service_user}" != root ] && [ -n "${source_value}" ]; then
     case "${source_value}" in
         /*) ;;
         *)
-            ancestor="$(dirname -- "$(realpath -m -- "${checkout_dir}")")"
+            [ "$(realpath -m -- "${checkout_dir}")" = "${checkout_dir}" ] \
+                || err "checkoutDir must not pass through a symbolic link."
+            ancestor="$(dirname -- "${checkout_dir}")"
             while [ ! -d "${ancestor}" ]; do
                 ancestor="$(dirname -- "${ancestor}")"
             done

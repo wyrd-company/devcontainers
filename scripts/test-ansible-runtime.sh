@@ -412,7 +412,7 @@ assert_install_rejected() {
 
     containers+=("${rejecter}")
     docker create --name "${rejecter}" --entrypoint /bin/bash "${base_image}" \
-        -c 'env "$@" /feature/install.sh' bash \
+        -c "${reject_setup:-true}"'; env "$@" /feature/install.sh' bash \
         SOURCE= PLAYBOOK=site.yml REF= INVENTORY= REQUIREMENTS= ARGS= \
         CHECKOUTDIR=/var/lib/ansible-setup/checkout SERVICEUSER=root _REMOTE_USER=vscode \
         "$@" >/dev/null
@@ -449,6 +449,10 @@ assert_install_rejected "a checkout directory inside the lock path" "must not be
     CHECKOUTDIR=/var/lib/ansible-setup/lock.d/checkout
 assert_install_rejected "a checkout below a directory the service user controls" "only root can change" \
     SERVICEUSER=vscode SOURCE=https://example.test/sample/repo.git CHECKOUTDIR=/home/vscode/cache/checkout
+reject_setup='ln -s /opt /var/lib/sample-link'
+assert_install_rejected "a checkout reached through a symbolic link" "must not pass through a symbolic link" \
+    SERVICEUSER=vscode SOURCE=https://example.test/sample/repo.git CHECKOUTDIR=/var/lib/sample-link/checkout
+unset reject_setup
 assert_install_rejected "an unknown service user" "does not exist" SERVICEUSER=sample-missing-user
 
 printf 'Ansible s6 runtime checks passed.\n'

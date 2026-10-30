@@ -52,8 +52,24 @@ IMAGE_SOURCES = (
     ".github/workflows/images.yml",
 )
 
+# Features whose service depends on the Ansible Feature's `ansible-setup` oneshot.
+ANSIBLE_DEPENDENTS = [
+    "caddy",
+    "codex-cli",
+    "dagu",
+    "docker-in-docker",
+    "docker-outside-of-docker",
+    "openbao-agent",
+    "opencodex",
+    "openobserve",
+    "opentelemetry-collector",
+    "sshd",
+    "t3code-server",
+]
+
 # Runtime scripts whose name is not a Feature id: scripts/test-<name>-runtime.sh.
 RUNTIME_SCRIPTS = {
+    "ansible-dependency": ANSIBLE_DEPENDENTS,
     "codex": ["codex-cli"],
     "codex-caddy": ["codex-cli", "caddy"],
     "codex-exec": ["codex-cli"],
@@ -80,6 +96,8 @@ def targets_for(path, features):
             return [name] if name in features else None
     if path.startswith("src/templates/"):
         return ["template"]
+    if path.startswith("test/ansible-dependency/"):
+        return ANSIBLE_DEPENDENTS
     if path == "scripts/test-moby-opt-in.sh":
         return ["base-image"]
     match = re.fullmatch(r"scripts/test-(.+)-runtime\.sh", path)

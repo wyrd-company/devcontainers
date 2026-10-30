@@ -1,8 +1,8 @@
 ## Runtime requirement
 
-This Feature registers `sshd` as an s6-overlay 3 longrun service. The image must provide `/init` as its entrypoint, and `devcontainer.json` must set `"overrideCommand": false`.
+This Feature registers the [OpenSSH](https://www.openssh.com/) `sshd` as an [s6-overlay](https://github.com/just-containers/s6-overlay) 3 longrun service. The image must provide `/init` as its entrypoint, and `devcontainer.json` must set `"overrideCommand": false`.
 
-This Feature derives from Microsoft's Dev Container SSHD Feature under the MIT License. It replaces the upstream entrypoint hook with native s6 supervision.
+This Feature derives from Microsoft's [Dev Container SSHD Feature](https://github.com/devcontainers/features/tree/main/src/sshd) under the MIT License. It replaces the upstream entrypoint hook with native s6 supervision.
 
 ## Usage
 
@@ -94,6 +94,8 @@ docker volume rm sshd-etc-ssh-host-keys-<devcontainerId>
 ```
 
 Because the fingerprint becomes stable, the `-o StrictHostKeyChecking=no` flags in the usage examples above are no longer required for reconnecting to the same dev container and can be dropped once you have accepted its host key.
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, `sshd` starts only after the `ansible-setup` s6-rc oneshot finishes, and does not start if it fails. Without Ansible, startup does not change.
 
 ## Trademarks
 

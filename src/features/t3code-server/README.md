@@ -1,6 +1,6 @@
 # T3 Code Server
 
-Installs T3 Code as a pinned release runtime and runs its native service launcher under s6-overlay 3 as the selected service user. Connected clients can update the server in place. `t3code-server-update` provides local maintenance. Runtime state remains in the service user's home directory.
+Installs [T3 Code](https://t3.codes/) as a pinned release runtime and runs its native service launcher under [s6-overlay](https://github.com/just-containers/s6-overlay) 3 as the selected service user. Connected clients can update the server in place. `t3code-server-update` provides local maintenance. Runtime state remains in the service user's home directory.
 
 The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. Release archives are self-contained; Node.js 24 is supplied through the official Dev Container Node Feature for versions installed through npm.
 
@@ -13,7 +13,7 @@ The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. 
 | `host`        | string | `0.0.0.0`   | Interface to bind the T3 Code server to.                                                                                                                                             |
 | `serveMode`   | string | `""`        | Optional T3 runtime mode passed to `t3 serve --mode`. Empty preserves the T3 CLI default.                                                                                            |
 | `serviceUser` | string | `automatic` | User account that runs T3 and owns its runtime state. Automatic selection prefers the remote user, container user, `vscode`, then `root`.                                            |
-| `dnsName`     | string | `""`        | Optional fully qualified DNS name exposed through the Caddy Feature.                                                                                                                 |
+| `dnsName`     | string | `""`        | Optional fully qualified DNS name exposed through the [Caddy](https://caddyserver.com/) Feature.                                                                                     |
 
 ## Example usage
 
@@ -86,7 +86,7 @@ When both Features are selected, T3 installs after Caddy automatically. Setting 
 
 ## Pairing
 
-The Feature does not install Codex. Add the separate Codex CLI Feature when needed.
+The Feature does not install [Codex](https://github.com/openai/codex). Add the separate Codex CLI Feature when needed.
 
 To mint a pairing code at any time, run the command as the service user and use the same T3 base directory as the server:
 
@@ -95,6 +95,10 @@ sudo -u vscode t3 auth pairing create --base-dir /home/vscode/.t3
 ```
 
 Replace `vscode` and its home directory when `serviceUser` resolves to another account. T3 writes its own logs beneath `<home>/.t3/userdata/logs`; s6 sends process output to the container logs.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, T3 Code starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, T3 Code does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

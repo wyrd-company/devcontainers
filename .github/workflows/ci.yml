@@ -188,6 +188,34 @@ jobs:
         if: env.AFFECTED == 'true'
         run: ./scripts/test-features.sh --skip-scenarios -f ${{ matrix.feature }} -i ${{ matrix.baseImage }}
 
+  test-ansible-dependency:
+    needs: changes
+    runs-on: ubuntu-latest
+    env:
+      AFFECTED: ${{ contains(fromJSON(needs.changes.outputs.targets), matrix.feature) }}
+    strategy:
+      matrix:
+        feature:
+          - caddy
+          - codex-cli
+          - dagu
+          - docker-in-docker
+          - docker-outside-of-docker
+          - openbao-agent
+          - opencodex
+          - openobserve
+          - opentelemetry-collector
+          - sshd
+          - t3code-server
+    steps:
+      - name: Checkout
+        if: env.AFFECTED == 'true'
+        uses: actions/checkout@v5
+
+      - name: Test the optional Ansible startup dependency
+        if: env.AFFECTED == 'true'
+        run: ./scripts/test-ansible-dependency-runtime.sh ${{ matrix.feature }}
+
   test-caddy-runtime:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.targets), 'caddy')

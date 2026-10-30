@@ -1,19 +1,19 @@
 # Codex CLI
 
-Installs the OpenAI Codex CLI from npm in the selected user's `~/.local` directory. Node.js 24 LTS comes from the official Node Feature. S6-overlay runs a shared app-server with the user's environment, `HOME`, and `USER`.
+Installs the OpenAI [Codex](https://github.com/openai/codex) CLI from npm in the selected user's `~/.local` directory. Node.js 24 LTS comes from the official Node Feature. [s6-overlay](https://github.com/just-containers/s6-overlay) runs a shared app-server with the user's environment, `HOME`, and `USER`.
 
 ## Options
 
-| Option           | Type    | Default     | Description                                                                                                                |
-| ---------------- | ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `version`        | string  | `latest`    | Codex CLI version from npm.                                                                                                |
-| `startAppServer` | boolean | `true`      | Run the shared app-server under S6.                                                                                        |
-| `remoteControl`  | boolean | `false`     | Enable remote control on the shared app-server. Requires `startAppServer` and ChatGPT sign-in.                             |
-| `execServer`     | string  | `false`     | `false` disables exec-server; `true` enables it without authentication; any other value supplies additional CLI arguments. |
-| `execServerPort` | string  | `4501`      | Exec-server IPv4 loopback port.                                                                                            |
-| `dnsName`        | string  | empty       | Fully qualified DNS name served by the Caddy Feature. App-server uses `/`; exec-server uses `/exec-server`.                |
-| `appServerPort`  | string  | `4500`      | IPv4 loopback port for the app-server socket bridge when `dnsName` is set.                                                 |
-| `serviceUser`    | string  | `automatic` | CLI and service owner: remote user, container user, `vscode`, then `root`, or an explicit existing user.                   |
+| Option           | Type    | Default     | Description                                                                                                                             |
+| ---------------- | ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`        | string  | `latest`    | Codex CLI version from npm.                                                                                                             |
+| `startAppServer` | boolean | `true`      | Run the shared app-server under S6.                                                                                                     |
+| `remoteControl`  | boolean | `false`     | Enable remote control on the shared app-server. Requires `startAppServer` and ChatGPT sign-in.                                          |
+| `execServer`     | string  | `false`     | `false` disables exec-server; `true` enables it without authentication; any other value supplies additional CLI arguments.              |
+| `execServerPort` | string  | `4501`      | Exec-server IPv4 loopback port.                                                                                                         |
+| `dnsName`        | string  | empty       | Fully qualified DNS name served by the [Caddy](https://caddyserver.com/) Feature. App-server uses `/`; exec-server uses `/exec-server`. |
+| `appServerPort`  | string  | `4500`      | IPv4 loopback port for the app-server socket bridge when `dnsName` is set.                                                              |
+| `serviceUser`    | string  | `automatic` | CLI and service owner: remote user, container user, `vscode`, then `root`, or an explicit existing user.                                |
 
 ## Example usage
 
@@ -83,6 +83,10 @@ Example with both routes:
   }
 }
 ```
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the Codex services starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the Codex services does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change. This covers the app-server and the exec-server when each is enabled. The app-server proxy starts after the app-server, so it also waits.
 
 ## Trademarks
 

@@ -1,6 +1,6 @@
 # OpenTelemetry Collector
 
-Installs an official OpenTelemetry Collector distribution and runs it as an s6-overlay longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
+Installs an official [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) distribution and runs it as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
 The Collector runs as the selected devcontainer user. Automatic selection prefers the remote user, container user, `vscode`, then `root`. The s6 supervisor remains root-controlled, so a user with sudo access can restart the Collector:
 
@@ -62,7 +62,7 @@ exporters:
       Authorization: ${env:OTLP_AUTHORIZATION}
 ```
 
-When the OpenBao Agent Feature is present and its configuration has a `template` with that destination, the Collector does not start until the file is rendered. The matching template builds the complete header value:
+When the [OpenBao Agent](https://openbao.org/) Feature is present and its configuration has a `template` with that destination, the Collector does not start until the file is rendered. The matching template builds the complete header value:
 
 ```hcl
 template {
@@ -83,6 +83,10 @@ Values are literal text, so a value can contain spaces. A variable that the cont
 The selected upstream command is installed as `otelcol` or `otelcol-contrib`. The stable `opentelemetry-collector` command points to the selected binary.
 
 Release archives are downloaded from the official `open-telemetry/opentelemetry-collector-releases` repository and verified against the adjacent upstream SHA256 file.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the Collector starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the Collector does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

@@ -1,6 +1,6 @@
 # Caddy Reverse Proxy
 
-Installs Caddy's official Debian package from the GitHub release, verified against the release's SHA-512 checksums, and supervises it with s6-overlay. A second s6 service watches a well-known fragment directory and gracefully reloads valid configuration changes through a permissioned Unix admin socket.
+Installs [Caddy](https://caddyserver.com/)'s official Debian package from the GitHub release, verified against the release's SHA-512 checksums, and supervises it with [s6-overlay](https://github.com/just-containers/s6-overlay). A second s6 service watches a well-known fragment directory and gracefully reloads valid configuration changes through a permissioned Unix admin socket.
 
 The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed.
 
@@ -42,6 +42,10 @@ Integrations that require automatic HTTPS should place each required DNS name on
 ```
 
 The root path refers to a public certificate, never the CA private key. It may be omitted when the CA is already trusted through the container's system trust store.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the `caddy` service starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the `caddy` service does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change. The config watcher starts after Caddy, so it also waits.
 
 ## Trademarks
 

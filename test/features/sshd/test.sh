@@ -16,4 +16,6 @@ check "host keys are read from the persistent volume" grep -qx 'HostKey /etc/ssh
 # shellcheck disable=SC2016
 check "run script seeds persistent host keys" grep -q 'key="/etc/ssh/keys/ssh_host_${keytype}_key"' /etc/s6-overlay/s6-rc.d/sshd/run
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

@@ -33,4 +33,6 @@ check "secret file directory belongs to the Agent user" grep -Fq -- '-m 2750 -o 
 check "secret file directory refuses a mount point" grep -Fq -- 'findmnt --raw --noheadings --output TARGET' /usr/local/bin/openbao-prepare-secrets
 check "Agent Feature does not register systemd" test ! -e /etc/systemd/system/openbao-agent.service
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

@@ -4,7 +4,7 @@
 
 # Docker (docker-outside-of-docker) (docker-outside-of-docker)
 
-Reuses the host Docker socket and supervises any required socket proxy with s6-overlay.
+Reuses the host [Docker](https://www.docker.com/) socket and supervises any required socket proxy with [s6-overlay](https://github.com/just-containers/s6-overlay).
 
 ## Example Usage
 
@@ -18,11 +18,11 @@ Reuses the host Docker socket and supervises any required socket proxy with s6-o
 
 | Options Id                 | Description                                                                                                                                                                                                                    | Type    | Default Value             |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------------------------- |
-| version                    | Select or enter a Docker/Moby CLI version. (Availability can vary by OS version.)                                                                                                                                              | string  | latest                    |
+| version                    | Select or enter a Docker/[Moby](https://mobyproject.org/) CLI version. (Availability can vary by OS version.)                                                                                                                  | string  | latest                    |
 | moby                       | Install Microsoft-packaged Moby instead of Docker CE when the complete package set is available                                                                                                                                | boolean | false                     |
 | mobyBuildxVersion          | Install a specific version of moby-buildx when using Moby                                                                                                                                                                      | string  | latest                    |
 | dockerDashComposeVersion   | Compose version to use for docker-compose (v1 or v2 or none or latest)                                                                                                                                                         | string  | latest                    |
-| installDockerBuildx        | Install Docker Buildx                                                                                                                                                                                                          | boolean | true                      |
+| installDockerBuildx        | Install [Docker Buildx](https://github.com/docker/buildx)                                                                                                                                                                      | boolean | true                      |
 | installDockerComposeSwitch | Install Compose Switch (provided docker compose is available) which is a replacement to the Compose V1 docker-compose (python) executable. It translates the command line into Compose V2 docker compose then runs the latter. | boolean | false                     |
 | socketPath                 | Path where the Docker socket is mounted inside the container. For rootless Docker, override the mount in devcontainer.json to map your host socket to this path.                                                               | string  | /var/run/docker-host.sock |
 
@@ -123,6 +123,10 @@ This Feature should work on recent versions of Debian/Ubuntu-based distributions
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/devcontainers/features/blob/main/src/docker-outside-of-docker/devcontainer-feature.json). Add additional notes to a `NOTES.md`._
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the socket access service starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the socket access service does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

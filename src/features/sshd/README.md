@@ -1,6 +1,6 @@
 # SSH server (sshd)
 
-Adds an SSH server supervised as a native s6-overlay service.
+Adds an [OpenSSH](https://www.openssh.com/) server supervised as a native [s6-overlay](https://github.com/just-containers/s6-overlay) service.
 
 ## Example Usage
 
@@ -99,6 +99,10 @@ This Feature should work on recent versions of Debian/Ubuntu-based distributions
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/devcontainers/features/blob/main/src/sshd/devcontainer-feature.json). Add additional notes to a `NOTES.md`._
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, `sshd` starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, `sshd` does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

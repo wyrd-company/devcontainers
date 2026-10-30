@@ -1,6 +1,6 @@
 # Dagu
 
-Installs the official Dagu binary and runs `dagu start-all` as an s6-overlay longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
+Installs the official [Dagu](https://dagu.sh/) binary and runs `dagu start-all` as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
 Dagu runs as the selected devcontainer user so that workflows receive that user's home directory, permissions, Git configuration, SSH credentials, development tools, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
 
@@ -8,7 +8,7 @@ The Feature uses Dagu's native per-user configuration and state paths. It does n
 
 ## Caddy integration
 
-Set `dnsName` when the Caddy Feature is present to expose Dagu through automatic HTTPS. The Feature registers the DNS name with Caddy's startup-readiness mechanism, writes a reverse-proxy fragment targeting Dagu on IPv4 loopback, and sets Dagu's public URL to `https://<dnsName>`.
+Set `dnsName` when the [Caddy](https://caddyserver.com/) Feature is present to expose Dagu through automatic HTTPS. The Feature registers the DNS name with Caddy's startup-readiness mechanism, writes a reverse-proxy fragment targeting Dagu on IPv4 loopback, and sets Dagu's public URL to `https://<dnsName>`.
 
 ```json
 {
@@ -29,7 +29,7 @@ Setting `dnsName` requires the Caddy Feature. Caddy-enabled configurations accep
 
 The service loads `NAME=value` lines from `/run/openbao/secrets/dagu.env` into Dagu's environment when that file exists. Workflows read the values as environment variables. Values are literal text, and a variable that the container environment already sets keeps its container value.
 
-When the OpenBao Agent Feature is present and its configuration has a `template` with that destination, Dagu does not start until the file is rendered:
+When the [OpenBao Agent](https://openbao.org/) Feature is present and its configuration has a `template` with that destination, Dagu does not start until the file is rendered:
 
 ```hcl
 template {
@@ -69,6 +69,10 @@ For a service user whose home is `/home/vscode`, Dagu defaults to:
 | s6 service               | `/etc/s6-overlay/s6-rc.d/dagu`   |
 
 Dagu's built-in authentication presents its first-administrator setup flow when no user store exists.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, Dagu starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, Dagu does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

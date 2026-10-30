@@ -450,6 +450,9 @@ service_dir="${S6_RC_DIR}/docker-outside-of-docker"
 mkdir -p "${service_dir}/dependencies.d"
 printf 'longrun\n' > "${service_dir}/type"
 touch "${service_dir}/dependencies.d/base" "${S6_USER_BUNDLE}/docker-outside-of-docker"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${service_dir}/dependencies.d/ansible-setup"
+fi
 
 cat > "${service_dir}/run" << EOF
 #!/command/with-contenv bash

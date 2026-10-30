@@ -333,6 +333,9 @@ install -d -m 0755 "${service_dir}/dependencies.d"
 printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
 touch "${service_dir}/dependencies.d/openbao-secrets"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${service_dir}/dependencies.d/ansible-setup"
+fi
 cat >"${service_dir}/run" <<EOF
 #!/command/with-contenv bash
 exec s6-setuidgid ${quoted_user} env HOME=${quoted_home} USER=${quoted_user} /usr/local/bin/openbao-agent-service

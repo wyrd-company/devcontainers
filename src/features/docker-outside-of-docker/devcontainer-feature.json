@@ -63,6 +63,9 @@
     }
   ],
   "securityOpt": ["label=disable"],
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"],
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/ansible"
+  ],
   "legacyIds": ["docker-from-docker"]
 }

@@ -229,6 +229,9 @@ caddy_service=/etc/s6-overlay/s6-rc.d/caddy
 install -d -m 0755 "${caddy_service}/dependencies.d"
 printf 'longrun\n' >"${caddy_service}/type"
 touch "${caddy_service}/dependencies.d/base"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${caddy_service}/dependencies.d/ansible-setup"
+fi
 cat >"${caddy_service}/run" <<'EOF'
 #!/command/with-contenv bash
 install -d -m 0750 -o caddy -g caddy /run/caddy

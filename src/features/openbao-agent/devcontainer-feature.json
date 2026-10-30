@@ -21,5 +21,8 @@
       "description": "Absolute path to the user-supplied OpenBao Agent configuration file."
     }
   },
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/ansible"
+  ]
 }

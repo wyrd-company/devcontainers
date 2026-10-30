@@ -1,6 +1,6 @@
 # Codex CLI
 
-Installs the OpenAI [Codex](https://github.com/openai/codex) CLI from npm in the selected user's `~/.local` directory. [Node.js](https://nodejs.org/) 24 LTS comes from the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node). [s6-overlay](https://github.com/just-containers/s6-overlay) runs a shared app-server with the user's environment, `HOME`, and `USER`.
+Installs the OpenAI [Codex](https://github.com/openai/codex) CLI from [npm](https://www.npmjs.com/) in the selected user's `~/.local` directory. [Node.js](https://nodejs.org/) 24 LTS comes from the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node). [s6-overlay](https://github.com/just-containers/s6-overlay) runs a shared app-server with the user's environment, `HOME`, and `USER`.
 
 ## Options
 
@@ -32,7 +32,7 @@ The service requires an s6-overlay 3 image and a Codex CLI with `app-server --li
 
 ## Shared app-server
 
-The service runs `codex app-server --listen unix://`, adding `--remote-control` when enabled. It uses Codex's internal daemon startup marker to disable restoration of saved remote-control preferences when the option is false. It does not change saved settings. Codex owns its private control socket beneath `$CODEX_HOME/app-server-control/app-server-control.sock`; `CODEX_HOME` defaults to `~/.codex`. The TUI and `async-codex-mcp` discover this socket under the same user profile. Remote clients attach to that same server when remote control is enabled. Plain `codex remote-control` creates a separate foreground server with a temporary socket.
+The service runs `codex app-server --listen unix://`, adding `--remote-control` when enabled. It uses Codex's internal daemon startup marker to disable restoration of saved remote-control preferences when the option is false. It does not change saved settings. Codex owns its private control socket beneath `$CODEX_HOME/app-server-control/app-server-control.sock`; `CODEX_HOME` defaults to `~/.codex`. The TUI and [`async-codex-mcp`](https://github.com/wyrd-company/async-codex-mcp) discover this socket under the same user profile. Remote clients attach to that same server when remote control is enabled. Plain `codex remote-control` creates a separate foreground server with a temporary socket.
 
 Use `codex remote-control pair` to obtain a pairing code after sign-in. Manage the process through S6: `/command/s6-svc -r /run/service/codex-cli` restarts it when run by an authorized operator. The Feature adds no sudo grants. A service restart interrupts its clients.
 
@@ -65,7 +65,7 @@ Set `dnsName` and include the Caddy Feature. Its configuration and DNS readiness
 - `wss://<dnsName>/` connects to the shared app-server when `startAppServer=true`.
 - `wss://<dnsName>/exec-server` connects to exec-server when `execServer` is enabled.
 
-A disabled service's route returns HTTP 404. App-server retains its private Unix socket for the TUI and MCP. An S6-managed `socat` bridge runs as the same service user and exposes that socket on `127.0.0.1:<appServerPort>` for Caddy. The bridge follows runtime `CODEX_HOME`, including symlinked profiles. Socket permissions and the Caddy service user are unchanged. App-server requests with browser `Origin` headers are rejected, matching Codex's native TCP listener. The two enabled listeners must use different ports.
+A disabled service's route returns HTTP 404. App-server retains its private Unix socket for the TUI and MCP. An S6-managed [`socat`](http://www.dest-unreach.org/socat/) bridge runs as the same service user and exposes that socket on `127.0.0.1:<appServerPort>` for Caddy. The bridge follows runtime `CODEX_HOME`, including symlinked profiles. Socket permissions and the Caddy service user are unchanged. App-server requests with browser `Origin` headers are rejected, matching Codex's native TCP listener. The two enabled listeners must use different ports.
 
 **Warning:** The app-server Caddy route is unauthenticated and permits command execution. Exec-server authentication does not protect the app-server route. If exec-server is enabled without authentication, its Caddy route also permits unauthenticated command execution. The installer logs these warnings, including the app-server warning when exec-server remains `"false"`. Restrict access through Caddy or the network. `dnsName` alone does not authenticate clients.
 

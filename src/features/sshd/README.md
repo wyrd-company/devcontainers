@@ -59,7 +59,7 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 ### Using SSHFS
 
-[SSHFS](https://en.wikipedia.org/wiki/SSHFS) allows you to mount a remote filesystem to your local machine with nothing but a SSH connection. Here's how to use it with a dev container.
+[SSHFS](https://github.com/libfuse/sshfs) allows you to mount a remote filesystem to your local machine with nothing but a SSH connection. Here's how to use it with a dev container.
 
 1. Follow the steps in the previous section to ensure you can connect to the dev container using the normal `ssh` client.
 

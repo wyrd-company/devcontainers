@@ -11,7 +11,7 @@ Version 2 defaults to client mode. Version 1 ran a local proxy by default. Set `
 | Option        | Type   | Default     | Description                                                                                                                                       |
 | ------------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mode`        | string | `client`    | `client` refreshes a persisted Remote Hub connection at startup. `standalone` runs a local proxy and dashboard.                                   |
-| `version`     | string | `latest`    | OpenCodex npm version or dist-tag, such as `latest`, `preview`, or `2.51.0`.                                                                      |
+| `version`     | string | `latest`    | OpenCodex [npm](https://www.npmjs.com/) version or dist-tag, such as `latest`, `preview`, or `2.51.0`.                                                                      |
 | `port`        | string | `10100`     | Loopback port for the standalone proxy and dashboard. Ignored in client mode.                                                                     |
 | `serviceUser` | string | `automatic` | User account that owns the installation and runs OpenCodex. Automatic selection prefers the remote user, container user, `vscode`, then `root`.   |
 | `dnsName`     | string | `""`        | Optional fully qualified DNS name for the standalone dashboard. Requires the [Caddy](https://caddyserver.com/) Feature and `mode=standalone`.                                 |

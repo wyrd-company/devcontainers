@@ -2,7 +2,7 @@
 
 Installs [T3 Code](https://t3.codes/) as a pinned release runtime and runs its native service launcher under [s6-overlay](https://github.com/just-containers/s6-overlay) 3 as the selected service user. Connected clients can update the server in place. `t3code-server-update` provides local maintenance. Runtime state remains in the service user's home directory.
 
-The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. Release archives are self-contained; [Node.js](https://nodejs.org/) 24 is supplied through the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node) for versions installed through npm.
+The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. Release archives are self-contained; [Node.js](https://nodejs.org/) 24 is supplied through the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node) for versions installed through [npm](https://www.npmjs.com/).
 
 ## Options
 

@@ -30,7 +30,7 @@ A common question that comes up is how you can use `bind` mounts from the Docker
 docker run -it --rm -v ${LOCAL_WORKSPACE_FOLDER}:/workspace debian bash
 ```
 
-3. Usage with Docker-compose
+3. Usage with [Docker Compose](https://docs.docker.com/compose/)
 
 ```yaml
 version: "3.9"

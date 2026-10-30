@@ -32,7 +32,7 @@ Devcontainers at Wyrd Company are _long running_ and often multi-repo.
 ## Conventions
 
 - Features that install a service use S6-overlay.
-- S6 service Features that consume Ansible-managed configuration declare `installsAfter` the Ansible Feature and conditionally add an s6-rc dependency on `ansible-setup` when that service definition exists. The service-owning Feature owns this dependency; if Ansible is absent, no dependency is added. `installsAfter` orders Feature installation only; the s6-rc edge orders runtime startup.
+- S6 service Features declare `installsAfter` the Ansible Feature and conditionally add an s6-rc dependency on `ansible-setup` when that service definition exists. The service-owning Feature owns this dependency; if Ansible is absent, no dependency is added. `installsAfter` orders Feature installation only; the s6-rc edge orders runtime startup.
 - Any feature that installs a service exposes a `serviceUser` option. The default value is `automatic` which means it runs as the remote user, container user, `vscode`, then `root` in that order, or the specified user if another value is provided.
 - Add the `dnsName` option to features that expose a web UI to enable reverse proxying the web UI through the Caddy feature when it is also installed in the devcontainer.
 - Document required mounts instead of adding them to the `devcontainer-feature.json`.

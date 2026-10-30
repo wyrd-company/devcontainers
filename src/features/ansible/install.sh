@@ -68,7 +68,11 @@ validate_source() {
             authority="${value#*://}"
             authority="${authority%%/*}"
             case "${value}" in
-                ssh://*) [[ "${authority%@*}" != *:* ]] || err "source must not embed a password." ;;
+                ssh://*)
+                    if [[ "${authority}" == *@* ]]; then
+                        [[ "${authority%@*}" != *:* ]] || err "source must not embed a password."
+                    fi
+                    ;;
                 *) [[ "${authority}" != *@* ]] || err "source must not embed credentials." ;;
             esac
             ;;

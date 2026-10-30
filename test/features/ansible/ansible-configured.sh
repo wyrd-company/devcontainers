@@ -5,7 +5,7 @@ set -e
 # shellcheck disable=SC1091
 source dev-container-features-test-lib
 
-check "source is recorded" grep -qx 'SETUP_SOURCE=git@example.test:sample-team/sample-playbooks.git' /etc/ansible-setup/settings
+check "source is recorded" grep -qx 'SETUP_SOURCE=ssh://git@example.test:2222/sample-team/sample-playbooks.git' /etc/ansible-setup/settings
 check "playbook is recorded" grep -qx 'SETUP_PLAYBOOK=container/site.yml' /etc/ansible-setup/settings
 check "ref is recorded" grep -qx 'SETUP_REF=release-1' /etc/ansible-setup/settings
 check "inventory is recorded" grep -qx 'SETUP_INVENTORY=inventory/local.ini' /etc/ansible-setup/settings

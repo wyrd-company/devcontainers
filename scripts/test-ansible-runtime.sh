@@ -221,8 +221,9 @@ start_container() {
         "${image}" >/dev/null
 }
 
+# --no-lock keeps this poll from taking the s6-rc lock that a starting container needs.
 setup_done() {
-    docker exec --user root "$1" /command/s6-rc -a list | grep -qx ansible-setup
+    docker exec --user root "$1" /command/s6-rc --no-lock -a list | grep -qx ansible-setup
 }
 
 state_value() {

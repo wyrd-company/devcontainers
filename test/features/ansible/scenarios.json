@@ -3,7 +3,7 @@
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
     "features": {
       "ansible": {
-        "source": "git@example.test:sample-team/sample-playbooks.git",
+        "source": "ssh://git@example.test:2222/sample-team/sample-playbooks.git",
         "playbook": "container/site.yml",
         "ref": "release-1",
         "inventory": "inventory/local.ini",
@@ -14,6 +14,14 @@
       }
     },
     "remoteUser": "vscode"
+  },
+  "ansible-ssh-url-without-user": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "ansible": {
+        "source": "ssh://example.test:2222/sample-playbooks.git"
+      }
+    }
   },
   "ansible-local-source": {
     "image": "ghcr.io/wyrd-company/devcontainers/base:noble",

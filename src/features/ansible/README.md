@@ -19,7 +19,7 @@ Set `source` to a [Git](https://git-scm.com/) repository, or to a local director
   "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
   "overrideCommand": false,
   "features": {
-    "ghcr.io/wyrd-company/devcontainers/ansible:0": {
+    "ghcr.io/wyrd-company/devcontainers/ansible:1": {
       "source": "git@example.test:sample-team/sample-playbooks.git",
       "playbook": "container.yml",
       "ref": "main"

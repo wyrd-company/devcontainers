@@ -39,7 +39,7 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 - `ghcr.io/wyrd-company/devcontainers/docker-outside-of-docker:1`
 - `ghcr.io/wyrd-company/devcontainers/docker-in-docker:1`
 - `ghcr.io/wyrd-company/devcontainers/caddy:1`
-- `ghcr.io/wyrd-company/devcontainers/ansible:0`
+- `ghcr.io/wyrd-company/devcontainers/ansible:1`
 
 The service Features require the Ubuntu base image above, or another image that uses s6-overlay 3 with `/init` as its entrypoint. Set `"overrideCommand": false` in `devcontainer.json` so the image command remains active. Docker CE is the default for both Docker Features; Microsoft-packaged Moby is available only as an explicit opt-in where its complete package set exists.
 

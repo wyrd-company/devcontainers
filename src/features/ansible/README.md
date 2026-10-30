@@ -62,11 +62,23 @@ The oneshot and `ansible-sync` stop and fail when:
 
 A failed oneshot does not stop the container. Services that depend on `ansible-setup` do not start until a later run succeeds. A failed startup does not retry by itself. After you fix the cause, run `ansible-sync` to check the result. It does not mark the oneshot as up, so services that wait for `ansible-setup` stay down until you run `s6-rc -u change user` as root, which retries `ansible-setup` and starts its dependents, or restart the container. The Feature sets no timeout, so an unreachable but not refusing repository waits on Git's own network timeouts.
 
-`ansible-sync` runs as the service user. Called by root it changes to that user, and called by any other user it fails. With the default `serviceUser` of `root`, run it as root, for example with `docker exec --user root <container> ansible-sync`.
+`ansible-sync` runs as the service user. Called by root it changes to that user, and called by any other user it fails unless `sudoUser` names that user. With the default `serviceUser` of `root`, run it as root, for example with `docker exec --user root <container> ansible-sync`, or set `sudoUser`.
 
 ```bash
 ansible-sync
 ```
+
+### Running `ansible-sync` with `sudo`
+
+`sudoUser` is empty by default, so the Feature adds no sudo rule. Set it to a user name, or to `automatic` for the first of the remote user, container user and `vscode` that is not root, and the Feature writes `/etc/sudoers.d/ansible`:
+
+```text
+vscode ALL=(root) NOPASSWD: /usr/local/bin/ansible-sync ""
+```
+
+That user can run `sudo ansible-sync` and nothing else as root. The empty `""` means no arguments, so sudo refuses `sudo ansible-sync --startup` and every other argument. The command runs the configured playbook as `serviceUser`, so the grant gives that user the rights of the service user (root by default) over whatever the playbook does. The user cannot choose another playbook or source: only root can edit the settings, and a Git checkout of the default `serviceUser` belongs to root. A local directory source is different. Anyone who can write to that directory can change what the playbook does, so keep it read-only for the sudo user.
+
+sudo gives a command a minimal environment, so `ansible-sync` loads the container environment, as it does at startup, and drops sudo's own variables. The playbook sees the same `SSH_AUTH_SOCK`, `VAULT_ADDR` and other variables as at startup, and nothing the caller set. The base image restricts `vscode` to a few commands in `/etc/sudoers.d/vscode`; this rule adds one more and keeps `scripts/check-sudo-no-all.sh` passing. The image must contain sudo; the installer fails when `visudo` is missing.
 
 ## Service user
 
@@ -94,6 +106,7 @@ The `ansible-setup` oneshot depends on the `base` bundle and nothing else. This 
 | `args`         | string | `""`                              | Extra `ansible-playbook` arguments, split on spaces.                                                                     |
 | `checkoutDir`  | string | `/var/lib/ansible-setup/checkout` | Absolute path of the Git checkout. It must not contain or sit inside the lock directory `/var/lib/ansible-setup/lock.d`. |
 | `serviceUser`  | string | `root`                            | User that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, `root`.                      |
+| `sudoUser`     | string | `""`                              | User that may run `sudo ansible-sync` and nothing else. Empty adds no sudo rule. `automatic` picks a non-root user.      |
 
 Option values are fixed when the container image is built, validated, and rejected when they hold newlines, quotes, braces or other characters that could break the generated settings.
 
@@ -106,6 +119,7 @@ Option values are fixed when the container image is built, validated, and reject
 | Default checkout          | `/var/lib/ansible-setup/checkout`                             |
 | s6 service                | `/etc/s6-overlay/s6-rc.d/ansible-setup`                       |
 | Startup and sync commands | `/usr/local/bin/ansible-setup`, `/usr/local/bin/ansible-sync` |
+| sudo rule (`sudoUser`)    | `/etc/sudoers.d/ansible`                                      |
 
 The Feature declares no mounts. Roles and collections install under the service user's `~/.ansible`. Persist the checkout directory or that directory with a bind mount only if you want them to survive a rebuild.
 

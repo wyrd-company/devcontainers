@@ -10,7 +10,8 @@
         "requirements": "requirements.yml",
         "args": "--tags base -e sample_flag=true",
         "checkoutDir": "/opt/sample-checkout",
-        "serviceUser": "automatic"
+        "serviceUser": "automatic",
+        "sudoUser": "automatic"
       }
     },
     "remoteUser": "vscode"

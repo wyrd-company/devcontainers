@@ -3,6 +3,7 @@ FROM ${BASE_IMAGE}
 
 ARG SOURCE=
 ARG SERVICEUSER=root
+ARG SUDOUSER=
 ARG REQUIREMENTS=
 ARG ARGS=
 ARG REMAP_UID=
@@ -17,6 +18,7 @@ RUN SOURCE="${SOURCE}" \
     ARGS="${ARGS}" \
     CHECKOUTDIR=/var/lib/ansible-setup/checkout \
     SERVICEUSER="${SERVICEUSER}" \
+    SUDOUSER="${SUDOUSER}" \
     _REMOTE_USER=vscode \
     /tmp/ansible-feature/install.sh \
     && rm -rf /tmp/ansible-feature

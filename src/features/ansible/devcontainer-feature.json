@@ -44,6 +44,11 @@
       "type": "string",
       "default": "root",
       "description": "User account that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, then `root`."
+    },
+    "sudoUser": {
+      "type": "string",
+      "default": "",
+      "description": "User account that may run `sudo ansible-sync`, and nothing else, through /etc/sudoers.d/ansible. Empty adds no sudo rule. `automatic` picks the first of the remote user, container user and `vscode` that is not root."
     }
   },
   "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]

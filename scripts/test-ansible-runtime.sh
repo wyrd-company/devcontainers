@@ -75,7 +75,7 @@ build_image() {
 root_image="ansible-runtime:root-${suffix}"
 user_image="ansible-runtime:user-${suffix}"
 local_image="ansible-runtime:local-${suffix}"
-build_image "${root_image}" --build-arg "SOURCE=${git_url}"
+build_image "${root_image}" --build-arg "SOURCE=${git_url}" --build-arg SUDOUSER=vscode
 # The user image remaps the vscode user ID the way the Dev Containers CLI does on a host whose
 # user ID is not 1000.
 build_image "${user_image}" --build-arg "SOURCE=${git_url}" --build-arg SERVICEUSER=vscode --build-arg REMAP_UID=1234
@@ -300,6 +300,30 @@ if docker exec --user vscode "${root_name}" ansible-sync >/dev/null 2>&1; then
     fail "ansible-sync ran for a user other than the service user."
 fi
 
+echo "== sudoUser may run ansible-sync through sudo and nothing else"
+commit_playbook marker-sudo good
+docker exec --user vscode "${root_name}" sudo -n ansible-sync >/dev/null \
+    || fail "sudo ansible-sync failed for the sudo user."
+assert_eq "source applied through sudo" marker-sudo "$(state_value "${root_name}" marker)"
+assert_eq "service user through sudo" root "$(state_value "${root_name}" user)"
+assert_eq "SSH_AUTH_SOCK through sudo" /run/wyrwood/ssh-agent.sock "$(state_value "${root_name}" ssh_auth_sock)"
+assert_eq "VAULT_ADDR through sudo" unix:///run/wyrwood/vault.sock "$(state_value "${root_name}" vault_addr)"
+assert_eq "other container variables through sudo" sample-runtime-value "$(state_value "${root_name}" sample)"
+assert_eq "the Vault socket answered through sudo" True "$(state_value "${root_name}" vault_health)"
+if docker exec --user vscode "${root_name}" sudo -n ansible-sync --startup >/dev/null 2>&1; then
+    fail "The sudo rule allowed an argument."
+fi
+if docker exec --user vscode "${root_name}" sudo -n /bin/true >/dev/null 2>&1; then
+    fail "The sudo rule allowed another command."
+fi
+# A caller's own environment must not reach the root-run playbook.
+docker exec --user vscode "${root_name}" sudo -n env SAMPLE_RUNTIME_VALUE=sample-caller-value ansible-sync >/dev/null 2>&1 \
+    && fail "sudo ran a command other than ansible-sync."
+docker exec --user vscode --env SAMPLE_RUNTIME_VALUE=sample-caller-value "${root_name}" sudo -n ansible-sync >/dev/null
+assert_eq "the container environment beats the caller's" sample-runtime-value "$(state_value "${root_name}" sample)"
+docker exec "${root_name}" sh -c 'visudo --check --file=/etc/sudoers.d/ansible >/dev/null && test "$(stat -c %a /etc/sudoers.d/ansible)" = 440' \
+    || fail "The sudoers file is invalid or has the wrong mode."
+
 echo "== ansible-sync serializes with startup and with itself"
 docker exec "${root_name}" sh -c "rm -f ${state_dir}/timeline && touch ${state_dir}/slow"
 docker exec --user root "${root_name}" ansible-sync >/dev/null &
@@ -363,6 +387,7 @@ wait_for "the Git server to return" docker exec --user root "${root_name}" ansib
 echo "== A non-root service user"
 user_name="ansible-runtime-user-${suffix}"
 start_container "${user_name}" "${user_image}"
+docker exec "${user_name}" test ! -e /etc/sudoers.d/ansible || fail "A sudo rule exists without sudoUser."
 wait_for "ansible-setup for the non-root user" setup_done "${user_name}"
 assert_eq "service user" vscode "$(state_value "${user_name}" user)"
 assert_eq "Git reached the repository through the agent socket" marker-4 "$(state_value "${user_name}" marker)"
@@ -454,5 +479,8 @@ assert_install_rejected "a checkout reached through a symbolic link" "must not p
     SERVICEUSER=vscode SOURCE=https://example.test/sample/repo.git CHECKOUTDIR=/var/lib/sample-link/checkout
 unset reject_setup
 assert_install_rejected "an unknown service user" "does not exist" SERVICEUSER=sample-missing-user
+assert_install_rejected "root as the sudo user" "sudoUser must not be root" SUDOUSER=root
+assert_install_rejected "an unknown sudo user" "does not exist" SUDOUSER=sample-missing-user
+assert_install_rejected "a sudo user that breaks the rule" "sudoUser must be a user name" "SUDOUSER=vscode ALL"
 
 printf 'Ansible s6 runtime checks passed.\n'

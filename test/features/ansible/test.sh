@@ -11,6 +11,7 @@ check "Git exists for playbook sources" git --version
 check "ansible-sync is executable" test -x /usr/local/bin/ansible-sync
 check "ansible-setup launcher is executable" test -x /usr/local/bin/ansible-setup
 check "ansible-setup runs with the container environment" grep -qx '#!/command/with-contenv bash' /usr/local/bin/ansible-setup
+check "no sudo rule without sudoUser" test ! -e /etc/sudoers.d/ansible
 check "ansible-setup is registered" test -f /etc/s6-overlay/user-bundles.d/user/contents.d/ansible-setup
 check "ansible-setup is a oneshot" grep -qx oneshot /etc/s6-overlay/s6-rc.d/ansible-setup/type
 check "ansible-setup depends on the base bundle" test -f /etc/s6-overlay/s6-rc.d/ansible-setup/dependencies.d/base

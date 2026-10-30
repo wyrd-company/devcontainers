@@ -60,6 +60,15 @@ case "${1:-}" in
 esac
 [ "$#" -le 1 ] || { usage >&2; exit 2; }
 
+# sudo gives a command its own small environment. The playbook must see the container's, as it
+# does at startup, so load that and drop sudo's variables.
+if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+    [ -x /command/with-contenv ] || err "Unable to load the container environment: /command/with-contenv is missing."
+    # with-contenv is an execline script, so it needs /command on PATH, which sudo's PATH lacks.
+    PATH="/command:${PATH}" exec /command/with-contenv env -u SUDO_USER -u SUDO_UID -u SUDO_GID -u SUDO_COMMAND \
+        /usr/local/bin/ansible-sync "$@"
+fi
+
 if [ -z "${SETUP_SOURCE}" ]; then
     if "${startup}"; then
         log "No source is configured; nothing to apply."

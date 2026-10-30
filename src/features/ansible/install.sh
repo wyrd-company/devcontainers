@@ -31,6 +31,30 @@ pick_service_user() {
     err "Unable to resolve a service user."
 }
 
+# The first non-root user of the remote user, container user and vscode that exists.
+pick_sudo_user() {
+    local requested="$1"
+    local candidate
+
+    if [ "${requested}" != automatic ] && [ "${requested}" != auto ]; then
+        [[ "${requested}" =~ ^[a-z_][a-z0-9_-]*$ ]] \
+            || err "sudoUser must be a user name of lowercase letters, digits, '_' and '-'."
+        [ "${requested}" != root ] || err "sudoUser must not be root; root needs no sudo rule."
+        id -u "${requested}" >/dev/null 2>&1 || err "Requested sudo user '${requested}' does not exist."
+        echo "${requested}"
+        return
+    fi
+
+    for candidate in "${_REMOTE_USER:-}" "${_CONTAINER_USER:-}" vscode; do
+        if [ -n "${candidate}" ] && [ "${candidate}" != root ] && id -u "${candidate}" >/dev/null 2>&1; then
+            echo "${candidate}"
+            return
+        fi
+    done
+
+    err "Unable to resolve a non-root sudo user."
+}
+
 # A relative path inside the playbook source: no leading slash, dash or dot-dot component.
 validate_relative_path() {
     local option="$1"
@@ -146,6 +170,13 @@ esac
 service_user="$(pick_service_user "${SERVICEUSER:-root}")"
 service_group="$(id -gn "${service_user}")"
 
+sudo_user=
+if [ -n "${SUDOUSER:-}" ]; then
+    sudo_user="$(pick_sudo_user "${SUDOUSER}")"
+    command -v visudo >/dev/null 2>&1 && [ -d /etc/sudoers.d ] \
+        || err "sudoUser needs sudo in the image, and visudo was not found."
+fi
+
 # A root-run command repairs the checkout directory's owner after a user ID change, so a
 # non-root service user must not be able to redirect that path through a symlink.
 if [ "${service_user}" != root ] && [ -n "${source_value}" ]; then
@@ -226,11 +257,25 @@ touch "${setup_dir}/dependencies.d/base"
 printf '/usr/local/bin/ansible-setup\n' >"${setup_dir}/up"
 touch /etc/s6-overlay/user-bundles.d/user/contents.d/ansible-setup
 
+# The grant names this one command and no arguments (the empty "" argument), so sudo refuses
+# --startup and anything else. The command loads the container environment itself, because
+# sudo discards the caller's.
+if [ -n "${sudo_user}" ]; then
+    cat >/etc/sudoers.d/ansible <<EOF
+# Let ${sudo_user} reapply the playbook with ansible-sync and run nothing else as root.
+${sudo_user} ALL=(root) NOPASSWD: /usr/local/bin/ansible-sync ""
+EOF
+    chmod 0440 /etc/sudoers.d/ansible
+    visudo --check --file=/etc/sudoers.d/ansible >/dev/null \
+        || { rm -f /etc/sudoers.d/ansible; err "The sudoers rule is not valid."; }
+fi
+
 ansible-playbook --version >/dev/null
 ansible-galaxy --version >/dev/null
 rm -rf /var/lib/apt/lists/*
 if [ -n "${source_value}" ]; then
     log "Installed Ansible; the ansible-setup oneshot applies ${playbook} from ${source_value} as ${service_user} at startup."
+    [ -z "${sudo_user}" ] || log "${sudo_user} may run 'sudo ansible-sync'."
 else
     log "Installed Ansible; no source is configured, so ansible-setup applies nothing."
 fi

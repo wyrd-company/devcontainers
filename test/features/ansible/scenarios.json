@@ -1,0 +1,26 @@
+{
+  "ansible-configured": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "ansible": {
+        "source": "git@example.test:sample-team/sample-playbooks.git",
+        "playbook": "container/site.yml",
+        "ref": "release-1",
+        "inventory": "inventory/local.ini",
+        "requirements": "requirements.yml",
+        "args": "--tags base -e sample_flag=true",
+        "checkoutDir": "/opt/sample-checkout",
+        "serviceUser": "automatic"
+      }
+    },
+    "remoteUser": "vscode"
+  },
+  "ansible-local-source": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "ansible": {
+        "source": "/srv/sample-playbooks"
+      }
+    }
+  }
+}

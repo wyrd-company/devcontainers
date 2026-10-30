@@ -67,6 +67,11 @@ products:
             architectures:
               - amd64
               - arm64
+  ansible:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/ansible
+    logo: logo.svg
   caddy:
     kinds:
       - kind: devcontainer-feature

@@ -1,0 +1,5 @@
+roles:
+  - name: sample_role
+    src: ssh://git@sample-git/srv/git/sample-role.git
+    scm: git
+    version: main

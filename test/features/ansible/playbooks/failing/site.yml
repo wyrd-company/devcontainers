@@ -1,0 +1,7 @@
+- name: Fail on purpose
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Stop the run
+      ansible.builtin.fail:
+        msg: The sample playbook fails on purpose.

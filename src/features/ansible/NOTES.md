@@ -1,0 +1,7 @@
+[Ansible](https://www.ansible.com/) runs under [s6-overlay](https://github.com/just-containers/s6-overlay) as the `ansible-setup` oneshot at every container start. It fetches the playbook source from [Git](https://git-scm.com/) (or uses a local directory), applies the playbook, and succeeds only when the playbook succeeds. Set `source` and `playbook`; without `source` it installs Ansible only. Run `ansible-sync` to update the source and apply the playbook again. A lock serializes it with startup, and it runs as `serviceUser`, which is `root` by default. The playbook receives the container environment unchanged, including the `SSH_AUTH_SOCK` and `VAULT_ADDR` that [Wyrwood](https://wyrd.foo/tools/wyrwood/) provides; the Feature stores no credential and does not need the [OpenBao](https://openbao.org/) Agent Feature. Service Features add their own dependency on `ansible-setup`; this Feature adds none.
+
+## Trademarks
+
+This feature is not affiliated with or endorsed by Red Hat, Inc. or the Ansible project. Ansible and its logo are trademarks of Red Hat, Inc. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.
+
+Logo: the Ansible community mark (Mango) from the [ansible/logos](https://github.com/ansible/logos) repository, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) and subject to its [trademark policy](https://github.com/ansible/logos/blob/main/TRADEMARKS.md).

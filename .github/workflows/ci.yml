@@ -99,6 +99,7 @@ jobs:
     strategy:
       matrix:
         feature:
+          - ansible
           - codex-cli
           - caddy
           - dagu
@@ -158,6 +159,7 @@ jobs:
     strategy:
       matrix:
         feature:
+          - ansible
           - codex-cli
           - caddy
           - dagu
@@ -225,6 +227,17 @@ jobs:
 
       - name: Test OpenCodex runtime under s6
         run: ./scripts/test-opencodex-runtime.sh
+
+  test-ansible-runtime:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.targets), 'ansible')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Test Ansible runtime under s6
+        run: ./scripts/test-ansible-runtime.sh
 
   test-dagu-runtime:
     needs: changes

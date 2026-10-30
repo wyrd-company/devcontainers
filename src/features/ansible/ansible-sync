@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# Updates the playbook source and applies the playbook. The ansible-setup s6 oneshot
+# runs this with --startup; run it without arguments to reapply after the source changes.
+set -euo pipefail
+
+settings=/etc/ansible-setup/settings
+# shellcheck source=/dev/null
+. "${settings}"
+
+log() {
+    echo "[ansible-setup] $*"
+}
+
+err() {
+    echo "[ansible-setup] ERROR: $*" >&2
+    exit 1
+}
+
+usage() {
+    echo "Usage: ansible-sync"
+    echo "Updates the configured playbook source and applies the playbook."
+}
+
+startup=false
+case "${1:-}" in
+    '') ;;
+    --startup) startup=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+esac
+[ "$#" -le 1 ] || { usage >&2; exit 2; }
+
+if [ -z "${SETUP_SOURCE}" ]; then
+    if "${startup}"; then
+        log "No source is configured; nothing to apply."
+        exit 0
+    fi
+    err "No source is configured. Set the Feature option 'source'."
+fi
+
+if [ "$(id -un)" != "${SETUP_USER}" ]; then
+    if [ "$(id -u)" -ne 0 ]; then
+        err "Run ansible-sync as ${SETUP_USER}$([ "${SETUP_USER}" = root ] || echo ' or root')."
+    fi
+    service_home="$(getent passwd "${SETUP_USER}" | cut -d: -f6)"
+    forwarded=()
+    if "${startup}"; then
+        forwarded=(--startup)
+    fi
+    exec setpriv --reuid="${SETUP_USER}" --regid="$(id -gn "${SETUP_USER}")" --init-groups \
+        env HOME="${service_home}" USER="${SETUP_USER}" LOGNAME="${SETUP_USER}" \
+        /usr/local/bin/ansible-sync "${forwarded[@]}"
+fi
+
+# The startup oneshot and every ansible-sync call wait for each other here.
+lock_file="${SETUP_STATE_DIR}/lock"
+exec 9>>"${lock_file}" || err "Unable to open ${lock_file}."
+flock 9
+
+# Git never asks for credentials. Access comes from the SSH agent that the container provides.
+export GIT_TERMINAL_PROMPT=0
+if [ -z "${GIT_SSH_COMMAND:-}" ]; then
+    export GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new'
+fi
+
+case "${SETUP_SOURCE}" in
+    /*)
+        [ -d "${SETUP_SOURCE}" ] || err "Local source ${SETUP_SOURCE} is not a directory."
+        workdir="${SETUP_SOURCE}"
+        log "Using local source ${workdir}."
+        ;;
+    *)
+        workdir="${SETUP_CHECKOUT}"
+        [ -d "${workdir}" ] || err "Checkout directory ${workdir} does not exist."
+        if [ ! -d "${workdir}/.git" ]; then
+            [ -z "$(ls -A "${workdir}")" ] || err "${workdir} is not empty and is not a Git checkout."
+            git -c init.defaultBranch=main init --quiet "${workdir}"
+            git -C "${workdir}" remote add origin "${SETUP_SOURCE}"
+        else
+            git -C "${workdir}" remote set-url origin "${SETUP_SOURCE}"
+        fi
+        log "Fetching ${SETUP_REF:-the default branch} from ${SETUP_SOURCE}."
+        if ! git -C "${workdir}" fetch --quiet --depth 1 --force --no-tags origin "${SETUP_REF:-HEAD}"; then
+            err "Unable to fetch ${SETUP_REF:-the default branch} from ${SETUP_SOURCE}. The checkout is unchanged and the playbook did not run."
+        fi
+        git -C "${workdir}" checkout --quiet --force --detach FETCH_HEAD
+        log "Checked out $(git -C "${workdir}" rev-parse --short HEAD)."
+        ;;
+esac
+
+[ -f "${workdir}/${SETUP_PLAYBOOK}" ] || err "Playbook ${SETUP_PLAYBOOK} does not exist in ${workdir}."
+
+cd "${workdir}"
+
+if [ -n "${SETUP_REQUIREMENTS}" ]; then
+    [ -f "${SETUP_REQUIREMENTS}" ] || err "Requirements file ${SETUP_REQUIREMENTS} does not exist in ${workdir}."
+    log "Installing requirements from ${SETUP_REQUIREMENTS}."
+    ansible-galaxy install -r "${SETUP_REQUIREMENTS}" || err "ansible-galaxy failed."
+fi
+
+inventory=(-i 'localhost,')
+if [ -n "${SETUP_INVENTORY}" ]; then
+    [ -e "${SETUP_INVENTORY}" ] || err "Inventory ${SETUP_INVENTORY} does not exist in ${workdir}."
+    inventory=(-i "${SETUP_INVENTORY}")
+fi
+
+extra_args=()
+if [ -n "${SETUP_ARGS}" ]; then
+    read -r -a extra_args <<<"${SETUP_ARGS}"
+fi
+
+# Flags take precedence over the container's ANSIBLE_* variables. Extra arguments come last
+# so that they can override the connection.
+log "Applying ${SETUP_PLAYBOOK}."
+if ! ansible-playbook "${inventory[@]}" --connection local "${extra_args[@]}" "${SETUP_PLAYBOOK}"; then
+    err "ansible-playbook failed for ${SETUP_PLAYBOOK}."
+fi
+log "Applied ${SETUP_PLAYBOOK}."

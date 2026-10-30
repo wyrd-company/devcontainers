@@ -1,0 +1,57 @@
+- name: Record a sample convergence
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - sample_role
+  vars:
+    state_dir: /var/tmp/ansible-runtime
+    vault_socket: "{{ lookup('env', 'VAULT_ADDR') | regex_replace('^unix://', '') }}"
+  pre_tasks:
+    - name: Create the state directory
+      ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        mode: "0777"
+
+  tasks:
+    - name: Mark the start
+      ansible.builtin.shell: echo start >> {{ state_dir }}/timeline
+      changed_when: true
+
+    - name: Wait when asked to
+      ansible.builtin.shell: sleep 3
+      when: lookup('ansible.builtin.fileglob', state_dir ~ '/slow') | length > 0
+      changed_when: false
+
+    - name: Ask the Vault socket
+      ansible.builtin.uri:
+        url: http://localhost/v1/sys/health
+        unix_socket: "{{ vault_socket }}"
+        return_content: true
+      register: health
+
+    - name: Name the running user
+      ansible.builtin.command: id -un
+      register: running_user
+      changed_when: false
+
+    - name: Record what the playbook saw
+      ansible.builtin.copy:
+        dest: "{{ state_dir }}/state"
+        mode: "0644"
+        content: |
+          user={{ running_user.stdout }}
+          marker={{ lookup('file', playbook_dir ~ '/marker.txt') | trim }}
+          host={{ inventory_hostname }}
+          extra={{ sample_extra | default('off') }}
+          vault_addr={{ lookup('env', 'VAULT_ADDR') | default('unset', true) }}
+          ssh_auth_sock={{ lookup('env', 'SSH_AUTH_SOCK') | default('unset', true) }}
+          ssh_agent_sock={{ lookup('env', 'SSH_AGENT_SOCK') | default('unset', true) }}
+          bao_addr={{ lookup('env', 'BAO_ADDR') | default('unset', true) }}
+          sample={{ lookup('env', 'SAMPLE_RUNTIME_VALUE') | default('unset', true) }}
+          inventory_env={{ lookup('env', 'ANSIBLE_INVENTORY') | default('unset', true) }}
+          vault_health={{ health.json.initialized }}
+
+    - name: Mark the end
+      ansible.builtin.shell: echo end >> {{ state_dir }}/timeline
+      changed_when: true

@@ -1,0 +1,5 @@
+- name: Record that the role ran
+  ansible.builtin.copy:
+    dest: /var/tmp/ansible-runtime/role-ran
+    content: "role-v1\n"
+    mode: "0644"

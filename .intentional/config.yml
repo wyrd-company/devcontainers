@@ -5,6 +5,9 @@ settings:
 discovery:
   managed-paths:
     - detector: devcontainer-feature
+      path: src/features/ansible/devcontainer-feature.json
+      release-unit: ansible
+    - detector: devcontainer-feature
       path: src/features/caddy/devcontainer-feature.json
       release-unit: caddy
     - detector: devcontainer-feature
@@ -63,6 +66,17 @@ discovery:
       path: src/features/codex-cli/arguments/package.json
       evidence-digest: sha256:151c48b63c71ef247e9d48d13cb852789fb6d643ef917c987d5214a9f26bedbd
 release-units:
+  ansible:
+    path: src/features/ansible
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
   caddy:
     path: src/features/caddy
     projections:

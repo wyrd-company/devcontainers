@@ -1,0 +1,55 @@
+{
+  "id": "ansible",
+  "version": "0.0.0",
+  "name": "Ansible",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/ansible",
+  "description": "Installs Ansible and converges the container with a playbook through an s6-overlay oneshot at startup and the ansible-sync command.",
+  "options": {
+    "source": {
+      "type": "string",
+      "default": "",
+      "description": "Git repository URL (https://, ssh://, file:// or user@host:path) or absolute path of a local directory that holds the playbook. Empty installs Ansible without convergence."
+    },
+    "playbook": {
+      "type": "string",
+      "default": "site.yml",
+      "description": "Playbook path relative to the repository or local directory."
+    },
+    "ref": {
+      "type": "string",
+      "default": "",
+      "description": "Branch, tag or commit to track in a Git repository. Empty tracks the remote's default branch. Not valid with a local directory."
+    },
+    "inventory": {
+      "type": "string",
+      "default": "",
+      "description": "Inventory path relative to the repository or local directory. Empty runs against the container as `localhost`."
+    },
+    "requirements": {
+      "type": "string",
+      "default": "",
+      "description": "Roles and collections requirements file, relative to the repository or local directory, installed with `ansible-galaxy install -r` before each run."
+    },
+    "args": {
+      "type": "string",
+      "default": "",
+      "description": "Extra ansible-playbook arguments, split on spaces. Quotes, braces and other shell characters are rejected."
+    },
+    "checkoutDir": {
+      "type": "string",
+      "default": "/var/lib/ansible-setup/checkout",
+      "description": "Absolute path of the Git checkout. Unused with a local directory."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "root",
+      "description": "User account that runs the playbook. `automatic` prefers the remote user, container user, `vscode`, then `root`."
+    },
+    "sudoUser": {
+      "type": "string",
+      "default": "",
+      "description": "User account that may run `sudo ansible-sync`, and nothing else, through /etc/sudoers.d/ansible. Empty adds no sudo rule. `automatic` picks the first of the remote user, container user and `vscode` that is not root."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}

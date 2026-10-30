@@ -1,0 +1,6 @@
+galaxy_info:
+  author: sample-author
+  description: Sample dependency role for the runtime test.
+  license: MIT
+  min_ansible_version: "2.14"
+dependencies: []

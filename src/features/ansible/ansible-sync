@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# Updates the playbook source and applies the playbook. The ansible-setup s6 oneshot
+# runs this with --startup; run it without arguments to reapply after the source changes.
+set -euo pipefail
+
+settings=/etc/ansible-setup/settings
+# shellcheck source=/dev/null
+. "${settings}"
+
+log() {
+    echo "[ansible-setup] $*"
+}
+
+err() {
+    echo "[ansible-setup] ERROR: $*" >&2
+    exit 1
+}
+
+usage() {
+    echo "Usage: ansible-sync"
+    echo "Updates the configured playbook source and applies the playbook."
+}
+
+# True when $1 passes through no symbolic link and only root can change the directories above
+# it, so that a non-root user cannot redirect a root-run command by replacing a path component.
+protected_ancestry() {
+    local dir mode
+    [ "$(realpath -m -- "$1")" = "$1" ] || return 1
+    dir="$(dirname -- "$1")"
+    while :; do
+        [ -d "${dir}" ] || return 1
+        [ "$(stat -c %u "${dir}")" = 0 ] || return 1
+        mode="$(stat -c %a "${dir}")"
+        (( (8#${mode} & 8#022) == 0 )) || return 1
+        [ "${dir}" != / ] || return 0
+        dir="$(dirname -- "${dir}")"
+    done
+}
+
+# Gives one directory, and nothing inside it, to the service user's current ID.
+repair_owner() {
+    local dir="$1"
+    local owner="$2"
+
+    [ -d "${dir}" ] && [ ! -L "${dir}" ] || return 0
+    [ "$(stat -c %u:%g "${dir}")" != "${owner}" ] || return 0
+    if protected_ancestry "${dir}"; then
+        chown -h "${owner}" "${dir}"
+    else
+        log "Not changing the owner of ${dir}: a non-root user can change its parent directories."
+    fi
+}
+
+startup=false
+case "${1:-}" in
+    '') ;;
+    --startup) startup=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+esac
+[ "$#" -le 1 ] || { usage >&2; exit 2; }
+
+# sudo gives a command its own small environment. The playbook must see the container's, as it
+# does at startup, so load that and drop sudo's variables.
+if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+    [ -x /command/with-contenv ] || err "Unable to load the container environment: /command/with-contenv is missing."
+    # with-contenv is an execline script, so it needs /command on PATH, which sudo's PATH lacks.
+    PATH="/command:${PATH}" exec /command/with-contenv env -u SUDO_USER -u SUDO_UID -u SUDO_GID -u SUDO_COMMAND \
+        /usr/local/bin/ansible-sync "$@"
+fi
+
+if [ -z "${SETUP_SOURCE}" ]; then
+    if "${startup}"; then
+        log "No source is configured; nothing to apply."
+        exit 0
+    fi
+    err "No source is configured. Set the Feature option 'source'."
+fi
+
+if [ "$(id -un)" != "${SETUP_USER}" ]; then
+    if [ "$(id -u)" -ne 0 ]; then
+        err "Run ansible-sync as ${SETUP_USER}$([ "${SETUP_USER}" = root ] || echo ' or root')."
+    fi
+    # The installer gave these directories to the service user by number. A remapped user ID
+    # (the Dev Containers updateRemoteUserUID) leaves them with the old number, so hand them back.
+    service_owner="$(id -u "${SETUP_USER}"):$(id -g "${SETUP_USER}")"
+    repair_owner "${SETUP_LOCK_DIR}" "${service_owner}"
+    case "${SETUP_SOURCE}" in
+        /*) ;;
+        *) repair_owner "${SETUP_CHECKOUT}" "${service_owner}" ;;
+    esac
+    forwarded=()
+    if "${startup}"; then
+        forwarded=(--startup)
+    fi
+    exec setpriv --reuid="${SETUP_USER}" --regid="$(id -gn "${SETUP_USER}")" --init-groups \
+        /usr/local/bin/ansible-sync "${forwarded[@]}"
+fi
+
+# Every run gets the service user's identity, whoever started it.
+service_home="$(getent passwd "${SETUP_USER}" | cut -d: -f6)"
+[ -n "${service_home}" ] || err "Unable to resolve the home directory for ${SETUP_USER}."
+export HOME="${service_home}" USER="${SETUP_USER}" LOGNAME="${SETUP_USER}"
+
+# The startup oneshot and every ansible-sync call wait for each other here.
+lock_file="${SETUP_LOCK_DIR}/lock"
+exec 9>>"${lock_file}" || err "Unable to open ${lock_file}."
+flock 9
+
+# Git never asks for credentials. Access comes from the SSH agent that the container provides.
+export GIT_TERMINAL_PROMPT=0
+if [ -z "${GIT_SSH_COMMAND:-}" ]; then
+    export GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new'
+fi
+
+case "${SETUP_SOURCE}" in
+    /*)
+        [ -d "${SETUP_SOURCE}" ] || err "Local source ${SETUP_SOURCE} is not a directory."
+        workdir="${SETUP_SOURCE}"
+        log "Using local source ${workdir}."
+        ;;
+    *)
+        workdir="${SETUP_CHECKOUT}"
+        [ -d "${workdir}" ] || err "Checkout directory ${workdir} does not exist."
+        if [ ! -d "${workdir}/.git" ]; then
+            [ -z "$(ls -A "${workdir}")" ] || err "${workdir} is not empty and is not a Git checkout."
+            git -c init.defaultBranch=main init --quiet "${workdir}"
+            git -C "${workdir}" remote add origin "${SETUP_SOURCE}"
+        else
+            git -C "${workdir}" remote set-url origin "${SETUP_SOURCE}"
+        fi
+        log "Fetching ${SETUP_REF:-the default branch} from ${SETUP_SOURCE}."
+        if ! git -C "${workdir}" fetch --quiet --depth 1 --force --no-tags origin "${SETUP_REF:-HEAD}"; then
+            err "Unable to fetch ${SETUP_REF:-the default branch} from ${SETUP_SOURCE}. The checkout is unchanged and the playbook did not run."
+        fi
+        git -C "${workdir}" checkout --quiet --force --detach FETCH_HEAD
+        log "Checked out $(git -C "${workdir}" rev-parse --short HEAD)."
+        ;;
+esac
+
+[ -f "${workdir}/${SETUP_PLAYBOOK}" ] || err "Playbook ${SETUP_PLAYBOOK} does not exist in ${workdir}."
+
+cd "${workdir}"
+
+if [ -n "${SETUP_REQUIREMENTS}" ]; then
+    [ -f "${SETUP_REQUIREMENTS}" ] || err "Requirements file ${SETUP_REQUIREMENTS} does not exist in ${workdir}."
+    log "Installing requirements from ${SETUP_REQUIREMENTS}."
+    # Forcing roles and their dependencies makes a changed version replace the installed one.
+    ansible-galaxy install --force-with-deps -r "${SETUP_REQUIREMENTS}" || err "ansible-galaxy failed."
+fi
+
+inventory=(-i 'localhost,')
+if [ -n "${SETUP_INVENTORY}" ]; then
+    [ -e "${SETUP_INVENTORY}" ] || err "Inventory ${SETUP_INVENTORY} does not exist in ${workdir}."
+    inventory=(-i "${SETUP_INVENTORY}")
+fi
+
+extra_args=()
+if [ -n "${SETUP_ARGS}" ]; then
+    read -r -a extra_args <<<"${SETUP_ARGS}"
+fi
+
+# Flags take precedence over the container's ANSIBLE_* variables. Extra arguments come last
+# so that they can override the connection.
+log "Applying ${SETUP_PLAYBOOK}."
+if ! ansible-playbook "${inventory[@]}" --connection local "${extra_args[@]}" "${SETUP_PLAYBOOK}"; then
+    err "ansible-playbook failed for ${SETUP_PLAYBOOK}."
+fi
+log "Applied ${SETUP_PLAYBOOK}."

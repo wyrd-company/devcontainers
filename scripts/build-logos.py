@@ -60,6 +60,7 @@ FRAMES = {
 # Output path -> (artifact directory, frame, mark, scale). Scale evens out the
 # optical size of marks that fill their box (solid squares) or barely do.
 LOGOS = {
+    "src/features/ansible/logo.svg": ("src/features/ansible", "feature", "ansible", 1.0),
     "src/features/caddy/logo.svg": ("src/features/caddy", "feature", "caddy", 1.0),
     "src/features/claude-code-cli/logo.svg": ("src/features/claude-code-cli", "feature", "claude", 0.95),
     "src/features/codex-cli/logo.svg": ("src/features/codex-cli", "feature", "openai", 1.0),

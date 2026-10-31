@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0
+
+### Features
+
+- When the Ansible Feature is installed, the services of this Feature start after its `ansible-setup` oneshot succeeds. Without Ansible, startup does not change. The Feature adds the Ansible Feature to `installsAfter`.
+
 ## 2.1.0
 
 ### Features

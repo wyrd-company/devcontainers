@@ -1,6 +1,6 @@
 {
   "id": "opentelemetry-collector",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "OpenTelemetry Collector",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/opentelemetry-collector",
   "description": "Installs the OpenTelemetry Collector core or contrib distribution and runs it as an s6-overlay service.",

@@ -1,6 +1,6 @@
 {
   "id": "t3code-server",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "name": "T3 Code Server",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/t3code-server",
   "description": "Installs upstream T3 Code, runs its native update launcher under s6-overlay, and supports client-driven updates plus local maintenance with t3code-server-update.",

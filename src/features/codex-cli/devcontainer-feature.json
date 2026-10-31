@@ -1,6 +1,6 @@
 {
   "id": "codex-cli",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "name": "Codex CLI",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/codex-cli",
   "description": "Installs Codex CLI for the Dev Container user and runs a shared app-server under s6-overlay.",

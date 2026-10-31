@@ -1,6 +1,6 @@
 {
   "id": "docker-outside-of-docker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Docker (docker-outside-of-docker)",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/docker-outside-of-docker",
   "description": "Reuses the host Docker socket and supervises any required socket proxy with s6-overlay.",

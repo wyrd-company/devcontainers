@@ -87,5 +87,8 @@
       "type": "volume"
     }
   ],
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/ansible"
+  ]
 }

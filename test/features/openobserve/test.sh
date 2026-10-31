@@ -25,4 +25,6 @@ check "OpenObserve Feature does not export an S3 bucket prefix by default" bash 
 check "OpenObserve Feature does not create a managed config" test ! -e /etc/openobserve/openobserve.env
 check "OpenObserve Feature does not register systemd" test ! -e /etc/systemd/system/openobserve.service
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

@@ -240,6 +240,9 @@ service_dir=/etc/s6-overlay/s6-rc.d/opentelemetry-collector
 install -d -m 0755 "${service_dir}/dependencies.d"
 printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${service_dir}/dependencies.d/ansible-setup"
+fi
 if [ -d /etc/s6-overlay/s6-rc.d/openbao-secrets ]; then
     touch "${service_dir}/dependencies.d/openbao-secrets"
 fi

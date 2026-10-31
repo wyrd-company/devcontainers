@@ -1,4 +1,6 @@
-OpenBao Agent runs under s6-overlay as `root` by default; `serviceUser` overrides this. Supply a readable Agent configuration at `/etc/openbao/agent.hcl`, or at `configPath`, and restart the service with `sudo /command/s6-svc -r /run/service/openbao-agent` after changing it. To give a secret to another Feature's service, add a `template` with the destination `/run/openbao/secrets/<feature-id>.env`; the service waits for that file and loads its `NAME=value` lines at start.
+[OpenBao Agent](https://openbao.org/) runs under [s6-overlay](https://github.com/just-containers/s6-overlay) as `root` by default; `serviceUser` overrides this. Supply a readable Agent configuration at `/etc/openbao/agent.hcl`, or at `configPath`, and restart the service with `sudo /command/s6-svc -r /run/service/openbao-agent` after changing it. To give a secret to another Feature's service, add a `template` with the destination `/run/openbao/secrets/<feature-id>.env`; the service waits for that file and loads its `NAME=value` lines at start.
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the `openbao-agent` service starts only after the `ansible-setup` s6-rc oneshot finishes, and does not start if it fails. Without Ansible, startup does not change. The `openbao-secrets` oneshot only creates the secret directory and group. It does not wait, so that other Features can find the directory at their own start.
 
 ## Trademarks
 

@@ -138,8 +138,11 @@ EOF2
     chmod 0755 /usr/local/bin/opencodex-client-sync
 
     sync_dir=/etc/s6-overlay/s6-rc.d/opencodex-client-sync
-    install -d -m 0755 "${sync_dir}"
+    install -d -m 0755 "${sync_dir}/dependencies.d"
     printf 'oneshot\n' >"${sync_dir}/type"
+    if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+        touch "${sync_dir}/dependencies.d/ansible-setup"
+    fi
     cat >"${sync_dir}/up" <<EOF2
 #!/command/with-contenv bash
 exec s6-setuidgid ${quoted_user} /usr/local/bin/opencodex-client-sync
@@ -250,6 +253,9 @@ service_dir=/etc/s6-overlay/s6-rc.d/opencodex
 install -d -m 0755 "${service_dir}/dependencies.d"
 printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${service_dir}/dependencies.d/ansible-setup"
+fi
 
 cat >"${service_dir}/run" <<EOF2
 #!/command/with-contenv bash

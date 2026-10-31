@@ -1,14 +1,14 @@
 ## Runtime requirement
 
-This Feature registers `sshd` as an s6-overlay 3 longrun service. The image must provide `/init` as its entrypoint, and `devcontainer.json` must set `"overrideCommand": false`.
+This Feature registers the [OpenSSH](https://www.openssh.com/) `sshd` as an [s6-overlay](https://github.com/just-containers/s6-overlay) 3 longrun service. The image must provide `/init` as its entrypoint, and `devcontainer.json` must set `"overrideCommand": false`.
 
-This Feature derives from Microsoft's Dev Container SSHD Feature under the MIT License. It replaces the upstream entrypoint hook with native s6 supervision.
+This Feature derives from Microsoft's [Dev Container SSHD Feature](https://github.com/devcontainers/features/tree/main/src/sshd) under the MIT License. It replaces the upstream entrypoint hook with native s6 supervision.
 
 ## Usage
 
-While the some services automates SSH setup (e.g., when using the GitHub CLI for GitHub Codespaces), this may not be the case for other tools and services. Follow these directions to connect to the dev container from these other tools:
+While the some services automates SSH setup (e.g., when using the [GitHub CLI](https://cli.github.com/) for [GitHub Codespaces](https://github.com/features/codespaces)), this may not be the case for other tools and services. Follow these directions to connect to the dev container from these other tools:
 
-1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., VS Code client).
+1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., [VS Code](https://code.visualstudio.com/) client).
 
 2. Put your public key in the container user's `authorized_keys` file. Password and root login are disabled, so this is the only way in. Either mount the file from `devcontainer.json`:
 
@@ -44,14 +44,14 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 ### Using SSHFS
 
-[SSHFS](https://en.wikipedia.org/wiki/SSHFS) allows you to mount a remote filesystem to your local machine with nothing but a SSH connection. Here's how to use it with a dev container.
+[SSHFS](https://github.com/libfuse/sshfs) allows you to mount a remote filesystem to your local machine with nothing but a SSH connection. Here's how to use it with a dev container.
 
 1. Follow the steps in the previous section to ensure you can connect to the dev container using the normal `ssh` client.
 
 2. Install a SSHFS client.
 
    - **Windows:** Install [WinFsp](https://github.com/billziss-gh/winfsp/releases) and [SSHFS-Win](https://github.com/billziss-gh/sshfs-win/releases).
-   - **macOS**: Use [Homebrew](https://brew.sh/) to install: `brew install macfuse gromgit/fuse/sshfs-mac`
+   - **macOS**: Use [Homebrew](https://brew.sh/) to install [macFUSE](https://macfuse.github.io/) and [sshfs-mac](https://github.com/gromgit/homebrew-fuse): `brew install macfuse gromgit/fuse/sshfs-mac`
    - **Linux:** Use your native package manager to install your distribution's copy of the sshfs package. e.g. `sudo apt-get update && sudo apt-get install sshfs`
 
 3. Mount the remote filesystem.
@@ -79,11 +79,11 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 ## Persisted state
 
-This Feature mounts a named Docker volume into the dev container so the SSH server fingerprint is stable across rebuilds:
+This Feature mounts a named [Docker](https://www.docker.com/) volume into the dev container so the SSH server fingerprint is stable across rebuilds:
 
 - `sshd-etc-ssh-host-keys-${devcontainerId}` → `/etc/ssh/keys`
 
@@ -94,6 +94,8 @@ docker volume rm sshd-etc-ssh-host-keys-<devcontainerId>
 ```
 
 Because the fingerprint becomes stable, the `-o StrictHostKeyChecking=no` flags in the usage examples above are no longer required for reconnecting to the same dev container and can be dropped once you have accepted its host key.
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, `sshd` starts only after the `ansible-setup` s6-rc oneshot finishes, and does not start if it fails. Without Ansible, startup does not change.
 
 ## Trademarks
 

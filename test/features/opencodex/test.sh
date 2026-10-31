@@ -83,4 +83,6 @@ check "invalid status does not sync or block startup" no_sync_case not-json
 check "status failure does not sync or block startup" no_sync_case command-failure
 check "sync failure does not block startup" failed_sync_case
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

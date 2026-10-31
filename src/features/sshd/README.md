@@ -1,6 +1,6 @@
 # SSH server (sshd)
 
-Adds an SSH server supervised as a native s6-overlay service.
+Adds an [OpenSSH](https://www.openssh.com/) server supervised as a native [s6-overlay](https://github.com/just-containers/s6-overlay) service.
 
 ## Example Usage
 
@@ -21,9 +21,9 @@ Adds an SSH server supervised as a native s6-overlay service.
 
 The image must use s6-overlay 3 with `/init` as its entrypoint. Set `"overrideCommand": false` in `devcontainer.json` so s6 remains PID 1.
 
-While the some services automates SSH setup (e.g., when using the GitHub CLI for GitHub Codespaces), this may not be the case for other tools and services. Follow these directions to connect to the dev container from these other tools:
+While the some services automates SSH setup (e.g., when using the [GitHub CLI](https://cli.github.com/) for [GitHub Codespaces](https://github.com/features/codespaces)), this may not be the case for other tools and services. Follow these directions to connect to the dev container from these other tools:
 
-1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., VS Code client).
+1. Connect to your dev container using a desktop tool or CLI that supports the dev container spec (e.g., [VS Code](https://code.visualstudio.com/) client).
 
 2. Put your public key in the container user's `authorized_keys` file. Password and root login are disabled, so this is the only way in. Either mount the file from `devcontainer.json`:
 
@@ -59,14 +59,14 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 ### Using SSHFS
 
-[SSHFS](https://en.wikipedia.org/wiki/SSHFS) allows you to mount a remote filesystem to your local machine with nothing but a SSH connection. Here's how to use it with a dev container.
+[SSHFS](https://github.com/libfuse/sshfs) allows you to mount a remote filesystem to your local machine with nothing but a SSH connection. Here's how to use it with a dev container.
 
 1. Follow the steps in the previous section to ensure you can connect to the dev container using the normal `ssh` client.
 
 2. Install a SSHFS client.
 
    - **Windows:** Install [WinFsp](https://github.com/billziss-gh/winfsp/releases) and [SSHFS-Win](https://github.com/billziss-gh/sshfs-win/releases).
-   - **macOS**: Use [Homebrew](https://brew.sh/) to install: `brew install macfuse gromgit/fuse/sshfs-mac`
+   - **macOS**: Use [Homebrew](https://brew.sh/) to install [macFUSE](https://macfuse.github.io/) and [sshfs-mac](https://github.com/gromgit/homebrew-fuse): `brew install macfuse gromgit/fuse/sshfs-mac`
    - **Linux:** Use your native package manager to install your distribution's copy of the sshfs package. e.g. `sudo apt-get update && sudo apt-get install sshfs`
 
 3. Mount the remote filesystem.
@@ -94,11 +94,15 @@ While the some services automates SSH setup (e.g., when using the GitHub CLI for
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/devcontainers/features/blob/main/src/sshd/devcontainer-feature.json). Add additional notes to a `NOTES.md`._
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, `sshd` starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, `sshd` does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

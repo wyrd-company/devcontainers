@@ -26,5 +26,8 @@
       "description": "User allowed to manage Caddy fragments. Automatic selection prefers the remote user, container user, `vscode`, then `root`."
     }
   },
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/ansible"
+  ]
 }

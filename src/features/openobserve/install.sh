@@ -278,6 +278,9 @@ service_dir=/etc/s6-overlay/s6-rc.d/openobserve
 install -d -m 0755 "${service_dir}/dependencies.d"
 printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${service_dir}/dependencies.d/ansible-setup"
+fi
 printf -v quoted_user '%q' "${service_user}"
 printf -v quoted_home '%q' "${service_home}"
 cat >"${service_dir}/run" <<EOF

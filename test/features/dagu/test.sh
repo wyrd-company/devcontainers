@@ -21,4 +21,6 @@ check "Dagu launcher loads the conventional secret file" grep -Fq 'secret_file=/
 check "Dagu does not depend on an absent OpenBao Agent Feature" test ! -e /etc/s6-overlay/s6-rc.d/dagu/dependencies.d/openbao-secrets
 check "Dagu Feature does not register systemd" test ! -e /etc/systemd/system/dagu.service
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

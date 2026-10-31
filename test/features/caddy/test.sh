@@ -28,4 +28,6 @@ check "DNS readiness blocks until a registered name resolves" bash -c '
 check "remote user can manage fragments" bash -c 'id -nG vscode | tr " " "\n" | grep -qx caddy-config'
 check "admin socket is not exposed to config authors" bash -c '! id -nG vscode | tr " " "\n" | grep -qx caddy'
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

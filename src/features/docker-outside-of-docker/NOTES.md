@@ -1,10 +1,10 @@
 ## Runtime requirement
 
-This Feature registers Docker socket access as an s6-overlay 3 longrun service. The image must provide `/init` as its entrypoint, and `devcontainer.json` must set `"overrideCommand": false`.
+This Feature registers [Docker](https://www.docker.com/) socket access as an [s6-overlay](https://github.com/just-containers/s6-overlay) 3 longrun service. The image must provide `/init` as its entrypoint, and `devcontainer.json` must set `"overrideCommand": false`.
 
-Docker CE is installed by default. Set `"moby": true` to request Microsoft-packaged Moby explicitly. The installation fails rather than substituting Docker CE when the complete requested Moby package set is unavailable. Moby is unavailable on Ubuntu Resolute and Debian Trixie.
+Docker CE is installed by default. Set `"moby": true` to request Microsoft-packaged [Moby](https://mobyproject.org/) explicitly. The installation fails rather than substituting Docker CE when the complete requested Moby package set is unavailable. Moby is unavailable on Ubuntu Resolute and Debian Trixie.
 
-This Feature derives from Microsoft's Dev Container Docker-outside-of-Docker Feature under the MIT License. It replaces the upstream entrypoint hook with native s6 supervision.
+This Feature derives from Microsoft's [Dev Container Docker-outside-of-Docker Feature](https://github.com/devcontainers/features/tree/main/src/docker-outside-of-docker) under the MIT License. It replaces the upstream entrypoint hook with native s6 supervision.
 
 ## Limitations
 
@@ -30,7 +30,7 @@ A common question that comes up is how you can use `bind` mounts from the Docker
 docker run -it --rm -v ${LOCAL_WORKSPACE_FOLDER}:/workspace debian bash
 ```
 
-3. Usage with Docker-compose
+3. Usage with [Docker Compose](https://docs.docker.com/compose/)
 
 ```yaml
 version: "3.9"
@@ -59,13 +59,15 @@ services:
 3. When the container first started with this settings, select the Workspace with the absolute path to the working directory inside the container
 4. Docker commands with bind mount should work as they did outside of the devcontainer
 
-> **Note:** There is no `${localWorkspaceFolder}` when using the **Clone Repository in Container Volume** command in the VS Code Dev Containers extension ([info](https://github.com/microsoft/vscode-remote-release/issues/6160#issuecomment-1014701007)).
+> **Note:** There is no `${localWorkspaceFolder}` when using the **Clone Repository in Container Volume** command in the [VS Code](https://code.visualstudio.com/) [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) ([info](https://github.com/microsoft/vscode-remote-release/issues/6160#issuecomment-1014701007)).
 
 ## OS Support
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the socket access service starts only after the `ansible-setup` s6-rc oneshot finishes, and does not start if it fails. Without Ansible, startup does not change.
 
 ## Trademarks
 

@@ -1,14 +1,14 @@
 # OpenObserve
 
-Installs the official OpenObserve OSS single binary and runs it as an s6-overlay longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
+Installs the official [OpenObserve](https://openobserve.ai/) OSS single binary and runs it as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
-OpenObserve runs as the selected devcontainer user so that service state, logs, and SQLite metadata use that user's permissions, home directory, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
+OpenObserve runs as the selected devcontainer user so that service state, logs, and [SQLite](https://sqlite.org/) metadata use that user's permissions, home directory, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
 
 The Feature uses OpenObserve's native per-user configuration and state paths. It does not create configuration files, mount volumes, or create directories outside the service user's paths. Configure bind mounts and their permissions in each `devcontainer.json` when configuration or state must survive a rebuild.
 
 ## Caddy integration
 
-Set `dnsName` when the Caddy Feature is present to expose OpenObserve through automatic HTTPS. The Feature registers the DNS name with Caddy's startup-readiness mechanism, writes a reverse-proxy fragment targeting OpenObserve on IPv4 loopback, and sets OpenObserve's public URL (`ZO_WEB_URL`) to `https://<dnsName>`.
+Set `dnsName` when the [Caddy](https://caddyserver.com/) Feature is present to expose OpenObserve through automatic HTTPS. The Feature registers the DNS name with Caddy's startup-readiness mechanism, writes a reverse-proxy fragment targeting OpenObserve on IPv4 loopback, and sets OpenObserve's public URL (`ZO_WEB_URL`) to `https://<dnsName>`.
 
 ```json
 {
@@ -118,6 +118,10 @@ Accepted values start with a letter or digit, then letters, digits, `.`, `_`, `/
 - **Latest version resolution:** When `version` is set to `latest`, the installer queries GitHub releases for the latest stable, non-prerelease tag (ignoring `-rc` candidates). If the GitHub API is unavailable or rate-limited, it falls back to the known stable release `v0.92.2`.
 - **Archive source:** OpenObserve publishes OSS binaries at `downloads.openobserve.ai/releases/openobserve/v<version>/openobserve-v<version>-linux-<arch>.tar.gz`.
 - **Integrity verification:** Upstream OpenObserve does not serve machine-readable checksum files for OSS releases from its download CDN (endpoints return 403), and the public download page does not publish Linux OSS checksums. When `sha256` is configured, the installer verifies the archive using `sha256sum --check`. When omitted, checksum verification is skipped.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, OpenObserve starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, OpenObserve does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

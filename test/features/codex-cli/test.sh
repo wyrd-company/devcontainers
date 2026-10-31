@@ -29,4 +29,6 @@ check "service user and home" grep -Fq "s6-setuidgid ${FEATURE_USER} env HOME=${
 check "canonical control socket listener" grep -Fq 'app-server --listen unix://' /usr/local/bin/codex-cli-service
 check "remote control is opt-in" bash -c '! grep -q -- --remote-control /usr/local/bin/codex-cli-service'
 check "exec-server is opt-in" test ! -e /etc/s6-overlay/user-bundles.d/user/contents.d/codex-exec-server
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

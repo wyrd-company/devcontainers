@@ -36,4 +36,6 @@ check "T3 has no SSH agent linker dependency" test ! -e /etc/s6-overlay/s6-rc.d/
 check "T3 does not override SSH_AUTH_SOCK" bash -c "! grep -q 'SSH_AUTH_SOCK' /etc/s6-overlay/s6-rc.d/t3code-server/run"
 check "systemd unit is absent" test ! -e /etc/systemd/system/t3code.service
 
+check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
+
 reportResults

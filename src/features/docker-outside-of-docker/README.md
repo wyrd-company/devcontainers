@@ -4,7 +4,7 @@
 
 # Docker (docker-outside-of-docker) (docker-outside-of-docker)
 
-Reuses the host Docker socket and supervises any required socket proxy with s6-overlay.
+Reuses the host [Docker](https://www.docker.com/) socket and supervises any required socket proxy with [s6-overlay](https://github.com/just-containers/s6-overlay).
 
 ## Example Usage
 
@@ -16,21 +16,21 @@ Reuses the host Docker socket and supervises any required socket proxy with s6-o
 
 ## Options
 
-| Options Id                 | Description                                                                                                                                                                                                                    | Type    | Default Value             |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------------------------- |
-| version                    | Select or enter a Docker/Moby CLI version. (Availability can vary by OS version.)                                                                                                                                              | string  | latest                    |
-| moby                       | Install Microsoft-packaged Moby instead of Docker CE when the complete package set is available                                                                                                                                | boolean | false                     |
-| mobyBuildxVersion          | Install a specific version of moby-buildx when using Moby                                                                                                                                                                      | string  | latest                    |
-| dockerDashComposeVersion   | Compose version to use for docker-compose (v1 or v2 or none or latest)                                                                                                                                                         | string  | latest                    |
-| installDockerBuildx        | Install Docker Buildx                                                                                                                                                                                                          | boolean | true                      |
-| installDockerComposeSwitch | Install Compose Switch (provided docker compose is available) which is a replacement to the Compose V1 docker-compose (python) executable. It translates the command line into Compose V2 docker compose then runs the latter. | boolean | false                     |
-| socketPath                 | Path where the Docker socket is mounted inside the container. For rootless Docker, override the mount in devcontainer.json to map your host socket to this path.                                                               | string  | /var/run/docker-host.sock |
+| Options Id                 | Description                                                                                                                                                                                                                                                                | Type    | Default Value             |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------- |
+| version                    | Select or enter a Docker/[Moby](https://mobyproject.org/) CLI version. (Availability can vary by OS version.)                                                                                                                                                              | string  | latest                    |
+| moby                       | Install Microsoft-packaged Moby instead of Docker CE when the complete package set is available                                                                                                                                                                            | boolean | false                     |
+| mobyBuildxVersion          | Install a specific version of moby-buildx when using Moby                                                                                                                                                                                                                  | string  | latest                    |
+| dockerDashComposeVersion   | [Compose](https://docs.docker.com/compose/) version to use for docker-compose (v1 or v2 or none or latest)                                                                                                                                                                 | string  | latest                    |
+| installDockerBuildx        | Install [Docker Buildx](https://github.com/docker/buildx)                                                                                                                                                                                                                  | boolean | true                      |
+| installDockerComposeSwitch | Install [Compose Switch](https://github.com/docker/compose-switch) (provided docker compose is available) which is a replacement to the Compose V1 docker-compose (python) executable. It translates the command line into Compose V2 docker compose then runs the latter. | boolean | false                     |
+| socketPath                 | Path where the Docker socket is mounted inside the container. For rootless Docker, override the mount in devcontainer.json to map your host socket to this path.                                                                                                           | string  | /var/run/docker-host.sock |
 
 ## Customizations
 
-### VS Code Extensions
+### [VS Code](https://code.visualstudio.com/) Extensions
 
-- `ms-azuretools.vscode-containers`
+- [`ms-azuretools.vscode-containers`](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-containers)
 
 ## Limitations
 
@@ -112,17 +112,21 @@ services:
 3. When the container first started with this settings, select the Workspace with the absolute path to the working directory inside the container
 4. Docker commands with bind mount should work as they did outside of the devcontainer
 
-> **Note:** There is no `${localWorkspaceFolder}` when using the **Clone Repository in Container Volume** command in the VS Code Dev Containers extension ([info](https://github.com/microsoft/vscode-remote-release/issues/6160#issuecomment-1014701007)).
+> **Note:** There is no `${localWorkspaceFolder}` when using the **Clone Repository in Container Volume** command in the [VS Code](https://code.visualstudio.com/) [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) ([info](https://github.com/microsoft/vscode-remote-release/issues/6160#issuecomment-1014701007)).
 
 ## OS Support
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/devcontainers/features/blob/main/src/docker-outside-of-docker/devcontainer-feature.json). Add additional notes to a `NOTES.md`._
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the socket access service starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the socket access service does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.
 
 ## Trademarks
 

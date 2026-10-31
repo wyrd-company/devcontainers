@@ -1,6 +1,6 @@
 # Docker (Docker-in-Docker) (docker-in-docker)
 
-Creates child containers using Docker daemons supervised as native s6-overlay services.
+Creates child containers using [Docker](https://www.docker.com/) daemons supervised as native [s6-overlay](https://github.com/just-containers/s6-overlay) services.
 
 ## Example Usage
 
@@ -12,24 +12,24 @@ Creates child containers using Docker daemons supervised as native s6-overlay se
 
 ## Options
 
-| Options Id                 | Description                                                                                                                                                                                                                    | Type    | Default Value |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------------- |
-| version                    | Select or enter a Docker/Moby Engine version. (Availability can vary by OS version.)                                                                                                                                           | string  | latest        |
-| moby                       | Install Microsoft-packaged Moby instead of Docker CE when the complete package set is available                                                                                                                                | boolean | false         |
-| mobyBuildxVersion          | Install a specific version of moby-buildx when using Moby                                                                                                                                                                      | string  | latest        |
-| dockerDashComposeVersion   | Default version of Docker Compose (v1, v2, latest or none)                                                                                                                                                                     | string  | latest        |
-| azureDnsAutoDetection      | Allow automatically setting the dockerd DNS server when the installation script detects it is running in Azure                                                                                                                 | boolean | true          |
-| dockerDefaultAddressPool   | Define default address pools for Docker networks. e.g. base=192.168.0.0/16,size=24                                                                                                                                             | string  | -             |
-| installDockerBuildx        | Install Docker Buildx                                                                                                                                                                                                          | boolean | true          |
-| installDockerComposeSwitch | Install Compose Switch (provided docker compose is available) which is a replacement to the Compose V1 docker-compose (python) executable. It translates the command line into Compose V2 docker compose then runs the latter. | boolean | false         |
-| disableIp6tables           | Disable ip6tables (this option is only applicable for Docker versions 27 and greater)                                                                                                                                          | boolean | false         |
-| iptablesSwitchAtRuntime    | If true, the iptables alternative is selected by the s6 preparation service at container start. Useful when the desired iptables backend depends on the host kernel at runtime rather than at build time.                      | boolean | true          |
+| Options Id                 | Description                                                                                                                                                                                                                                                                | Type    | Default Value |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------- |
+| version                    | Select or enter a Docker/[Moby](https://mobyproject.org/) Engine version. (Availability can vary by OS version.)                                                                                                                                                           | string  | latest        |
+| moby                       | Install Microsoft-packaged Moby instead of Docker CE when the complete package set is available                                                                                                                                                                            | boolean | false         |
+| mobyBuildxVersion          | Install a specific version of moby-buildx when using Moby                                                                                                                                                                                                                  | string  | latest        |
+| dockerDashComposeVersion   | Default version of [Docker Compose](https://docs.docker.com/compose/) (v1, v2, latest or none)                                                                                                                                                                             | string  | latest        |
+| azureDnsAutoDetection      | Allow automatically setting the dockerd DNS server when the installation script detects it is running in [Azure](https://azure.microsoft.com/)                                                                                                                             | boolean | true          |
+| dockerDefaultAddressPool   | Define default address pools for Docker networks. e.g. base=192.168.0.0/16,size=24                                                                                                                                                                                         | string  | -             |
+| installDockerBuildx        | Install [Docker Buildx](https://github.com/docker/buildx)                                                                                                                                                                                                                  | boolean | true          |
+| installDockerComposeSwitch | Install [Compose Switch](https://github.com/docker/compose-switch) (provided docker compose is available) which is a replacement to the Compose V1 docker-compose (python) executable. It translates the command line into Compose V2 docker compose then runs the latter. | boolean | false         |
+| disableIp6tables           | Disable ip6tables (this option is only applicable for Docker versions 27 and greater)                                                                                                                                                                                      | boolean | false         |
+| iptablesSwitchAtRuntime    | If true, the [iptables](https://www.netfilter.org/projects/iptables/) alternative is selected by the s6 preparation service at container start. Useful when the desired iptables backend depends on the host kernel at runtime rather than at build time.                  | boolean | true          |
 
 ## Customizations
 
-### VS Code Extensions
+### [VS Code](https://code.visualstudio.com/) Extensions
 
-- `ms-azuretools.vscode-containers`
+- [`ms-azuretools.vscode-containers`](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-containers)
 
 ## Limitations
 
@@ -48,11 +48,15 @@ This docker-in-docker Dev Container Feature is roughly based on the [official do
 
 This Feature should work on recent versions of Debian/Ubuntu-based distributions with the `apt` package manager installed.
 
-`bash` is required to execute the `install.sh` script.
+[`bash`](https://www.gnu.org/software/bash/) is required to execute the `install.sh` script.
 
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/devcontainers/features/blob/main/src/docker-in-docker/devcontainer-feature.json). Add additional notes to a `NOTES.md`._
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, Docker starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, Docker does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change. The preparation oneshot waits, so [containerd](https://containerd.io/) and `dockerd` also wait.
 
 ## Trademarks
 

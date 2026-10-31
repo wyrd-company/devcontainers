@@ -958,7 +958,7 @@ prepare_dir="${S6_RC_DIR}/docker-in-docker-prepare"
 containerd_dir="${S6_RC_DIR}/docker-in-docker-containerd"
 dockerd_dir="${S6_RC_DIR}/docker-in-docker"
 mkdir -p \
-    "${prepare_dir}" \
+    "${prepare_dir}/dependencies.d" \
     "${containerd_dir}/dependencies.d" \
     "${dockerd_dir}/dependencies.d"
 printf 'oneshot\n' > "${prepare_dir}/type"
@@ -968,6 +968,9 @@ touch \
     "${containerd_dir}/dependencies.d/docker-in-docker-prepare" \
     "${dockerd_dir}/dependencies.d/docker-in-docker-containerd" \
     "${S6_USER_BUNDLE}/docker-in-docker"
+if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
+    touch "${prepare_dir}/dependencies.d/ansible-setup"
+fi
 
 cat > "${prepare_dir}/prepare" << EOF
 #!/command/with-contenv bash

@@ -1,6 +1,6 @@
 # OpenBao Agent
 
-Installs the official OpenBao `bao` binary and runs `bao agent` as an s6-overlay longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
+Installs the official [OpenBao](https://openbao.org/) `bao` binary and runs `bao agent` as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
 OpenBao Agent runs as `root` by default. Rendered secret files reach other Features through the `openbao-secrets` group. Set `serviceUser` to override: `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. Authentication inputs must be readable, and template destinations and token sinks writable, by the selected user.
 
@@ -39,7 +39,7 @@ See the [OpenBao Agent documentation](https://openbao.org/docs/agent-and-proxy/a
 
 ## Secret files for other Features
 
-The `opentelemetry-collector` and `dagu` Features load `/run/openbao/secrets/<feature-id>.env` before they start their service. The Agent configuration decides which files exist: add one `template` whose `destination` is that path.
+The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) (`opentelemetry-collector`) and [Dagu](https://dagu.sh/) (`dagu`) Features load `/run/openbao/secrets/<feature-id>.env` before they start their service. The Agent configuration decides which files exist: add one `template` whose `destination` is that path.
 
 ```hcl
 template {
@@ -89,6 +89,10 @@ sudo /command/s6-svc -r /run/service/openbao-agent
 ```
 
 The installed command is `bao`. The Feature does not create a `vault` alias because an existing HashiCorp Vault installation may own that command.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the `openbao-agent` service starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the `openbao-agent` service does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change. The `openbao-secrets` oneshot only creates the secret directory and group. It does not wait, so that other Features can find the directory at their own start.
 
 ## Trademarks
 

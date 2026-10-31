@@ -1,8 +1,8 @@
 # OpenCodex
 
-Installs [OpenCodex](https://github.com/lidge-jun/opencodex) (`ocx`) for the service user. The default `client` mode connects local coding tools to an external Remote Hub. Optional `standalone` mode runs a local proxy and dashboard as a native s6-overlay 3 service.
+Installs [OpenCodex](https://opencodex.me/) (`ocx`) for the service user. The default `client` mode connects local coding tools to an external Remote Hub. Optional `standalone` mode runs a local proxy and dashboard as a native [s6-overlay](https://github.com/just-containers/s6-overlay) 3 service.
 
-The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. Node.js 24 is supplied through the official Dev Container Node Feature.
+The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed. [Node.js](https://nodejs.org/) 24 is supplied through the official [Dev Container Node Feature](https://github.com/devcontainers/features/tree/main/src/node).
 
 Version 2 defaults to client mode. Version 1 ran a local proxy by default. Set `mode` to `standalone` to keep that behavior when moving from version 1.
 
@@ -11,14 +11,14 @@ Version 2 defaults to client mode. Version 1 ran a local proxy by default. Set `
 | Option        | Type   | Default     | Description                                                                                                                                       |
 | ------------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mode`        | string | `client`    | `client` refreshes a persisted Remote Hub connection at startup. `standalone` runs a local proxy and dashboard.                                   |
-| `version`     | string | `latest`    | OpenCodex npm version or dist-tag, such as `latest`, `preview`, or `2.51.0`.                                                                      |
+| `version`     | string | `latest`    | OpenCodex [npm](https://www.npmjs.com/) version or dist-tag, such as `latest`, `preview`, or `2.51.0`.                                                                      |
 | `port`        | string | `10100`     | Loopback port for the standalone proxy and dashboard. Ignored in client mode.                                                                     |
 | `serviceUser` | string | `automatic` | User account that owns the installation and runs OpenCodex. Automatic selection prefers the remote user, container user, `vscode`, then `root`.   |
-| `dnsName`     | string | `""`        | Optional fully qualified DNS name for the standalone dashboard. Requires the Caddy Feature and `mode=standalone`.                                 |
+| `dnsName`     | string | `""`        | Optional fully qualified DNS name for the standalone dashboard. Requires the [Caddy](https://caddyserver.com/) Feature and `mode=standalone`.                                 |
 
 ## Remote Hub client
 
-Persist separate OpenCodex and Codex homes for each dev container:
+Persist separate OpenCodex and [Codex](https://github.com/openai/codex) homes for each dev container:
 
 ```json
 {
@@ -96,6 +96,10 @@ In client mode, `ocx update` runs the user-owned installation directly. In stand
 OpenCodex accepts management requests only with a loopback `Host` and a loopback or absent `Origin`. The Caddy fragment supplies the loopback `Host` and rewrites the dashboard's own origin to the loopback origin. Other origins pass through and OpenCodex rejects them.
 
 The proxy keeps its loopback bind, so it treats requests through Caddy as local. Anyone who can reach the configured HTTPS name can use the dashboard without a token. Limit who can resolve and reach the name.
+
+## Ansible
+
+When the [Ansible](https://www.ansible.com/) Feature is installed, the OpenCodex service starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the OpenCodex service does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change. In client mode it is the `opencodex-client-sync` oneshot.
 
 ## Trademarks
 

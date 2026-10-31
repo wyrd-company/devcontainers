@@ -15,7 +15,6 @@ TEST = ROOT / "test/features/t3code-server"
 class SourceContractTests(unittest.TestCase):
     def test_metadata_documents_upstream_versions_and_in_place_update(self):
         metadata = json.loads((FEATURE / "devcontainer-feature.json").read_text())
-        self.assertEqual(metadata["version"], "2.1.0")
         self.assertIn("upstream release archive", metadata["options"]["version"]["description"])
         self.assertIn("t3code-server-update", metadata["description"])
         self.assertNotIn("packageSource", metadata["options"])

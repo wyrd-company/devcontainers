@@ -1,6 +1,6 @@
 {
   "id": "ansible",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "name": "Ansible",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/ansible",
   "description": "Installs Ansible and converges the container with a playbook through an s6-overlay oneshot at startup and the ansible-sync command.",

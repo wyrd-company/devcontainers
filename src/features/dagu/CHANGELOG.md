@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+### Features
+
+- Add configPath to select the Dagu service configuration file.
+
 ## 1.2.0
 
 ### Features

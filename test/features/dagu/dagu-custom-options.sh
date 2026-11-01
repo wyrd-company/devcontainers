@@ -11,4 +11,6 @@ check "localhost is normalized to IPv4 loopback" grep -q -- 'start-all --host 12
 check "custom service user is configured" grep -q '^exec s6-setuidgid root ' /etc/s6-overlay/s6-rc.d/dagu/run
 check "custom service home is configured" grep -q ' HOME=/root ' /etc/s6-overlay/s6-rc.d/dagu/run
 
+check "custom config path is shell quoted" grep -Fq -- '--config /etc/sample\ dagu/config.yaml' /usr/local/bin/dagu-service
+
 reportResults

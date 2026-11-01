@@ -23,4 +23,6 @@ check "Dagu Feature does not register systemd" test ! -e /etc/systemd/system/dag
 
 check "No service depends on an absent Ansible Feature" test -z "$(find /etc/s6-overlay/s6-rc.d -name ansible-setup 2>/dev/null)"
 
+check "default launcher keeps native config lookup" bash -c '! grep -q -- "--config" /usr/local/bin/dagu-service'
+
 reportResults

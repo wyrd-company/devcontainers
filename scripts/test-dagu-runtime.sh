@@ -29,12 +29,12 @@ docker run --detach \
     "${image}" >/dev/null
 
 for _ in $(seq 1 60); do
-    if docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/ >/dev/null 2>&1; then
+    if docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/sample-config/ >/dev/null 2>&1; then
         break
     fi
     sleep 0.5
 done
-docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/ >/dev/null
+docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/sample-config/ >/dev/null
 
 dagu_pid="$(docker exec "${name}" pgrep --exact dagu | head -n 1)"
 test -n "${dagu_pid}"
@@ -42,7 +42,7 @@ test "$(docker exec "${name}" ps -o user= -p "${dagu_pid}" | tr -d ' ')" = vscod
 docker exec --user vscode "${name}" sh -c \
     "tr '\0' '\n' </proc/${dagu_pid}/environ | grep -qx SAMPLE_RUNTIME_VALUE=sample-runtime-value"
 
-if docker exec "${name}" curl --fail --silent http://127.0.0.1:8123/ >/dev/null 2>&1; then
+if docker exec "${name}" curl --fail --silent http://127.0.0.1:8123/sample-config/ >/dev/null 2>&1; then
     echo "DAGU_PORT overrode the configured command-line port." >&2
     exit 1
 fi
@@ -77,6 +77,14 @@ common_options=(
     DNSNAME=
     _REMOTE_USER=vscode
 )
+assert_install_rejected \
+    "config path with a newline" \
+    "configPath contains unsupported characters" \
+    "${common_options[@]}" $'CONFIGPATH=/etc/sample\nconfig.yaml'
+assert_install_rejected \
+    "config path with braces" \
+    "configPath contains unsupported characters" \
+    "${common_options[@]}" 'CONFIGPATH=/etc/{sample}/config.yaml'
 assert_install_rejected \
     "out-of-range port" \
     "port must be an integer between 1 and 65535" \

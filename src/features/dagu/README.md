@@ -4,7 +4,9 @@ Installs the official [Dagu](https://dagu.sh/) binary and runs `dagu start-all` 
 
 Dagu runs as the selected devcontainer user so that workflows receive that user's home directory, permissions, Git configuration, SSH credentials, development tools, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.
 
-The Feature uses Dagu's native per-user configuration and state paths. It does not create `config.yaml`, mount volumes, or change ownership beneath the service user's home directory. Configure bind mounts and their permissions in each `devcontainer.json` when configuration, DAG definitions, or run state must survive a rebuild.
+The Feature uses Dagu's native per-user configuration and state paths by default. Set `configPath` to a configuration file path to pass it to Dagu through `--config`. Use an absolute container path, such as `/etc/dagu/config.yaml`, and make the file readable by the service user before the service starts. An empty `configPath` keeps Dagu's native configuration lookup.
+
+The Feature does not create `config.yaml`, mount volumes, or change ownership beneath the service user's home directory. Configure bind mounts and their permissions in each `devcontainer.json` when configuration, DAG definitions, or run state must survive a rebuild.
 
 ## Caddy integration
 
@@ -51,6 +53,7 @@ Dagu reads the file once, at start; restart the service after a secret changes. 
 | ------------- | ------ | ----------- | ----------------------------------------------------------------- |
 | `version`     | string | `latest`    | Dagu release version, with or without the upstream `v` prefix.    |
 | `host`        | string | `127.0.0.1` | Interface used by Dagu. `localhost` is normalized to `127.0.0.1`. |
+| `configPath`  | string | `""`        | Optional configuration file path passed as `--config`.            |
 | `port`        | string | `8080`      | Port used by Dagu.                                                |
 | `serviceUser` | string | `automatic` | User that runs Dagu and its workflows.                            |
 | `dnsName`     | string | `""`        | Optional fully qualified DNS name exposed through Caddy.          |

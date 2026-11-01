@@ -6,7 +6,8 @@
         "version": "v2.16.1",
         "host": "localhost",
         "port": "8123",
-        "serviceUser": "root"
+        "serviceUser": "root",
+        "configPath": "/etc/sample dagu/config.yaml"
       }
     }
   },

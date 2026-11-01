@@ -28,13 +28,18 @@ docker run --detach \
     --env SAMPLE_RUNTIME_VALUE=sample-runtime-value \
     "${image}" >/dev/null
 
+assert_config_loaded() {
+    docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/sample-config/api/v1/health \
+        | python3 -c 'import json, sys; sys.exit(json.load(sys.stdin).get("status") != "healthy")'
+}
+
 for _ in $(seq 1 60); do
-    if docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/sample-config/ >/dev/null 2>&1; then
+    if assert_config_loaded >/dev/null 2>&1; then
         break
     fi
     sleep 0.5
 done
-docker exec "${name}" curl --fail --silent http://127.0.0.1:8080/sample-config/ >/dev/null
+assert_config_loaded
 
 dagu_pid="$(docker exec "${name}" pgrep --exact dagu | head -n 1)"
 test -n "${dagu_pid}"

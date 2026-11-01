@@ -29,6 +29,11 @@
       "type": "string",
       "default": "",
       "description": "Optional fully qualified DNS name exposed through the Caddy Feature."
+    },
+    "configPath": {
+      "type": "string",
+      "default": "",
+      "description": "Optional path to a Dagu configuration file, passed as --config. Empty uses Dagu's native configuration lookup."
     }
   },
   "installsAfter": [

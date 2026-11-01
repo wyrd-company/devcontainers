@@ -49,6 +49,11 @@ done
 [ "${#PORT}" -le 5 ] || err "port must be an integer between 1 and 65535."
 ((10#${PORT} >= 1 && 10#${PORT} <= 65535)) || err "port must be an integer between 1 and 65535."
 
+config_path="${CONFIGPATH:-}"
+case "${config_path}" in
+    *$'\n'*|*$'\r'*|*'{'*|*'}'*) err "configPath contains unsupported characters." ;;
+esac
+
 normalized_host="${HOST}"
 if [ "${normalized_host}" = localhost ]; then
     normalized_host=127.0.0.1
@@ -144,6 +149,11 @@ printf -v quoted_dagu '%q' /usr/local/bin/dagu
 printf -v quoted_host '%q' "${normalized_host}"
 printf -v quoted_port '%q' "${PORT}"
 printf -v quoted_public_url '%q' "https://${DNSNAME}"
+config_flag=
+if [ -n "${config_path}" ]; then
+    printf -v quoted_config_path '%q' "${config_path}"
+    config_flag=" --config ${quoted_config_path}"
+fi
 
 cat >/usr/local/bin/dagu-service <<EOF
 #!/usr/bin/env bash
@@ -182,7 +192,7 @@ if [ -r "\${secret_file}" ]; then
     done <"\${secret_file}"
 fi
 
-exec ${quoted_dagu} start-all --host ${quoted_host} --port ${quoted_port} "\$@"
+exec ${quoted_dagu} start-all --host ${quoted_host} --port ${quoted_port}${config_flag} "\$@"
 EOF
 chmod 0755 /usr/local/bin/dagu-service
 

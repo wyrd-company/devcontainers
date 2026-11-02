@@ -48,6 +48,20 @@ jobs:
       - name: Check that every logo matches its frame and mark
         run: python3 scripts/build-logos.py --check
 
+  test-sdk-features:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.targets), 'dart') || contains(fromJSON(needs.changes.outputs.targets), 'flutter')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [debian:bookworm, local-base]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reject invalid SDK options before installation
+        run: sudo bash test/features/dart/test-validation.sh
+      - name: Test Dart alone and Flutter with Dart
+        run: ./scripts/test-sdk-features.sh ${{ matrix.image }}
+
   test-t3code-package-source-resolver:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.targets), 't3code-server')

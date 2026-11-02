@@ -61,6 +61,12 @@ discovery:
     - detector: devcontainer-template
       path: src/templates/ubuntu/devcontainer-template.json
       release-unit: ubuntu
+    - detector: devcontainer-feature
+      path: src/features/dart/devcontainer-feature.json
+      release-unit: dart
+    - detector: devcontainer-feature
+      path: src/features/flutter/devcontainer-feature.json
+      release-unit: flutter
   excluded-paths:
     - detector: npm-package
       path: src/features/codex-cli/arguments/package.json
@@ -300,6 +306,28 @@ release-units:
         file: /docs/user/docs.yml
         mode: committed
         pointer: /products/base/docs-version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  dart:
+    path: src/features/dart
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  flutter:
+    path: src/features/flutter
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
     tags:
       primary:
         role: primary

@@ -157,3 +157,13 @@ products:
       - kind: devcontainer-feature
     source: src/features/t3code-server
     logo: logo.svg
+  dart:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/dart
+    logo: logo.svg
+  flutter:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/flutter
+    logo: logo.svg

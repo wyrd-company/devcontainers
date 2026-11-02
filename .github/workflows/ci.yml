@@ -54,13 +54,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [debian:bookworm, local-base]
+        include:
+          - image: debian:bookworm
+            android: false
+          - image: local-base
+            android: true
     steps:
       - uses: actions/checkout@v5
       - name: Reject invalid SDK options before installation
         run: sudo bash test/features/dart/test-validation.sh
       - name: Test Dart alone and Flutter with Dart
-        run: ./scripts/test-sdk-features.sh ${{ matrix.image }}
+        run: ANDROID_SDK=${{ matrix.android }} ./scripts/test-sdk-features.sh ${{ matrix.image }}
 
   test-t3code-package-source-resolver:
     needs: changes

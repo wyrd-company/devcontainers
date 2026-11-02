@@ -19,6 +19,7 @@ Usage: build-logos.py          write every logo
 import argparse
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -122,6 +123,10 @@ def compose(frame: str, view_box: list[float], body: str, scale: float = 1.0) ->
 
 def problems(svg: str) -> list[str]:
     found = []
+    try:
+        ET.fromstring(svg)
+    except ET.ParseError as error:
+        found.append(f"is invalid XML: {error}")
     if not svg.startswith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">'):
         found.append("is not a square 128x128 SVG")
     if FORBIDDEN.search(svg):

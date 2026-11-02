@@ -8,7 +8,7 @@
 						L840.4,481.28L840.4,481.28z M520.9,1.98L1.6,521.28l159.8,159.8l679-679.1H520.9z"/>
 				</defs>
 				<clipPath id="SVGID_2_">
-					<use xlink:href="#SVGID_1_"  overflow="visible"/>
+					<use href="#SVGID_1_"  overflow="visible"/>
 				</clipPath>
 				<g clip-path="url(#SVGID_2_)">
 					<g>
@@ -24,7 +24,7 @@
 						L840.4,481.28L840.4,481.28z M520.9,1.98L1.6,521.28l159.8,159.8l679-679.1H520.9z"/>
 				</defs>
 				<clipPath id="SVGID_4_">
-					<use xlink:href="#SVGID_3_"  overflow="visible"/>
+					<use href="#SVGID_3_"  overflow="visible"/>
 				</clipPath>
 				<polygon clip-path="url(#SVGID_4_)" fill="#39CEFD" points="161.4,681.08 1.6,521.28 520.9,1.98 840.4,1.98 				"/>
 			</g>
@@ -36,7 +36,7 @@
 						L840.4,481.28L840.4,481.28z M520.9,1.98L1.6,521.28l159.8,159.8l679-679.1H520.9z"/>
 				</defs>
 				<clipPath id="SVGID_6_">
-					<use xlink:href="#SVGID_5_"  overflow="visible"/>
+					<use href="#SVGID_5_"  overflow="visible"/>
 				</clipPath>
 				<polygon clip-path="url(#SVGID_6_)" fill="#03569B" points="401,920.78 520.9,1040.58 840.4,1040.58 840.4,1040.58
 					560.8,760.98 				"/>
@@ -49,7 +49,7 @@
 						L840.4,481.28L840.4,481.28z M520.9,1.98L1.6,521.28l159.8,159.8l679-679.1H520.9z"/>
 				</defs>
 				<clipPath id="SVGID_8_">
-					<use xlink:href="#SVGID_7_"  overflow="visible"/>
+					<use href="#SVGID_7_"  overflow="visible"/>
 				</clipPath>
 
 					<linearGradient id="SVGID_9_" gradientUnits="userSpaceOnUse" x1="15272.4932" y1="9729.5889" x2="15748.5527" y2="9253.5293" gradientTransform="matrix(0.25 0 0 0.25 -3370.5 -1480.7891)">
@@ -66,7 +66,7 @@
 						L840.4,481.28L840.4,481.28z M520.9,1.98L1.6,521.28l159.8,159.8l679-679.1H520.9z"/>
 				</defs>
 				<clipPath id="SVGID_11_">
-					<use xlink:href="#SVGID_10_"  overflow="visible"/>
+					<use href="#SVGID_10_"  overflow="visible"/>
 				</clipPath>
 				<g clip-path="url(#SVGID_11_)">
 

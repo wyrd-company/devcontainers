@@ -9,6 +9,7 @@ fi
 for target in dart flutter; do
     image="sample-sdk-${target}:test"
     docker build --build-arg BASE_IMAGE="$base_image" \
+        --build-arg ANDROID_SDK="${ANDROID_SDK:-false}" \
         --target "$target" -t "$image" \
         -f "$repo_root/test/features/flutter/runtime.Dockerfile" "$repo_root"
     "$repo_root/scripts/check-sudo-no-all.sh" "$image"

@@ -12,11 +12,13 @@ artifacts in `/opt/flutter/bin/cache` using its native bootstrap and precache co
 replace that SDK with the standalone SDK. To pin standalone Dart, declare the Dart Feature
 explicitly with its `version` option.
 
-Linux desktop tools include clang, cmake, ninja-build, pkg-config, GTK development headers, Mesa
-DRI, and mesa-utils. Both architecture-specific system pkg-config directories are exported. Mesa
+Linux desktop tools include [Clang](https://clang.llvm.org/), [CMake](https://cmake.org/),
+[Ninja](https://ninja-build.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/),
+[GTK](https://www.gtk.org/) development headers, and [Mesa](https://www.mesa3d.org/)
+DRI and utilities. Both architecture-specific system pkg-config directories are exported. Mesa
 software rendering defaults to `LIBGL_ALWAYS_SOFTWARE=1` and `GALLIUM_DRIVER=llvmpipe`.
 
-Android installs JDK 17, command-line tools (verified against the SHA256 published on the Android
+Android installs [OpenJDK](https://openjdk.org/) 17, command-line tools (verified against the SHA256 published on the Android
 Studio download page), platform-tools, the selected platform, and build-tools. SDK package downloads
 use sdkmanager. Installation accepts Android SDK licenses, as in the source Feature. Google's Linux
 native Android tools may require amd64; use `androidSdk: false` for Dart, Flutter web, and
@@ -28,6 +30,8 @@ declared. `FLUTTER_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, the Android comman
 paths, and rendering defaults are supplied through Feature metadata.
 
 ## Provenance
+
+The adapted installer is licensed under [Apache-2.0](../../../LICENSES/the-wyrding-way-design-system-Apache-2.0.txt).
 
 Adapted from
 [`the-wyrding-way-design-system/src/flutter`](https://github.com/wyrd-company/the-wyrding-way-design-system/tree/95f4c52b49630b88ecf97ce396b1134f259fe261/src/flutter).

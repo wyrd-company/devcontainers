@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
-# Modified to use a standalone Dart Feature, validate options, and verify Android archives.
-# Adapted from wyrd-company/the-wyrding-way-design-system src/flutter/install.sh.
 # relationships: {references: devcontainer-feature.json}
 set -euo pipefail
 FEATURE=flutter

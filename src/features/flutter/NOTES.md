@@ -11,7 +11,7 @@ Flutter web and Linux-only work on arm64.
 
 SDKs are user-owned. No mounts are declared. Mount SDK and native user cache paths
 explicitly if they must survive a rebuild. See [README.md](README.md) for options,
-persistence paths, source provenance, and the adapted installer's Apache-2.0 license.
+persistence paths.
 
 ## Trademarks
 

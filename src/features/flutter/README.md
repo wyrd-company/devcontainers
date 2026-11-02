@@ -20,7 +20,7 @@ software rendering defaults to `LIBGL_ALWAYS_SOFTWARE=1` and `GALLIUM_DRIVER=llv
 
 Android installs [OpenJDK](https://openjdk.org/) 17, command-line tools (verified against the SHA256 published on the Android
 Studio download page), platform-tools, the selected platform, and build-tools. SDK package downloads
-use sdkmanager. Installation accepts Android SDK licenses, as in the source Feature. Google's Linux
+use sdkmanager. Installation accepts Android SDK licenses. Google's Linux
 native Android tools may require amd64; use `androidSdk: false` for Dart, Flutter web, and
 Linux-only work on arm64. Android emulators and an attached display are not provided.
 
@@ -28,16 +28,6 @@ Configuration and cache stay in native locations: `~/.config/flutter`, `~/.pub-c
 and the SDK directories. Mount those paths explicitly if you want persistence; no mounts are
 declared. `FLUTTER_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, the Android command paths, pkg-config
 paths, and rendering defaults are supplied through Feature metadata.
-
-## Provenance
-
-The adapted installer is licensed under [Apache-2.0](../../../LICENSES/the-wyrding-way-design-system-Apache-2.0.txt).
-
-Adapted from
-[`the-wyrding-way-design-system/src/flutter`](https://github.com/wyrd-company/the-wyrding-way-design-system/tree/95f4c52b49630b88ecf97ce396b1134f259fe261/src/flutter).
-Keeps channel selection, Linux dependencies, software rendering, optional Android packages and user
-ownership. Adds local installer validation and SHA256 verification for Android command-line tools.
-The source repository is unchanged.
 
 ## Usage
 

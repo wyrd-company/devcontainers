@@ -1,0 +1,2 @@
+# YAML parsing for semantic CI job selection.
+PyYAML

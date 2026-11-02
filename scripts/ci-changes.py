@@ -4,6 +4,10 @@
 Usage: ci-changes.py --all
        ci-changes.py <base-sha> <head-sha>
 
+Install YAML support with `python3 -m pip install -r scripts/ci-requirements.txt`.
+Mapped CI job edits select their owners; workflow-wide or unmapped edits select
+every target.
+
 Prints `targets=<JSON array>` and `images=<true|false>` for $GITHUB_OUTPUT.
 Targets are Feature ids plus `base-image` and `template`. A change to shared
 test infrastructure, the base image, or a path this script does not recognize
@@ -26,8 +30,9 @@ FEATURES_DIR = ROOT / "src/features"
 
 # Paths whose change can affect any test.
 SHARED = (
-    ".github/workflows/ci.yml",
     "scripts/ci-changes.py",
+    "scripts/ci-requirements.txt",
+    "test/ci-changes/",
     "scripts/test-features.sh",
     "scripts/build-base-image.sh",
     "scripts/check-sudo-no-all.sh",
@@ -78,6 +83,60 @@ RUNTIME_SCRIPTS = {
 }
 
 
+# Test entry points that do not follow the test-<feature>-runtime.sh convention.
+SCRIPT_TARGETS = {
+    "scripts/test-sdk-features.sh": ["dart", "flutter"],
+}
+
+# Ownership of workflow jobs whose edits can be isolated from the full suite.
+# Unknown jobs and workflow-wide changes deliberately select every target.
+JOB_TARGETS = {
+    "test-sdk-features": ["dart", "flutter"],
+}
+
+
+def targets_for_workflow(before, after):
+    """Select owners of changed jobs, retaining a full-suite fallback."""
+    try:
+        import yaml
+
+        old = yaml.safe_load(before)
+        new = yaml.safe_load(after)
+        if not isinstance(old, dict) or not isinstance(new, dict):
+            return None
+        if {k: v for k, v in old.items() if k != "jobs"} != {k: v for k, v in new.items() if k != "jobs"}:
+            return None
+        old_jobs, new_jobs = old.get("jobs"), new.get("jobs")
+        if not isinstance(old_jobs, dict) or not isinstance(new_jobs, dict):
+            return None
+        selected = set()
+        for job in old_jobs.keys() | new_jobs.keys():
+            if old_jobs.get(job) != new_jobs.get(job):
+                if job not in JOB_TARGETS:
+                    return None
+                selected.update(JOB_TARGETS[job])
+        return sorted(selected)
+    except (ImportError, ValueError, TypeError) as error:
+        print(f"Unable to compare CI workflow; selecting every target: {error}", file=sys.stderr)
+        return None
+    except yaml.YAMLError as error:
+        print(f"Unable to parse CI workflow; selecting every target: {error}", file=sys.stderr)
+        return None
+
+
+def workflow_targets_at(base, head):
+    contents = []
+    for revision in (base, head):
+        result = subprocess.run(
+            ["git", "show", f"{revision}:.github/workflows/ci.yml"],
+            cwd=ROOT, text=True, capture_output=True,
+        )
+        if result.returncode != 0:
+            return None
+        contents.append(result.stdout)
+    return targets_for_workflow(*contents)
+
+
 def all_features():
     return sorted(path.name for path in FEATURES_DIR.iterdir() if (path / "devcontainer-feature.json").is_file())
 
@@ -86,8 +145,12 @@ def all_targets():
     return all_features() + ["base-image", "template"]
 
 
-def targets_for(path, features):
+def targets_for(path, features, workflow_targets=None):
     """Return the targets a changed path selects, or None for every target."""
+    if path == ".github/workflows/ci.yml":
+        return workflow_targets
+    if path in SCRIPT_TARGETS:
+        return SCRIPT_TARGETS[path]
     if path.startswith(SHARED):
         return None
     for prefix in ("src/features/", "test/features/"):
@@ -140,13 +203,13 @@ def changed_paths(base, head):
     return [line for line in result.stdout.splitlines() if line]
 
 
-def select(paths):
+def select(paths, workflow_targets=None):
     if paths is None:
         return all_targets()
     features = set(all_features())
     selected = set()
     for path in paths:
-        targets = targets_for(path, features)
+        targets = targets_for(path, features, workflow_targets)
         if targets is None:
             print(f"{path} affects every target.", file=sys.stderr)
             return all_targets()
@@ -166,7 +229,8 @@ def main(argv):
     else:
         print(__doc__, file=sys.stderr)
         return 2
-    targets = select(paths)
+    workflow_targets = workflow_targets_at(*argv) if paths is not None and ".github/workflows/ci.yml" in paths else None
+    targets = select(paths, workflow_targets)
     images = images_changed(paths)
     print(f"Selected targets: {', '.join(targets) or '(none)'}", file=sys.stderr)
     print(f"Publish base image: {str(images).lower()}", file=sys.stderr)

@@ -32,7 +32,7 @@ The `core` distribution is installed by default. Select `contrib` when the confi
 | `distribution` | string | `core`      | Official distribution to install: `core` or `contrib`.    |
 | `serviceUser`  | string | `automatic` | User that runs the Collector.                             |
 
-For `latest`, the installer selects the newest stable release that contains an archive for the selected distribution and architecture. Different distributions can resolve to different versions when an upstream release omits an artifact.
+For `latest`, the installer follows the [GitHub](https://github.com/) release-page redirect and checks for the selected distribution and architecture archive. It uses the releases API only when that archive returns HTTP 404, then searches stable releases until it finds a matching archive. Different distributions can resolve to different versions when an upstream release omits an artifact. Other lookup or archive-check errors stop installation. Archive downloads still require the adjacent upstream SHA256 checksum.
 
 ## Configuration
 

@@ -3,6 +3,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+python3 "${repo_root}/test/features/opentelemetry-collector/test_release_resolution.py"
 base_image="${BASE_IMAGE:-$("${repo_root}/scripts/build-base-image.sh" noble)}"
 image="${1:-devcontainers-opentelemetry-collector-runtime:test}"
 name="opentelemetry-collector-runtime-test-${RANDOM}-$$"

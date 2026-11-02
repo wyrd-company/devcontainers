@@ -1,6 +1,6 @@
 {
   "id": "flutter",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "name": "Flutter SDK",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/flutter",
   "description": "Installs Flutter, Linux desktop dependencies, and optional Android tooling; depends on the Dart Feature.",

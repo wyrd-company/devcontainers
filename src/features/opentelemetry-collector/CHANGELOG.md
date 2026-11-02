@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+### Fixes
+
+- Resolves latest Collector releases through the release-page redirect, using the API search only when the selected platform archive is absent.
+
 ## 1.2.0
 
 ### Features

@@ -1,0 +1,30 @@
+{
+  "id": "dart",
+  "version": "0.0.0",
+  "name": "Dart SDK",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/dart",
+  "description": "Installs the standalone Dart SDK.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "Latest stable SDK or a full version (optional v prefix)."
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.dart-code"
+      ],
+      "settings": {
+        "dart.sdkPath": "/opt/dart-sdk"
+      }
+    }
+  },
+  "containerEnv": {
+    "DART_HOME": "/opt/dart-sdk"
+  }
+}

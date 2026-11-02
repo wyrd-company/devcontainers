@@ -1,0 +1,64 @@
+{
+  "id": "flutter",
+  "version": "0.0.0",
+  "name": "Flutter SDK",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/flutter",
+  "description": "Installs Flutter, Linux desktop dependencies, and optional Android tooling; depends on the Dart Feature.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "Latest stable SDK or a full version (optional v prefix)."
+    },
+    "channel": {
+      "type": "string",
+      "default": "stable",
+      "enum": [
+        "stable",
+        "beta",
+        "master"
+      ],
+      "description": "Channel for latest (stable is also accepted as a version alias)."
+    },
+    "androidSdk": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install Android command-line tools and SDK packages."
+    },
+    "androidApiLevel": {
+      "type": "string",
+      "default": "35",
+      "description": "Android API level."
+    },
+    "androidBuildTools": {
+      "type": "string",
+      "default": "35.0.0",
+      "description": "Android build-tools version."
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.flutter"
+      ],
+      "settings": {
+        "dart.flutterSdkPath": "/opt/flutter"
+      }
+    }
+  },
+  "dependsOn": {
+    "ghcr.io/wyrd-company/devcontainers/dart:1": {}
+  },
+  "containerEnv": {
+    "FLUTTER_HOME": "/opt/flutter",
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "PKG_CONFIG_PATH": "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig",
+    "LIBGL_ALWAYS_SOFTWARE": "1",
+    "GALLIUM_DRIVER": "llvmpipe",
+    "PATH": "/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:${PATH}"
+  }
+}

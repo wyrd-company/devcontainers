@@ -1,6 +1,6 @@
 {
   "id": "dart",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "name": "Dart SDK",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/dart",
   "description": "Installs the standalone Dart SDK.",

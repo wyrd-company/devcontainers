@@ -32,53 +32,8 @@ pick_service_user() {
     err "Unable to resolve a service user."
 }
 
-resolve_latest_version() {
-    local releases_json version page=1
-    local -a curl_args=(
-        --fail
-        --location
-        --silent
-        --show-error
-        --retry 3
-        -H "Accept: application/vnd.github+json"
-    )
-
-    if [ -n "${GITHUB_TOKEN:-}" ]; then
-        curl_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-    fi
-
-    while :; do
-        releases_json="$(curl "${curl_args[@]}" \
-            "https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases?per_page=20&page=${page}")" \
-            || err "Unable to query OpenTelemetry Collector releases. Set 'version' to a published version and retry."
-
-        version="$(printf '%s\n' "${releases_json}" | jq -r \
-            --arg binary "${upstream_binary}" \
-            --arg architecture "${architecture}" '
-                [
-                    .[]
-                    | select(.draft == false and .prerelease == false)
-                    | . as $release
-                    | ($release.tag_name | ltrimstr("v")) as $version
-                    | select(any(
-                        $release.assets[]?;
-                        .name == ($binary + "_" + $version + "_linux_" + $architecture + ".tar.gz")
-                      ))
-                    | $version
-                ]
-                | first // empty
-            ')"
-
-        if [ -n "${version}" ]; then
-            echo "${version}"
-            return
-        fi
-        [ "$(printf '%s\n' "${releases_json}" | jq 'length')" -gt 0 ] || break
-        page=$((page + 1))
-    done
-
-    err "No stable OpenTelemetry Collector release contains ${distribution} for Linux ${architecture}."
-}
+# shellcheck disable=SC1091
+source "$(dirname "$0")/common.sh"
 
 [ "$(id -u)" -eq 0 ] || err "This Feature must run as root."
 [ -r /etc/os-release ] || err "Unable to detect Linux distribution."

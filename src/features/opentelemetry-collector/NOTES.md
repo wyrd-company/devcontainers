@@ -2,6 +2,8 @@ The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) runs und
 
 When the [Ansible](https://www.ansible.com/) Feature is installed, the Collector starts only after the `ansible-setup` s6-rc oneshot finishes, and does not start if it fails. Without Ansible, startup does not change.
 
+For `latest`, release selection uses the [GitHub](https://github.com/) release-page redirect. Only a missing distribution/architecture archive (HTTP 404) triggers an API search for an older compatible stable release. Other lookup failures stop installation; downloads require the published SHA256 checksum.
+
 ## Trademarks
 
 This feature is not affiliated with or endorsed by The Linux Foundation. OpenTelemetry and its logo are trademarks of The Linux Foundation. All trademarks and copyrights belong to their holders. The logo is used only to identify the software that this feature installs.

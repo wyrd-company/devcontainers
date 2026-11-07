@@ -97,7 +97,7 @@ jobs:
 
       - name: Build and publish
         id: publish
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/images/base-ubuntu
           build-args: VARIANT=${{ matrix.variant }}

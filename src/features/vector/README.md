@@ -135,7 +135,7 @@ Vector runs as the selected user with `HOME` and `USER` set and the rest of the 
 
 To keep pipelines with a project, bind-mount a directory over `/etc/vector/conf.d`. It must be writable only by the service user.
 
-The Dev Container CLI can change the service user's UID and GID when it creates the container, to match the host user (`updateRemoteUserUID`). When the service starts, it gives `/etc/vector/conf.d` and `/var/lib/vector` to the user's current IDs, recursively, if they still belong to the IDs the user had at install. A directory owned by anyone else, such as a bind-mounted one, is left as it is.
+The Dev Container CLI can change the service user's UID and GID when it creates the container, to match the host user (`updateRemoteUserUID`). When the service starts, it gives the entries in `/etc/vector/conf.d` that still have the user's install-time UID or GID to the user's current IDs. Entries of other owners, such as files in a bind-mounted directory, keep theirs. `/var/lib/vector` belongs to Vector alone: at every start, everything in it is given to the service user, including a volume kept from a container that ran with another UID. Symlinks are not followed and other mounts are not entered.
 
 ## Ansible
 

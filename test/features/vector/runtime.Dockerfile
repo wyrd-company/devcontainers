@@ -15,3 +15,13 @@ RUN VERSION=latest \
     _REMOTE_USER=vscode \
     /tmp/vector-feature/install.sh \
     && rm -rf /tmp/vector-feature
+
+# Changes vscode's UID and GID the way the Dev Container CLI does when the host
+# user's IDs differ (updateUID.Dockerfile): it edits passwd and group and fixes
+# the ownership of the home directory only.
+ARG REMAP_UID=
+RUN if [ -n "${REMAP_UID}" ]; then \
+        sed -i -e "s/^\(vscode:[^:]*:\)[^:]*:[^:]*/\1${REMAP_UID}:${REMAP_UID}/" /etc/passwd \
+        && sed -i -e "s/^\(vscode:[^:]*:\)[^:]*:/\1${REMAP_UID}:/" /etc/group \
+        && chown -R "${REMAP_UID}:${REMAP_UID}" /home/vscode; \
+    fi

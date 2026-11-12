@@ -135,6 +135,8 @@ Vector runs as the selected user with `HOME` and `USER` set and the rest of the 
 
 To keep pipelines with a project, bind-mount a directory over `/etc/vector/conf.d`. It must be writable only by the service user.
 
+The Dev Container CLI can change the service user's UID and GID when it creates the container, to match the host user (`updateRemoteUserUID`). When the service starts, it gives `/etc/vector/conf.d` and `/var/lib/vector` to the user's current IDs, recursively, if they still belong to the IDs the user had at install. A directory owned by anyone else, such as a bind-mounted one, is left as it is.
+
 ## Ansible
 
 When the [Ansible](https://www.ansible.com/) Feature is installed, the `vector` service starts only after the `ansible-setup` s6-rc oneshot finishes. If the oneshot fails, the `vector` service does not start. This Feature declares `installsAfter` for the Ansible Feature, so that the `ansible-setup` service definition exists when this installer runs. The installer adds the dependency only when that definition exists. Without Ansible, startup does not change.

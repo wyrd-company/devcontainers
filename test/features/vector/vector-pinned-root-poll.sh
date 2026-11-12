@@ -10,7 +10,7 @@ check "custom service user is configured" grep -q '^exec s6-setuidgid root ' /et
 check "custom service home is configured" grep -q ' HOME=/root ' /etc/s6-overlay/s6-rc.d/vector/run
 check "root owns the pipeline directory" test "$(stat -c %U:%a /etc/vector/conf.d)" = root:755
 check "empty apiAddress disables the API" grep -qx '  enabled: false' /etc/vector/vector.yaml
-check "poll watcher is selected" grep -q -- '--watch-config-method poll' /usr/local/bin/vector-service
-check "poll interval is passed" grep -q -- '--watch-config-poll-interval-seconds 5' /usr/local/bin/vector-service
+check "poll watcher is selected" grep -qx '__vector_service_watch_method=poll' /usr/local/bin/vector-service
+check "poll interval is passed" grep -qx '__vector_service_poll_interval=5' /usr/local/bin/vector-service
 
 reportResults

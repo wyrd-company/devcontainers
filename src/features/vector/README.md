@@ -78,7 +78,7 @@ sinks:
 
 Since Vector 0.58, Vector does not substitute `${NAME}` environment variables in configuration unless it is started with `--dangerously-allow-env-var-interpolation`. This Feature keeps that default. The managed configuration declares an `exec` secret backend named `environment` instead: `SECRET[environment.NAME]` in a pipeline reads the variable `NAME` from Vector's environment. Do not write a `SECRET[...]` placeholder in a comment: Vector resolves placeholders anywhere in a file, and a missing variable stops the file from loading.
 
-The service loads `NAME=value` lines from `/run/openbao/secrets/vector.env` into its environment when that file exists, and waits for it when the [OpenBao Agent](https://openbao.org/) Feature renders it. Values are literal text, not shell, and the container environment takes precedence. A malformed line stops the service. Add one Agent `template` whose `destination` is that path:
+The service loads `NAME=value` lines from `/run/openbao/secrets/vector.env` into its environment when that file exists, and waits for it when the [OpenBao Agent](https://openbao.org/) Feature renders it. Values are literal text, not shell, and the container environment takes precedence. A malformed line, or a line that sets one of the `VECTOR_*` variables the Feature manages (see [Environment and flags](#environment-and-flags)), stops the service. Add one Agent `template` whose `destination` is that path:
 
 ```hcl
 template {

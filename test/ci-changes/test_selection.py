@@ -33,6 +33,16 @@ class SelectionTests(unittest.TestCase):
     def test_sdk_script_selects_only_sdk_features(self):
         self.assertEqual(ci.select(["scripts/test-sdk-features.sh"]), ["dart", "flutter"])
 
+    def test_vector_runtime_selects_vector(self):
+        self.assertEqual(ci.select(["scripts/test-vector-runtime.sh"]), ["vector"])
+        self.assertEqual(ci.select(["src/features/vector/install.sh"]), ["vector"])
+
+    def test_every_feature_with_an_ansible_setup_edge_is_an_ansible_dependent(self):
+        installers = sorted((ROOT / "src/features").glob("*/install.sh"))
+        with_edge = sorted(path.parent.name for path in installers
+                           if "dependencies.d/ansible-setup" in path.read_text())
+        self.assertEqual(sorted(ci.ANSIBLE_DEPENDENTS), with_edge)
+
     def test_template_and_documentation(self):
         self.assertEqual(ci.select(["src/templates/ubuntu/NOTES.md"]), ["template"])
         self.assertEqual(ci.select(["docs/user/overview.md"]), [])

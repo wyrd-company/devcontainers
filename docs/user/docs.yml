@@ -167,3 +167,8 @@ products:
       - kind: devcontainer-feature
     source: src/features/flutter
     logo: logo.svg
+  vector:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/vector
+    logo: logo.svg

@@ -74,6 +74,7 @@ configurations() {
         opentelemetry-collector) echo 'default||no|opentelemetry-collector' ;;
         sshd) echo 'default||no|sshd' ;;
         t3code-server) echo 'default||no|t3code-server' ;;
+        vector) echo 'default||no|vector' ;;
         *) fail "No Ansible dependency configuration for ${feature}." ;;
     esac
 }

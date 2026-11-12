@@ -1,0 +1,25 @@
+{
+  "vector-pinned-root-poll": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "vector": {
+        "version": "0.60.0",
+        "serviceUser": "root",
+        "apiAddress": "",
+        "watchConfigMethod": "poll",
+        "watchConfigPollIntervalSeconds": "5"
+      }
+    }
+  },
+  "vector-openbao-agent": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "vector": {},
+      "openbao-agent": {}
+    },
+    "overrideFeatureInstallOrder": [
+      "./openbao-agent",
+      "./vector"
+    ]
+  }
+}

@@ -11,10 +11,11 @@ check "managed configuration is owned by root" test "$(stat -c %U:%a /etc/vector
 # The Dev Container CLI may have changed the service user's UID since install,
 # and s6 does not run here to hand the directories over, so compare with the
 # IDs the installer recorded.
-install_owner="$(sed -n 's/^install_owner=//p' /etc/s6-overlay/s6-rc.d/vector/run)"
-check "service records the install-time service user IDs" test -n "${install_owner}"
-check "pipeline directory is owned by the install-time service user" test "$(stat -c %u:%g:%a /etc/vector/conf.d)" = "${install_owner}:755"
-check "data directory is owned by the install-time service user" test "$(stat -c %u:%g:%a /var/lib/vector)" = "${install_owner}:750"
+run_script=/etc/s6-overlay/s6-rc.d/vector/run
+install_ids="$(sed -n 's/^install_uid=//p' "${run_script}"):$(sed -n 's/^install_gid=//p' "${run_script}")"
+check "service records the install-time service user IDs" test "${install_ids}" != :
+check "pipeline directory is owned by the install-time service user" test "$(stat -c %u:%g:%a /etc/vector/conf.d)" = "${install_ids}:755"
+check "data directory is owned by the install-time service user" test "$(stat -c %u:%g:%a /var/lib/vector)" = "${install_ids}:750"
 check "API listens on loopback" grep -qx '  address: "127.0.0.1:8686"' /etc/vector/vector.yaml
 check "environment secret backend is configured" grep -qx '      - /usr/local/bin/vector-secret-environment' /etc/vector/vector.yaml
 # shellcheck disable=SC2016

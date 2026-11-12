@@ -8,7 +8,8 @@
 # select the Feature options. A host whose user has run out of inotify
 # instances can run the hot-reload checks with WATCH_CONFIG_METHOD=poll.
 # REMAP_UID changes vscode's UID and GID after install, as the Dev Container
-# CLI does when the host user's IDs differ.
+# CLI does when the host user's IDs differ, and leaves files of other owners
+# in the pipeline and data directories.
 
 set -euo pipefail
 
@@ -122,12 +123,19 @@ owner="$(docker exec "${name}" ps -o user= -p "${pid}" | tr -d ' ')"
 [ "${owner}" = "${expected_user}" ] || fail "Vector runs as ${owner}, expected ${expected_user}"
 pass "Vector runs as ${expected_user}"
 
-for dir in /etc/vector/conf.d /var/lib/vector; do
-    dir_owner="$(docker exec "${name}" stat -c %U:%G "${dir}")"
-    expected_owner="${expected_user}:$(docker exec "${name}" id -gn "${expected_user}")"
-    [ "${dir_owner}" = "${expected_owner}" ] || fail "${dir} is owned by ${dir_owner}, expected ${expected_owner}"
-done
-pass "the pipeline and data directories belong to ${expected_user}"
+expected_group="$(docker exec "${name}" id -gn "${expected_user}")"
+owned_by() {
+    [ "$(docker exec "${name}" stat -c %U:%G "$1")" = "$2" ] || fail "$1 is not owned by $2"
+}
+owned_by /etc/vector/conf.d "${expected_user}:${expected_group}"
+others="$(docker exec "${name}" find /var/lib/vector ! -user "${expected_user}" -o ! -group "${expected_group}")"
+[ -z "${others}" ] || fail "the data directory has entries ${expected_user} does not own: ${others}"
+if [ -n "${remap_uid}" ]; then
+    owned_by /etc/vector/conf.d/sample-install-owned.txt "${expected_user}:${expected_group}"
+    owned_by /etc/vector/conf.d/sample-root-owned.txt root:root
+    owned_by /var/lib/vector/sample-previous-container "${expected_user}:${expected_group}"
+fi
+pass "the pipeline and data directories belong to ${expected_user}, and other owners keep their pipeline files"
 
 docker exec --user "${expected_user}" "${name}" sh -c "tr '\0' '\n' </proc/${pid}/environ" >/tmp/"${name}".environ
 grep -qx SAMPLE_RUNTIME_VALUE=sample-runtime-value /tmp/"${name}".environ \

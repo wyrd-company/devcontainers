@@ -18,10 +18,17 @@ RUN VERSION=latest \
 
 # Changes vscode's UID and GID the way the Dev Container CLI does when the host
 # user's IDs differ (updateUID.Dockerfile): it edits passwd and group and fixes
-# the ownership of the home directory only.
+# the ownership of the home directory only. The pipeline directory also gets a
+# file another user owns, and the data directory is left with UID 1002, as a
+# volume kept from an earlier container would be.
 ARG REMAP_UID=
 RUN if [ -n "${REMAP_UID}" ]; then \
         sed -i -e "s/^\(vscode:[^:]*:\)[^:]*:[^:]*/\1${REMAP_UID}:${REMAP_UID}/" /etc/passwd \
         && sed -i -e "s/^\(vscode:[^:]*:\)[^:]*:/\1${REMAP_UID}:/" /etc/group \
-        && chown -R "${REMAP_UID}:${REMAP_UID}" /home/vscode; \
+        && chown -R "${REMAP_UID}:${REMAP_UID}" /home/vscode \
+        && install -m 0644 /dev/null /etc/vector/conf.d/sample-install-owned.txt \
+        && chown 1000:1000 /etc/vector/conf.d/sample-install-owned.txt \
+        && install -m 0644 -o root -g root /dev/null /etc/vector/conf.d/sample-root-owned.txt \
+        && install -d -m 0750 /var/lib/vector/sample-previous-container \
+        && chown -R 1002:1002 /var/lib/vector; \
     fi

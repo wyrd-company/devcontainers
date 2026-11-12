@@ -1,6 +1,6 @@
 {
   "id": "vector",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Vector",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/vector",
   "description": "Installs Vector and runs it as an s6-overlay service that hot-loads and unloads pipeline files from a well-known directory.",

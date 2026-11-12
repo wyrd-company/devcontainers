@@ -7,6 +7,8 @@
 # SERVICE_USER, WATCH_CONFIG_METHOD and WATCH_CONFIG_POLL_INTERVAL_SECONDS
 # select the Feature options. A host whose user has run out of inotify
 # instances can run the hot-reload checks with WATCH_CONFIG_METHOD=poll.
+# REMAP_UID changes vscode's UID and GID after install, as the Dev Container
+# CLI does when the host user's IDs differ.
 
 set -euo pipefail
 
@@ -16,6 +18,7 @@ image="${1:-devcontainers-vector-runtime:test}"
 service_user_option="${SERVICE_USER:-automatic}"
 watch_method="${WATCH_CONFIG_METHOD:-recommended}"
 poll_interval="${WATCH_CONFIG_POLL_INTERVAL_SECONDS:-30}"
+remap_uid="${REMAP_UID:-}"
 name="vector-runtime-test-${RANDOM}-$$"
 
 expected_user=vscode
@@ -93,6 +96,7 @@ docker build \
     --build-arg "SERVICE_USER=${service_user_option}" \
     --build-arg "WATCH_CONFIG_METHOD=${watch_method}" \
     --build-arg "WATCH_CONFIG_POLL_INTERVAL_SECONDS=${poll_interval}" \
+    --build-arg "REMAP_UID=${remap_uid}" \
     --tag "${image}" \
     "${repo_root}"
 
@@ -117,6 +121,13 @@ pid="$(vector_pid)"
 owner="$(docker exec "${name}" ps -o user= -p "${pid}" | tr -d ' ')"
 [ "${owner}" = "${expected_user}" ] || fail "Vector runs as ${owner}, expected ${expected_user}"
 pass "Vector runs as ${expected_user}"
+
+for dir in /etc/vector/conf.d /var/lib/vector; do
+    dir_owner="$(docker exec "${name}" stat -c %U:%G "${dir}")"
+    expected_owner="${expected_user}:$(docker exec "${name}" id -gn "${expected_user}")"
+    [ "${dir_owner}" = "${expected_owner}" ] || fail "${dir} is owned by ${dir_owner}, expected ${expected_owner}"
+done
+pass "the pipeline and data directories belong to ${expected_user}"
 
 docker exec --user "${expected_user}" "${name}" sh -c "tr '\0' '\n' </proc/${pid}/environ" >/tmp/"${name}".environ
 grep -qx SAMPLE_RUNTIME_VALUE=sample-runtime-value /tmp/"${name}".environ \

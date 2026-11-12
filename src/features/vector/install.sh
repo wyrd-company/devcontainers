@@ -302,8 +302,25 @@ if [ -d /etc/s6-overlay/s6-rc.d/openbao-secrets ]; then
 fi
 printf -v quoted_user '%q' "${service_user}"
 printf -v quoted_home '%q' "${service_home}"
+install_owner="$(id -u "${service_user}"):$(id -g "${service_user}")"
+# The Dev Container CLI can change the service user's UID and GID when it
+# creates the container (updateRemoteUserUID), and then fixes the ownership of
+# the user's home directory only. The run script runs as root, so it gives the
+# Feature's directories to the user's current UID and GID while they still
+# belong to the IDs recorded here. A directory owned by anyone else, such as a
+# bind-mounted pipeline directory, is left alone.
 cat >"${service_dir}/run" <<EOF
 #!/command/with-contenv bash
+set -euo pipefail
+install_owner=${install_owner}
+service_owner="\$(id -u ${quoted_user}):\$(id -g ${quoted_user})"
+if [ "\${service_owner}" != "\${install_owner}" ]; then
+    for dir in ${config_dir} ${data_dir}; do
+        if [ "\$(stat -c %u:%g "\${dir}")" = "\${install_owner}" ]; then
+            chown -R "\${service_owner}" "\${dir}"
+        fi
+    done
+fi
 exec s6-setuidgid ${quoted_user} env HOME=${quoted_home} USER=${quoted_user} /usr/local/bin/vector-service
 EOF
 chmod 0755 "${service_dir}/run"

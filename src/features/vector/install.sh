@@ -158,6 +158,23 @@ install -d -m 0750 -o "${service_user}" -g "${service_group}" "${data_dir}"
 } >"${config_file}"
 chmod 0644 "${config_file}"
 
+# Vector refuses to validate a configuration without components, so a stub
+# pipeline lets Vector itself check the generated file, including apiAddress.
+check_dir="${download_dir}/check.d"
+install -d -m 0755 "${check_dir}"
+cat >"${check_dir}/stub.yaml" <<'EOF'
+sources:
+  feature_check_source:
+    type: demo_logs
+    format: json
+sinks:
+  feature_check_sink:
+    type: blackhole
+    inputs: [feature_check_source]
+EOF
+check_output="$(/usr/local/bin/vector validate --no-environment \
+    --config-dir "${check_dir}" "${config_file}" 2>&1)" \
+    || err "Vector rejected the generated configuration; check apiAddress. ${check_output}"
 
 cat >/usr/local/bin/vector-secret-environment <<'EOF'
 #!/usr/bin/env bash

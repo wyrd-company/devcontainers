@@ -12,7 +12,10 @@ normalize_api_address() {
     port="${address##*:}"
     [ "${host}" != "${address}" ] || err "apiAddress must be host:port, such as 127.0.0.1:8686."
     [ "${host}" != localhost ] || host=127.0.0.1
-    [[ "${host}" =~ ^([0-9]{1,3}(\.[0-9]{1,3}){3}|\[[0-9A-Fa-f:]+\])$ ]] \
+    local octet='(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'
+    # IPv6 is checked for its characters only; install.sh has Vector parse the
+    # generated configuration, which rejects a malformed address.
+    [[ "${host}" =~ ^(${octet}\.){3}${octet}$ || "${host}" =~ ^\[[0-9A-Fa-f:.]+\]$ ]] \
         || err "apiAddress must use an IP address, such as 127.0.0.1:8686."
     [[ "${port}" =~ ^[0-9]{1,5}$ ]] && [ "${port}" -ge 1 ] && [ "${port}" -le 65535 ] \
         || err "apiAddress must end in a port from 1 to 65535."

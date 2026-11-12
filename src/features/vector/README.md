@@ -104,7 +104,7 @@ On Linux, Vector watches its configuration with inotify. The kernel limits inoti
 | -------------------------------- | ------ | ---------------- | ------------------------------------------------------------------------------------------------------ |
 | `version`                        | string | `latest`         | Vector release version, such as `0.61.0`.                                                              |
 | `serviceUser`                    | string | `automatic`      | User that runs Vector and owns the pipeline directory. Automatic selection prefers the remote user.   |
-| `apiAddress`                     | string | `127.0.0.1:8686` | Address of the Vector API for `vector top` and `vector tap`. `localhost` becomes `127.0.0.1`. Empty disables the API. |
+| `apiAddress`                     | string | `127.0.0.1:8686` | IPv4 or bracketed IPv6 address and port of the Vector API for `vector top` and `vector tap`. `localhost` becomes `127.0.0.1`. Empty disables the API. |
 | `watchConfigMethod`              | string | `recommended`    | `recommended` (inotify) or `poll`.                                                                     |
 | `watchConfigPollIntervalSeconds` | string | `30`             | Seconds between configuration checks when `watchConfigMethod` is `poll`.                              |
 

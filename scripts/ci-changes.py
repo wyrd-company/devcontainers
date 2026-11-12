@@ -70,6 +70,7 @@ ANSIBLE_DEPENDENTS = [
     "opentelemetry-collector",
     "sshd",
     "t3code-server",
+    "vector",
 ]
 
 # Runtime scripts whose name is not a Feature id: scripts/test-<name>-runtime.sh.

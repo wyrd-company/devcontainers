@@ -135,6 +135,7 @@ jobs:
           - opencode-cli
           - opencodex
           - t3code-server
+          - vector
     steps:
       - name: Checkout
         if: env.AFFECTED == 'true'
@@ -195,6 +196,7 @@ jobs:
           - sshd
           - docker-outside-of-docker
           - docker-in-docker
+          - vector
         baseImage:
           - ghcr.io/wyrd-company/devcontainers/base:noble
         include:
@@ -232,6 +234,7 @@ jobs:
           - opentelemetry-collector
           - sshd
           - t3code-server
+          - vector
     steps:
       - name: Checkout
         if: env.AFFECTED == 'true'
@@ -324,6 +327,17 @@ jobs:
 
       - name: Test OpenTelemetry Collector runtime under s6
         run: ./scripts/test-opentelemetry-collector-runtime.sh
+
+  test-vector-runtime:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.targets), 'vector')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Test Vector runtime and hot reload under s6
+        run: ./scripts/test-vector-runtime.sh
 
   test-openbao-agent-runtime:
     needs: changes

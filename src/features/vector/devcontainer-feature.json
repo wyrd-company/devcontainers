@@ -1,0 +1,40 @@
+{
+  "id": "vector",
+  "version": "0.0.0",
+  "name": "Vector",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/vector",
+  "description": "Installs Vector and runs it as an s6-overlay service that hot-loads and unloads pipeline files from a well-known directory.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "Vector release version to install. `latest` installs the current stable release."
+    },
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User account that runs Vector and owns its pipeline directory. Automatic selection prefers the remote user, container user, `vscode`, then `root`."
+    },
+    "apiAddress": {
+      "type": "string",
+      "default": "127.0.0.1:8686",
+      "description": "Address of the Vector API used by `vector top` and `vector tap`. `localhost` is normalized to `127.0.0.1`. Empty disables the API."
+    },
+    "watchConfigMethod": {
+      "type": "string",
+      "proposals": ["recommended", "poll"],
+      "default": "recommended",
+      "description": "How Vector watches its configuration: `recommended` (inotify on Linux) or `poll`, for hosts that have run out of inotify instances."
+    },
+    "watchConfigPollIntervalSeconds": {
+      "type": "string",
+      "default": "30",
+      "description": "Seconds between configuration checks when `watchConfigMethod` is `poll`."
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/ansible",
+    "ghcr.io/wyrd-company/devcontainers/openbao-agent"
+  ]
+}

@@ -81,6 +81,7 @@ LOGOS = {
     "src/features/pi-coding-agent-cli/logo.svg": ("src/features/pi-coding-agent-cli", "feature", "pi", 0.85),
     "src/features/sshd/logo.svg": ("src/features/sshd", "feature", "openssh", 1.08),
     "src/features/t3code-server/logo.svg": ("src/features/t3code-server", "feature", "t3code", 1.0),
+    "src/features/vector/logo.svg": ("src/features/vector", "feature", "vector", 1.0),
     "docs/user/assets/base.svg": ("src/images/base-ubuntu", "image", "ubuntu", 1.0),
     "src/templates/ubuntu/logo.svg": ("src/templates/ubuntu", "template", "devcontainers", 1.0),
 }

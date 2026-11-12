@@ -67,6 +67,9 @@ discovery:
     - detector: devcontainer-feature
       path: src/features/flutter/devcontainer-feature.json
       release-unit: flutter
+    - detector: devcontainer-feature
+      path: src/features/vector/devcontainer-feature.json
+      release-unit: vector
   excluded-paths:
     - detector: npm-package
       path: src/features/codex-cli/arguments/package.json
@@ -323,6 +326,17 @@ release-units:
         template: '{id}@{version}'
   flutter:
     path: src/features/flutter
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  vector:
+    path: src/features/vector
     projections:
       - adapter: json
         file: devcontainer-feature.json

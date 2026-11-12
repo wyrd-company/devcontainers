@@ -158,6 +158,7 @@ install -d -m 0750 -o "${service_user}" -g "${service_group}" "${data_dir}"
 } >"${config_file}"
 chmod 0644 "${config_file}"
 
+
 cat >/usr/local/bin/vector-secret-environment <<'EOF'
 #!/usr/bin/env bash
 # Vector exec secret backend: answers SECRET[environment.NAME] from the
@@ -184,61 +185,91 @@ printf -v quoted_config_file '%q' "${config_file}"
 printf -v quoted_config_dir '%q' "${config_dir}"
 printf -v quoted_watch_method '%q' "${watch_method}"
 printf -v quoted_poll_interval '%q' "${poll_interval}"
+# The launcher runs with the user's environment, so its own variables carry a
+# reserved prefix and are never exported. Secret file values reach Vector only
+# through `env`, so a key can share a name with any launcher variable.
 cat >/usr/local/bin/vector-service <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
-mode=run
-if [ "\${1:-}" = validate ]; then
-    mode=validate
-    shift
-fi
+__vector_service_config_file=${quoted_config_file}
+__vector_service_config_dir=${quoted_config_dir}
+__vector_service_watch_method=${quoted_watch_method}
+__vector_service_poll_interval=${quoted_poll_interval}
+EOF
+cat >>/usr/local/bin/vector-service <<'EOF'
 
-secret_file=/run/openbao/secrets/vector.env
-if [ "\${mode}" = run ] && [ -x /usr/local/bin/openbao-wait-for-secrets ]; then
-    /usr/local/bin/openbao-wait-for-secrets vector
-fi
-if [ -e "\${secret_file}" ] && [ ! -r "\${secret_file}" ]; then
-    echo "[vector] ERROR: \${secret_file} exists but is not readable by \$(id -un)." >&2
-    exit 1
-fi
-if [ -r "\${secret_file}" ]; then
-    # Values are literal text, not shell. The container environment takes precedence.
-    while IFS= read -r line || [ -n "\${line}" ]; do
-        line="\${line#"\${line%%[![:space:]]*}"}"
-        case "\${line}" in
-            ''|'#'*) continue ;;
-        esac
-        name="\${line%%=*}"
-        if [ "\${name}" = "\${line}" ] || ! [[ "\${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*\$ ]]; then
-            echo "[vector] ERROR: \${secret_file} contains a line that is not NAME=value." >&2
-            exit 1
-        fi
-        if [ -z "\${!name+x}" ]; then
-            export "\${name}=\${line#*=}"
-        fi
-    done <"\${secret_file}"
-fi
+# Names exported by the container, captured before the launcher assigns anything
+# that could shadow them.
+declare -A __vector_service_incoming=()
+while IFS= read -r __vector_service_name; do
+    __vector_service_incoming["${__vector_service_name}"]=1
+done < <(compgen -e)
 
 # The Feature manages these settings. Some would add configuration beside the
 # managed files, and Vector parses all of them even for subcommands.
-unset VECTOR_CONFIG VECTOR_CONFIG_DIR VECTOR_CONFIG_TOML VECTOR_CONFIG_JSON VECTOR_CONFIG_YAML \
-    VECTOR_WATCH_CONFIG VECTOR_WATCH_CONFIG_METHOD VECTOR_WATCH_CONFIG_POLL_INTERVAL_SECONDS \
+__vector_service_managed=(
+    VECTOR_CONFIG VECTOR_CONFIG_DIR VECTOR_CONFIG_TOML VECTOR_CONFIG_JSON VECTOR_CONFIG_YAML
+    VECTOR_WATCH_CONFIG VECTOR_WATCH_CONFIG_METHOD VECTOR_WATCH_CONFIG_POLL_INTERVAL_SECONDS
     VECTOR_ALLOW_EMPTY_CONFIG
+)
 
-if [ "\${mode}" = validate ]; then
-    exec /usr/local/bin/vector validate --no-environment --resolve-secrets \\
-        --config-dir ${quoted_config_dir} "\$@" ${quoted_config_file}
+__vector_service_mode=run
+if [ "${1:-}" = validate ]; then
+    __vector_service_mode=validate
+    shift
 fi
 
-exec /usr/local/bin/vector \\
-    --config ${quoted_config_file} \\
-    --config-dir ${quoted_config_dir} \\
-    --watch-config \\
-    --watch-config-method ${quoted_watch_method} \\
-    --watch-config-poll-interval-seconds ${quoted_poll_interval} \\
-    --allow-empty-config \\
-    "\$@"
+__vector_service_secret_file=/run/openbao/secrets/vector.env
+__vector_service_secrets=()
+if [ "${__vector_service_mode}" = run ] && [ -x /usr/local/bin/openbao-wait-for-secrets ]; then
+    /usr/local/bin/openbao-wait-for-secrets vector
+fi
+if [ -e "${__vector_service_secret_file}" ] && [ ! -r "${__vector_service_secret_file}" ]; then
+    echo "[vector] ERROR: ${__vector_service_secret_file} exists but is not readable by $(id -un)." >&2
+    exit 1
+fi
+if [ -r "${__vector_service_secret_file}" ]; then
+    # Values are literal text, not shell. The container environment takes precedence.
+    while IFS= read -r __vector_service_line || [ -n "${__vector_service_line}" ]; do
+        __vector_service_line="${__vector_service_line#"${__vector_service_line%%[![:space:]]*}"}"
+        case "${__vector_service_line}" in
+            ''|'#'*) continue ;;
+        esac
+        __vector_service_name="${__vector_service_line%%=*}"
+        if [ "${__vector_service_name}" = "${__vector_service_line}" ] \
+            || ! [[ "${__vector_service_name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            echo "[vector] ERROR: ${__vector_service_secret_file} contains a line that is not NAME=value." >&2
+            exit 1
+        fi
+        for __vector_service_setting in "${__vector_service_managed[@]}"; do
+            if [ "${__vector_service_name}" = "${__vector_service_setting}" ]; then
+                echo "[vector] ERROR: ${__vector_service_secret_file} sets ${__vector_service_name}, which the Feature manages." >&2
+                exit 1
+            fi
+        done
+        if [ -z "${__vector_service_incoming["${__vector_service_name}"]+x}" ]; then
+            __vector_service_secrets+=("${__vector_service_line}")
+        fi
+    done <"${__vector_service_secret_file}"
+fi
+
+unset "${__vector_service_managed[@]}"
+
+if [ "${__vector_service_mode}" = validate ]; then
+    exec env -- "${__vector_service_secrets[@]}" /usr/local/bin/vector validate \
+        --no-environment --resolve-secrets \
+        --config-dir "${__vector_service_config_dir}" "$@" "${__vector_service_config_file}"
+fi
+
+exec env -- "${__vector_service_secrets[@]}" /usr/local/bin/vector \
+    --config "${__vector_service_config_file}" \
+    --config-dir "${__vector_service_config_dir}" \
+    --watch-config \
+    --watch-config-method "${__vector_service_watch_method}" \
+    --watch-config-poll-interval-seconds "${__vector_service_poll_interval}" \
+    --allow-empty-config \
+    "$@"
 EOF
 chmod 0755 /usr/local/bin/vector-service
 

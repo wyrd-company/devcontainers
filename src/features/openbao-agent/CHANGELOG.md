@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1
+
+### Fixes
+
+- The README lists the Vector Feature among the Features that load a secret file.
+
 ## 2.1.0
 
 ### Features

@@ -339,6 +339,10 @@ jobs:
       - name: Test Vector runtime and hot reload under s6
         run: ./scripts/test-vector-runtime.sh
 
+      - name: Test Vector runtime after a UID change
+        env:
+          REMAP_UID: "1001"
+        run: ./scripts/test-vector-runtime.sh
   test-openbao-agent-runtime:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.targets), 'openbao-agent')

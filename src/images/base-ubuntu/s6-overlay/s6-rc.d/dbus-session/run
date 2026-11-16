@@ -1,0 +1,15 @@
+#!/command/with-contenv sh
+# shellcheck shell=sh
+# One D-Bus session bus for the vscode user, at the address in
+# DBUS_SESSION_BUS_ADDRESS. Clients that find the variable connect here instead
+# of autolaunching a new dbus-daemon per call, which never exits.
+set -eu
+
+socket_dir=/run/dbus-session
+install -d -m 0700 -o vscode -g vscode "${socket_dir}"
+rm -f "${socket_dir}/bus"
+
+# The address goes to fd 3 once the bus accepts connections (s6 readiness).
+exec s6-setuidgid vscode env HOME=/home/vscode USER=vscode \
+    dbus-daemon --session --nofork --nopidfile --nosyslog \
+    --address="unix:path=${socket_dir}/bus" --print-address=3

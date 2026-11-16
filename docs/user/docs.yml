@@ -6,8 +6,8 @@ assets:
 products:
   base:
     name: Wyrd base image
-    version: 1.0.0
-    docs-version: 0.1.0
+    version: 1.1.0
+    docs-version: 0.1.1
     tagline: Microsoft's Ubuntu Dev Container base with s6-overlay as PID 1.
     blurb: >-
       A Dev Container image that keeps the tools, non-root vscode user and

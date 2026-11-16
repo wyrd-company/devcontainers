@@ -29,6 +29,58 @@ docker exec "${container}" sh -c "tr '\0' ' ' </proc/1/cmdline | grep -q s6-svsc
 docker exec "${container}" sh -c 'tr "\0" " " </proc/$(pgrep -x s6-pause)/cmdline | grep -q s6-pause'
 docker exec "${container}" sh -c 'test "$(wc -l </tmp/restart-probe-pids)" -ge 2'
 
+# One D-Bus session bus runs as vscode, at the address every process inherits.
+bus_socket=/run/dbus-session/bus
+get_bus_id=(dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.GetId)
+for _ in $(seq 1 10); do
+    docker exec "${container}" test -S "${bus_socket}" && break
+    sleep 1
+done
+test "$(docker exec "${container}" printenv DBUS_SESSION_BUS_ADDRESS)" = "unix:path=${bus_socket}"
+test "$(docker exec "${container}" pgrep -c -x dbus-daemon)" -eq 1
+bus_pid="$(docker exec "${container}" pgrep -x dbus-daemon)"
+test "$(docker exec "${container}" ps -o user= -p "${bus_pid}")" = vscode
+environ_file="$(mktemp)"
+docker exec --user vscode "${container}" sh -c "tr '\0' '\n' </proc/${bus_pid}/environ" >"${environ_file}"
+grep -qx 'HOME=/home/vscode' "${environ_file}"
+grep -qx 'USER=vscode' "${environ_file}"
+rm -f "${environ_file}"
+docker exec --user vscode "${container}" "${get_bus_id[@]}" >/dev/null
+if docker exec "${container}" sh -c 'command -v dbus-launch' >/dev/null; then
+    echo "expected no dbus-launch in the image" >&2
+    exit 1
+fi
+
+# With the address set, clients never autolaunch a daemon of their own. A
+# recording dbus-launch proves the check sees an autolaunch when one happens.
+docker exec "${container}" sh -c 'printf "%s\n" "#!/bin/sh" "echo \"\$*\" >>/tmp/dbus-launch-calls" "exit 1" >/usr/local/bin/dbus-launch && chmod 0755 /usr/local/bin/dbus-launch'
+for _ in 1 2 3; do
+    docker exec --user vscode --env DISPLAY=:99 "${container}" "${get_bus_id[@]}" >/dev/null
+done
+if docker exec "${container}" test -e /tmp/dbus-launch-calls; then
+    echo "expected no dbus-launch call while DBUS_SESSION_BUS_ADDRESS is set" >&2
+    exit 1
+fi
+docker exec --user vscode --env DISPLAY=:99 "${container}" \
+    env -u DBUS_SESSION_BUS_ADDRESS "${get_bus_id[@]}" >/dev/null 2>&1 || true
+docker exec "${container}" grep -q -- --autolaunch /tmp/dbus-launch-calls
+docker exec "${container}" rm -f /usr/local/bin/dbus-launch /tmp/dbus-launch-calls
+test "$(docker exec "${container}" pgrep -c -x dbus-daemon)" -eq 1
+
+# A restart replaces the daemon and the bus answers again on the same socket.
+docker exec --user vscode "${container}" sudo -n /command/s6-svc -r /run/service/dbus-session
+for _ in $(seq 1 10); do
+    new_bus_pid="$(docker exec "${container}" pgrep -x dbus-daemon || true)"
+    [ -n "${new_bus_pid}" ] && [ "${new_bus_pid}" != "${bus_pid}" ] && break
+    sleep 1
+done
+test "${new_bus_pid}" != "${bus_pid}"
+for _ in $(seq 1 10); do
+    docker exec --user vscode "${container}" "${get_bus_id[@]}" >/dev/null 2>&1 && break
+    sleep 1
+done
+docker exec --user vscode "${container}" "${get_bus_id[@]}" >/dev/null
+
 # The vscode user may only use sudo for apt installs and s6-overlay service control.
 allowed=(
     "apt-get update"

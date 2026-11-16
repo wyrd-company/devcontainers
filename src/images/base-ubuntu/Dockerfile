@@ -34,8 +34,23 @@ RUN set -eux; \
     visudo --check --file=/etc/sudoers.d/vscode; \
     ! sudo -n -l -U vscode /bin/true >/dev/null 2>&1
 
+# One D-Bus session bus for the vscode user, supervised by s6. Without
+# DBUS_SESSION_BUS_ADDRESS, D-Bus clients (libsecret, Go keyrings, VS Code)
+# autolaunch a new dbus-daemon per call that never exits. dbus-x11, which
+# provides dbus-launch, is deliberately not installed.
+RUN set -eux; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dbus-daemon; \
+    ! dpkg -s dbus-x11 >/dev/null 2>&1; \
+    rm -rf /var/lib/apt/lists/*
+COPY s6-overlay/ /etc/s6-overlay/
+RUN set -eux; \
+    chmod 0755 /etc/s6-overlay/s6-rc.d/dbus-session/run; \
+    command -v dbus-daemon
+ENV DBUS_SESSION_BUS_ADDRESS="unix:path=/run/dbus-session/bus"
+
 LABEL org.opencontainers.image.authors="Bob Langley" \
-      org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay" \
+      org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay and a D-Bus session bus" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.source="https://github.com/wyrd-company/devcontainers" \
       org.opencontainers.image.title="Ubuntu Dev Container base with s6-overlay"

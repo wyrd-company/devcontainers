@@ -1,6 +1,6 @@
 {
   "id": "antigravity-cli",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "name": "Antigravity CLI",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/antigravity-cli",
   "description": "Installs the Antigravity CLI (`agy`) for the Dev Container user using Google's native installer and ensures `agy` is on the PATH.",

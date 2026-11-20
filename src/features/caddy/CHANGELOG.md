@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+### Features
+
+- Add root-owned /etc/caddy/system.d import and hot-reload watch directory
+
 ## 1.1.0
 
 ### Features

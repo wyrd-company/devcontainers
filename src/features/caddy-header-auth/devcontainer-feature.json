@@ -1,6 +1,6 @@
 {
   "id": "caddy-header-auth",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "name": "Caddy Header Auth",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/caddy-header-auth",
   "description": "Runs a Unix-socket forward_auth service under s6-overlay that invokes registered header-helper commands and returns their JSON headers to Caddy.",

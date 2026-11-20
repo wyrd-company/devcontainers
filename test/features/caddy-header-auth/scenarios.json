@@ -1,0 +1,9 @@
+{
+  "with-caddy": {
+    "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
+    "features": {
+      "caddy": {},
+      "caddy-header-auth": {}
+    }
+  }
+}

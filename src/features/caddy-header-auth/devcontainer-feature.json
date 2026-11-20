@@ -1,0 +1,39 @@
+{
+  "id": "caddy-header-auth",
+  "version": "0.0.0",
+  "name": "Caddy Header Auth",
+  "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/caddy-header-auth",
+  "description": "Runs a Unix-socket forward_auth service under s6-overlay that invokes registered header-helper commands and returns their JSON headers to Caddy.",
+  "options": {
+    "serviceUser": {
+      "type": "string",
+      "default": "automatic",
+      "description": "User that runs the service and executes header-helper commands: remote user, container user, vscode, then root; or an explicit existing user."
+    },
+    "socketGroup": {
+      "type": "string",
+      "default": "automatic",
+      "description": "Group granted connect access to the Unix socket directory: caddy when present, otherwise the service user's primary group; or an explicit existing group."
+    },
+    "socketPath": {
+      "type": "string",
+      "default": "/run/caddy-header-auth/auth.sock",
+      "description": "Absolute path of the Unix domain socket listened on by the service."
+    },
+    "configDir": {
+      "type": "string",
+      "default": "/etc/caddy-header-auth/conf.d",
+      "description": "Absolute directory containing root-owned route JSON files (<route>.json)."
+    },
+    "timeoutSeconds": {
+      "type": "string",
+      "default": "10",
+      "description": "Default per-request timeout in seconds for each header-helper invocation (1 to 300)."
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/wyrd-company/devcontainers/ansible",
+    "ghcr.io/wyrd-company/devcontainers/caddy"
+  ]
+}

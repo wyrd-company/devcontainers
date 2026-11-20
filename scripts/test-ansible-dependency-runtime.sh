@@ -61,6 +61,7 @@ trap cleanup EXIT
 configurations() {
     case "${feature}" in
         caddy) echo 'default||no|caddy' ;;
+        caddy-header-auth) echo 'default||no|caddy-header-auth' ;;
         codex-cli) echo 'exec-server|EXECSERVER=true|no|codex-cli codex-exec-server' ;;
         dagu) echo 'default||no|dagu' ;;
         docker-in-docker) echo 'default||yes|docker-in-docker-prepare' ;;

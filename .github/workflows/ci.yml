@@ -127,6 +127,7 @@ jobs:
           - ansible
           - codex-cli
           - caddy
+          - caddy-header-auth
           - dagu
           - openbao-agent
           - opentelemetry-collector
@@ -188,6 +189,7 @@ jobs:
           - ansible
           - codex-cli
           - caddy
+          - caddy-header-auth
           - dagu
           - openobserve
           - openbao-agent
@@ -224,6 +226,7 @@ jobs:
       matrix:
         feature:
           - caddy
+          - caddy-header-auth
           - codex-cli
           - dagu
           - docker-in-docker
@@ -254,6 +257,20 @@ jobs:
 
       - name: Test Caddy runtime and hot reload
         run: ./scripts/test-caddy-runtime.sh
+
+  test-caddy-header-auth-runtime:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.targets), 'caddy-header-auth')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Test caddy-header-auth server unit tests
+        run: python3 test/features/caddy-header-auth/test_server.py
+
+      - name: Test caddy-header-auth runtime under s6
+        run: ./scripts/test-caddy-header-auth-runtime.sh
 
   test-t3code-runtime:
     needs: changes

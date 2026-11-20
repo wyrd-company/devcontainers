@@ -77,6 +77,11 @@ products:
       - kind: devcontainer-feature
     source: src/features/caddy
     logo: logo.svg
+  caddy-header-auth:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/caddy-header-auth
+    logo: logo.svg
   claude-code-cli:
     kinds:
       - kind: devcontainer-feature

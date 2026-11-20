@@ -115,7 +115,7 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
       - name: Attest image
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/wyrd-company/devcontainers/base
           subject-digest: ${{ steps.publish.outputs.digest }}

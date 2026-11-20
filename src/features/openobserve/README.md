@@ -115,7 +115,7 @@ Accepted values start with a letter or digit, then letters, digits, `.`, `_`, `/
 
 ## Release resolution and integrity
 
-- **Latest version resolution:** When `version` is set to `latest`, the installer queries GitHub releases for the latest stable, non-prerelease tag (ignoring `-rc` candidates). If the GitHub API is unavailable or rate-limited, it falls back to the known stable release `v0.92.2`.
+- **Latest version resolution:** When `version` is set to `latest`, the installer follows GitHub’s latest-release redirect. If that fails, it queries the GitHub API for a stable, non-prerelease tag; if the API is also unavailable, it falls back to the known stable release `v0.92.2`.
 - **Archive source:** OpenObserve publishes OSS binaries at `downloads.openobserve.ai/releases/openobserve/v<version>/openobserve-v<version>-linux-<arch>.tar.gz`.
 - **Integrity verification:** Upstream OpenObserve does not serve machine-readable checksum files for OSS releases from its download CDN (endpoints return 403), and the public download page does not publish Linux OSS checksums. When `sha256` is configured, the installer verifies the archive using `sha256sum --check`. When omitted, checksum verification is skipped.
 

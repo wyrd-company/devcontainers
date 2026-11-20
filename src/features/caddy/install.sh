@@ -38,6 +38,26 @@ caddy_quote() {
     printf '"%s"' "${value}"
 }
 
+resolve_latest_version() {
+    local tag_url version
+    if tag_url="$(curl --fail --location --silent --show-error --retry 3 \
+        --output /dev/null --write-out '%{url_effective}' \
+        https://github.com/caddyserver/caddy/releases/latest)" && \
+        [[ "${tag_url}" =~ ^https://github\.com/caddyserver/caddy/releases/tag/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+        return
+    fi
+    local -a curl_args=(--fail --location --silent --show-error --retry 3 -H "Accept: application/vnd.github+json")
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        curl_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    fi
+    version="$(curl "${curl_args[@]}" https://api.github.com/repos/caddyserver/caddy/releases/latest \
+        | jq -r '.tag_name // empty | ltrimstr("v")')" \
+        || err "Unable to query Caddy releases. Set 'version' to a published version and retry."
+    [ -n "${version}" ] || err "Unable to resolve the latest Caddy release."
+    printf '%s\n' "${version}"
+}
+
 [ "$(id -u)" -eq 0 ] || err "This Feature must run as root."
 [ -r /etc/os-release ] || err "Unable to detect Linux distribution."
 requested_version="${VERSION}"
@@ -85,15 +105,7 @@ trap 'rm -rf "${download_dir}"' EXIT
 # package is installed from the GitHub release and verified against its checksums.
 if [ "${requested_version}" = latest ]; then
     log "Resolving the latest stable Caddy release..."
-    curl_args=(--fail --location --silent --show-error --retry 3 -H "Accept: application/vnd.github+json")
-    if [ -n "${GITHUB_TOKEN:-}" ]; then
-        curl_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-    fi
-    normalized_version="$(curl "${curl_args[@]}" \
-        https://api.github.com/repos/caddyserver/caddy/releases/latest \
-        | jq -r '.tag_name // empty | ltrimstr("v")')" \
-        || err "Unable to query Caddy releases. Set 'version' to a published version and retry."
-    [ -n "${normalized_version}" ] || err "Unable to resolve the latest Caddy release."
+    normalized_version="$(resolve_latest_version)"
 else
     normalized_version="${requested_version#v}"
 fi

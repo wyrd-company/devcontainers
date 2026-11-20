@@ -37,6 +37,13 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(ci.select(["scripts/test-vector-runtime.sh"]), ["vector"])
         self.assertEqual(ci.select(["src/features/vector/install.sh"]), ["vector"])
 
+    def test_release_resolution_checks_select_all_affected_features(self):
+        for feature in ("caddy", "openbao-agent", "openobserve"):
+            with self.subTest(feature=feature):
+                self.assertIn(feature, ci.select([f"scripts/test-{feature}-runtime.sh"]))
+                self.assertIn(feature, ci.select([f"src/features/{feature}/install.sh"]))
+        self.assertEqual(ci.select(["test/release-resolution/test.py"]), ci.all_targets())
+
     def test_every_feature_with_an_ansible_setup_edge_is_an_ansible_dependent(self):
         installers = sorted((ROOT / "src/features").glob("*/install.sh"))
         with_edge = sorted(path.parent.name for path in installers

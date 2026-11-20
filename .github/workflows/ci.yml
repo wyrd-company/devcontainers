@@ -95,6 +95,7 @@ jobs:
     strategy:
       matrix:
         feature:
+          - antigravity-cli
           - claude-code-cli
           - cursor-agent-cli
           - grok-cli

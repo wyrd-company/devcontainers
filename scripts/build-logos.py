@@ -87,7 +87,9 @@ LOGOS = {
 }
 
 # Artifact directory -> why it has no logo.
-NO_LOGO: dict[str, str] = {}
+NO_LOGO: dict[str, str] = {
+    "src/features/antigravity-cli": "Google publishes no standalone SVG of the Antigravity CLI mark yet.",
+}
 
 FORBIDDEN = re.compile(r"<(script|image|foreignObject|style)\b|\son\w+\s*=|(?:xlink:)?href\s*=\s*\"(?!#)", re.I)
 

@@ -72,6 +72,10 @@ products:
       - kind: devcontainer-feature
     source: src/features/ansible
     logo: logo.svg
+  antigravity-cli:
+    kinds:
+      - kind: devcontainer-feature
+    source: src/features/antigravity-cli
   caddy:
     kinds:
       - kind: devcontainer-feature

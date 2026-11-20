@@ -8,6 +8,9 @@ discovery:
       path: src/features/ansible/devcontainer-feature.json
       release-unit: ansible
     - detector: devcontainer-feature
+      path: src/features/antigravity-cli/devcontainer-feature.json
+      release-unit: antigravity-cli
+    - detector: devcontainer-feature
       path: src/features/caddy/devcontainer-feature.json
       release-unit: caddy
     - detector: devcontainer-feature
@@ -77,6 +80,17 @@ discovery:
 release-units:
   ansible:
     path: src/features/ansible
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  antigravity-cli:
+    path: src/features/antigravity-cli
     projections:
       - adapter: json
         file: devcontainer-feature.json

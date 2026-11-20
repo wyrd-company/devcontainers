@@ -32,7 +32,14 @@ pick_service_user() {
 }
 
 resolve_latest_version() {
-    local releases_json tag
+    local releases_json tag tag_url
+    if tag_url="$(curl --fail --location --silent --show-error --retry 3 \
+        --output /dev/null --write-out '%{url_effective}' \
+        https://github.com/openobserve/openobserve/releases/latest)" && \
+        [[ "${tag_url}" =~ ^https://github\.com/openobserve/openobserve/releases/tag/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+        printf 'v%s\n' "${BASH_REMATCH[1]}"
+        return
+    fi
     if releases_json="$(curl --fail --location --silent --show-error --retry 3 \
         ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
         -H "Accept: application/vnd.github+json" \

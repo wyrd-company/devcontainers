@@ -104,8 +104,7 @@ class ServerTests(unittest.TestCase):
 
     def test_socket_mode_is_group_accessible_only(self) -> None:
         mode = stat.S_IMODE(self.socket_path.stat().st_mode)
-        self.assertEqual(mode & 0o007, 0)
-        self.assertEqual(mode & 0o660, 0o660)
+        self.assertEqual(mode, 0o660)
 
     def test_valid_route_and_hot_reload_without_restart(self) -> None:
         status, _ = unix_request(self.socket_path, "GET", "/sample-mcp")

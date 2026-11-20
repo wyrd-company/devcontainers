@@ -249,7 +249,7 @@ def main(argv: list[str] | None = None) -> int:
     config_dir = Path(args.config_dir)
 
     remove_stale_socket(socket_path)
-    old_umask = os.umask(0o007)
+    old_umask = os.umask(0o117)
     try:
         server = ThreadingUnixHTTPServer(str(socket_path), config_dir, args.timeout)
     finally:

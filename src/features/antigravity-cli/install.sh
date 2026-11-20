@@ -16,15 +16,18 @@ install -d -m 0755 -o "${devcontainer_user}" -g "$(id -gn "${devcontainer_user}"
     "${user_home}/.local" "${user_home}/.local/bin"
 
 installer="$(mktemp)"
-trap 'rm -f "${installer}"' EXIT
+scratch_home="$(mktemp -d)"
+trap 'rm -rf "${installer}" "${scratch_home}"' EXIT
+chown "${devcontainer_user}:$(id -gn "${devcontainer_user}")" "${scratch_home}"
 curl --fail --location --silent --show-error https://antigravity.google/cli/install.sh --output "${installer}"
 chmod 0755 "${installer}"
 
 # The installer takes no version: it installs the latest build, verified against the SHA-512 in Google's
-# release manifest, and the CLI then updates itself in place. SHELL is empty so that the installer's
-# `agy install` step does not edit a shell profile; the dotfiles own those.
+# release manifest, and the CLI then updates itself in place. Run it with a scratch HOME and --dir so the
+# installer's `agy install` step never edits the user's shell profiles; the dotfiles own those.
 log "Installing Antigravity CLI for ${devcontainer_user}"
-run_as_user "${devcontainer_user}" env HOME="${user_home}" PATH="${user_home}/.local/bin:${PATH}" SHELL= bash "${installer}"
+run_as_user "${devcontainer_user}" env HOME="${scratch_home}" PATH="${user_home}/.local/bin:${PATH}" SHELL= \
+    bash "${installer}" --dir "${user_home}/.local/bin"
 
 agy_binary="${user_home}/.local/bin/agy"
 [ -x "${agy_binary}" ] || err "Antigravity CLI was not installed at ${agy_binary}."

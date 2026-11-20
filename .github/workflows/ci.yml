@@ -14,7 +14,7 @@ jobs:
       targets: ${{ steps.plan.outputs.targets }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Check that every logo matches its frame and mark
         run: python3 scripts/build-logos.py --check
@@ -67,7 +67,7 @@ jobs:
           - image: local-base
             android: true
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Reject invalid SDK options before installation
         run: sudo bash test/features/dart/test-validation.sh
       - name: Test Dart alone and Flutter with Dart
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test package source resolver
         run: |
@@ -107,7 +107,7 @@ jobs:
     steps:
       - name: Checkout
         if: env.AFFECTED == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         if: env.AFFECTED == 'true'
@@ -141,7 +141,7 @@ jobs:
     steps:
       - name: Checkout
         if: env.AFFECTED == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         if: env.AFFECTED == 'true'
@@ -157,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         run: npm install -g @devcontainers/cli
@@ -171,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         run: npm install -g @devcontainers/cli
@@ -208,7 +208,7 @@ jobs:
     steps:
       - name: Checkout
         if: env.AFFECTED == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         if: env.AFFECTED == 'true'
@@ -242,7 +242,7 @@ jobs:
     steps:
       - name: Checkout
         if: env.AFFECTED == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test the optional Ansible startup dependency
         if: env.AFFECTED == 'true'
@@ -254,7 +254,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test Caddy runtime and hot reload
         run: ./scripts/test-caddy-runtime.sh
@@ -265,7 +265,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test caddy-header-auth server unit tests
         run: python3 test/features/caddy-header-auth/test_server.py
@@ -280,7 +280,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         run: npm install -g @devcontainers/cli
@@ -294,7 +294,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install latest devcontainer CLI
         run: npm install -g @devcontainers/cli
@@ -308,7 +308,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test Ansible runtime under s6
         run: ./scripts/test-ansible-runtime.sh
@@ -319,7 +319,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test Dagu runtime under s6
         run: ./scripts/test-dagu-runtime.sh
@@ -330,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test OpenObserve runtime under s6
         run: ./scripts/test-openobserve-runtime.sh
@@ -341,7 +341,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test OpenTelemetry Collector runtime under s6
         run: ./scripts/test-opentelemetry-collector-runtime.sh
@@ -352,7 +352,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test Vector runtime and hot reload under s6
         run: ./scripts/test-vector-runtime.sh
@@ -367,7 +367,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test OpenBao Agent runtime under s6
         run: ./scripts/test-openbao-agent-runtime.sh
@@ -378,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Test OpenBao secret files under s6
         run: ./scripts/test-openbao-secret-files-runtime.sh
@@ -392,7 +392,7 @@ jobs:
         variant: [noble, resolute]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -421,7 +421,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Validate metadata and substitutions
         run: |
@@ -436,6 +436,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Test shared Codex app-server under s6
         run: ./scripts/test-codex-runtime.sh

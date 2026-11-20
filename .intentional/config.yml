@@ -14,6 +14,9 @@ discovery:
       path: src/features/caddy/devcontainer-feature.json
       release-unit: caddy
     - detector: devcontainer-feature
+      path: src/features/caddy-header-auth/devcontainer-feature.json
+      release-unit: caddy-header-auth
+    - detector: devcontainer-feature
       path: src/features/claude-code-cli/devcontainer-feature.json
       release-unit: claude-code-cli
     - detector: devcontainer-feature
@@ -102,6 +105,17 @@ release-units:
         template: '{id}@{version}'
   caddy:
     path: src/features/caddy
+    projections:
+      - adapter: json
+        file: devcontainer-feature.json
+        mode: committed
+        pointer: /version
+    tags:
+      primary:
+        role: primary
+        template: '{id}@{version}'
+  caddy-header-auth:
+    path: src/features/caddy-header-auth
     projections:
       - adapter: json
         file: devcontainer-feature.json

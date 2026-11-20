@@ -60,6 +60,7 @@ IMAGE_SOURCES = (
 # Features whose service depends on the Ansible Feature's `ansible-setup` oneshot.
 ANSIBLE_DEPENDENTS = [
     "caddy",
+    "caddy-header-auth",
     "codex-cli",
     "dagu",
     "docker-in-docker",

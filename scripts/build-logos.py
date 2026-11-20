@@ -65,6 +65,7 @@ LOGOS = {
     "src/features/flutter/logo.svg": ("src/features/flutter", "feature", "flutter", 1.0),
     "src/features/ansible/logo.svg": ("src/features/ansible", "feature", "ansible", 1.0),
     "src/features/caddy/logo.svg": ("src/features/caddy", "feature", "caddy", 1.0),
+    "src/features/caddy-header-auth/logo.svg": ("src/features/caddy-header-auth", "feature", "caddy", 1.0),
     "src/features/claude-code-cli/logo.svg": ("src/features/claude-code-cli", "feature", "claude", 0.95),
     "src/features/codex-cli/logo.svg": ("src/features/codex-cli", "feature", "openai", 1.0),
     "src/features/cursor-agent-cli/logo.svg": ("src/features/cursor-agent-cli", "feature", "cursor", 0.95),

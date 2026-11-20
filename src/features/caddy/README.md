@@ -9,12 +9,13 @@ The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed.
 | Purpose            | Location                             |
 | ------------------ | ------------------------------------ |
 | Main Caddyfile     | `/etc/caddy/Caddyfile`               |
+| System fragments   | `/etc/caddy/system.d/*.caddy`        |
 | Proxy fragments    | `/etc/caddy/conf.d/*.caddy`          |
 | Required DNS names | `/etc/caddy/required-hosts.d/*.host` |
 | Admin API socket   | `/run/caddy/admin.sock`              |
 | Reload command     | `/usr/local/bin/caddy-reload`        |
 
-The selected configuration user can add, change, and remove fragments without root access. The watcher validates the complete Caddyfile before reloading; a failed reload leaves the active configuration intact.
+The selected configuration user can add, change, and remove fragments under `/etc/caddy/conf.d` without root access. `/etc/caddy/system.d` is root-owned for system- or Ansible-managed fragments that stay separate when `/etc/caddy/conf.d` is bind-mounted from a workspace. The watcher monitors both directories and validates the complete Caddyfile before reloading; a failed reload leaves the active configuration intact.
 
 Integrations that require automatic HTTPS should place each required DNS name on its own line in a `.host` file under `/etc/caddy/required-hosts.d`. Caddy waits for every registered name to resolve before initial startup and before hot reloads, preventing ACME validation from racing service discovery.
 

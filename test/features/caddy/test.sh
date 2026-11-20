@@ -9,8 +9,11 @@ check "caddy is installed" caddy version
 check "caddy service is registered" test -f /etc/s6-overlay/user-bundles.d/user/contents.d/caddy
 check "watcher service is registered" test -f /etc/s6-overlay/user-bundles.d/user/contents.d/caddy-config-watcher
 check "admin uses a Unix socket" grep -Eq '^[[:space:]]+admin unix//run/caddy/admin\.sock$' /etc/caddy/Caddyfile
+check "system fragment wildcard is imported" grep -q '^import /etc/caddy/system.d/\*.caddy$' /etc/caddy/Caddyfile
 check "fragment wildcard is imported" grep -q '^import /etc/caddy/conf.d/\*.caddy$' /etc/caddy/Caddyfile
+check "system fragment directory is root-owned" bash -c 'test "$(stat -c "%a %U:%G" /etc/caddy/system.d)" = "755 root:root"'
 check "fragment directory is setgid" test "$(stat -c %a /etc/caddy/conf.d)" = 2775
+check "watcher monitors system.d" grep -q '/etc/caddy/system\.d' /usr/local/bin/caddy-watch-config
 check "required-host directory is setgid" test "$(stat -c %a /etc/caddy/required-hosts.d)" = 2775
 check "Caddy waits for registered DNS names" grep -q '^/usr/local/bin/caddy-wait-for-dns$' /etc/s6-overlay/s6-rc.d/caddy/run
 check "reloads wait for registered DNS names" grep -q '^/usr/local/bin/caddy-wait-for-dns$' /usr/local/bin/caddy-reload

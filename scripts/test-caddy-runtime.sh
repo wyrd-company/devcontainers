@@ -68,4 +68,25 @@ if docker exec "${name}" curl -fsS http://127.0.0.1:8080 >/dev/null 2>&1; then
     exit 1
 fi
 
+docker exec "${name}" bash -c 'printf "http://127.0.0.1:8081 {\n    bind 127.0.0.1\n    respond \"system\"\n}\n" > /etc/caddy/system.d/system-test.caddy'
+for _ in $(seq 1 30); do
+    if [ "$(docker exec "${name}" curl -fsS http://127.0.0.1:8081 2>/dev/null || true)" = system ]; then
+        break
+    fi
+    sleep 0.5
+done
+test "$(docker exec "${name}" curl -fsS http://127.0.0.1:8081)" = system
+
+docker exec "${name}" rm /etc/caddy/system.d/system-test.caddy
+for _ in $(seq 1 30); do
+    if ! docker exec "${name}" curl -fsS http://127.0.0.1:8081 >/dev/null 2>&1; then
+        break
+    fi
+    sleep 0.5
+done
+if docker exec "${name}" curl -fsS http://127.0.0.1:8081 >/dev/null 2>&1; then
+    echo "Deleted system.d fragment remained active." >&2
+    exit 1
+fi
+
 printf 'Caddy s6 runtime and configuration watcher checks passed.\n'

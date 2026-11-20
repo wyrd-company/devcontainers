@@ -134,6 +134,7 @@ fi
 
 install -d -m 0750 -o caddy -g caddy /var/lib/caddy /run/caddy
 install -d -m 0755 -o root -g root /etc/caddy
+install -d -m 0755 -o root -g root /etc/caddy/system.d
 install -d -m 2775 -o root -g caddy-config /etc/caddy/conf.d
 install -d -m 2775 -o root -g caddy-config /etc/caddy/required-hosts.d
 
@@ -148,6 +149,7 @@ install -d -m 2775 -o root -g caddy-config /etc/caddy/required-hosts.d
     fi
     echo '}'
     echo
+    echo 'import /etc/caddy/system.d/*.caddy'
     echo 'import /etc/caddy/conf.d/*.caddy'
 } >/etc/caddy/Caddyfile
 chmod 0644 /etc/caddy/Caddyfile
@@ -204,17 +206,17 @@ cat >/usr/local/bin/caddy-watch-config <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-directory=/etc/caddy/conf.d
+directories=(/etc/caddy/conf.d /etc/caddy/system.d)
 
 while :; do
     inotifywait --quiet \
         --event close_write,create,delete,moved_to,moved_from \
-        "${directory}" >/dev/null 2>&1
+        "${directories[@]}" >/dev/null 2>&1
 
     sleep 0.2
     while inotifywait --quiet --timeout 1 \
         --event close_write,create,delete,moved_to,moved_from \
-        "${directory}" >/dev/null 2>&1; do
+        "${directories[@]}" >/dev/null 2>&1; do
         :
     done
 

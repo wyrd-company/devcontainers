@@ -1003,8 +1003,18 @@ fi
 
 if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
     mkdir -p /sys/fs/cgroup/init
-    xargs -rn1 < /sys/fs/cgroup/cgroup.procs > /sys/fs/cgroup/init/cgroup.procs || true
-    sed -e 's/ / +/g' -e 's/^/+/' < /sys/fs/cgroup/cgroup.controllers > /sys/fs/cgroup/cgroup.subtree_control
+    controllers="\$(sed -e 's/ / +/g' -e 's/^/+/' < /sys/fs/cgroup/cgroup.controllers)"
+    for attempt in {1..10}; do
+        xargs -rn1 2>/dev/null < /sys/fs/cgroup/cgroup.procs > /sys/fs/cgroup/init/cgroup.procs || true
+        if { printf '%s\n' "\${controllers}" > /sys/fs/cgroup/cgroup.subtree_control; } 2>/dev/null; then
+            break
+        fi
+        if [ "\${attempt}" -eq 10 ]; then
+            echo "docker-in-docker: unable to enable cgroup controllers after \${attempt} attempts" >&2
+            exit 1
+        fi
+        sleep 0.5
+    done
 fi
 EOF
 chmod 0755 "${prepare_dir}/prepare"

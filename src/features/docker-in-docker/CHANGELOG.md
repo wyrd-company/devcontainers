@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+### Fixes
+
+- Retry cgroup v2 setup when concurrent startup leaves processes in the root cgroup.
+
 ## 1.1.0
 
 ### Features

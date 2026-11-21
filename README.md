@@ -35,10 +35,10 @@ It defaults to Ubuntu 24.04 LTS (`noble`) and can select Ubuntu 26.04 LTS (`reso
 - `ghcr.io/wyrd-company/devcontainers/opencodex:2`
 - `ghcr.io/wyrd-company/devcontainers/t3code-server:2`
 - `ghcr.io/wyrd-company/devcontainers/dagu:1`
-- `ghcr.io/wyrd-company/devcontainers/openobserve:1`
+- `ghcr.io/wyrd-company/devcontainers/openobserve:1` — deprecated
 - `ghcr.io/wyrd-company/devcontainers/opentelemetry-collector:1`
 - [`ghcr.io/wyrd-company/devcontainers/vector:1`](src/features/vector/README.md) — Vector pipelines hot-loaded from a directory
-- `ghcr.io/wyrd-company/devcontainers/openbao-agent:2`
+- `ghcr.io/wyrd-company/devcontainers/openbao-agent:2` — deprecated
 - `ghcr.io/wyrd-company/devcontainers/go:1`
 - `ghcr.io/wyrd-company/devcontainers/sshd:1`
 - `ghcr.io/wyrd-company/devcontainers/docker-outside-of-docker:1`

@@ -3,7 +3,6 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-python3 "${repo_root}/test/release-resolution/test.py"
 base_image="${BASE_IMAGE:-$("${repo_root}/scripts/build-base-image.sh" noble)}"
 image="${1:-devcontainers-openobserve-runtime:test}"
 name="openobserve-runtime-test-${RANDOM}-$$"

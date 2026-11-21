@@ -33,26 +33,6 @@ pick_service_user() {
 }
 
 resolve_latest_version() {
-    local tag_url version status
-    if tag_url="$(curl --fail --location --silent --show-error --retry 3 \
-        --output /dev/null --write-out '%{url_effective}' \
-        https://github.com/openbao/openbao/releases/latest)" && \
-        [[ "${tag_url}" =~ ^https://github\.com/openbao/openbao/releases/tag/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-        version="${BASH_REMATCH[1]}"
-        status="$(curl --head --location --silent --show-error --retry 3 \
-            --output /dev/null --write-out '%{http_code}' \
-            "https://github.com/openbao/openbao/releases/download/v${version}/openbao_${version}_linux_${architecture}.tar.gz")" \
-            || err "Unable to check the latest OpenBao archive for Linux ${architecture}."
-        case "${status}" in
-            200) printf '%s\n' "${version}"; return ;;
-            404) log "Latest OpenBao release has no Linux ${architecture} archive; searching older releases through the GitHub API." >&2 ;;
-            *) err "Unable to check the latest OpenBao archive for Linux ${architecture}: HTTP ${status}." ;;
-        esac
-    fi
-    resolve_latest_version_from_api
-}
-
-resolve_latest_version_from_api() {
     local releases_json version page=1
     local -a curl_args=(
         --fail

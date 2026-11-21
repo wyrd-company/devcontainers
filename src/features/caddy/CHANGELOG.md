@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+### Fixes
+
+- Resolve the latest Caddy release through the GitHub redirect before using the API.
+
 ## 1.2.0
 
 ### Features

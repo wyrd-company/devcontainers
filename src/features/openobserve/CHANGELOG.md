@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+### Fixes
+
+- Deprecate this Feature; it is no longer maintained or supported.
+
 ## 1.2.0
 
 ### Features

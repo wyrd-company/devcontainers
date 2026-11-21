@@ -1,5 +1,7 @@
 # OpenObserve
 
+> **Deprecated:** This Feature is no longer maintained and will not receive further updates or support. Existing published versions remain available.
+
 Installs the official [OpenObserve](https://openobserve.ai/) OSS single binary and runs it as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
 OpenObserve runs as the selected devcontainer user so that service state, logs, and [SQLite](https://sqlite.org/) metadata use that user's permissions, home directory, and container environment. Automatic selection prefers the remote user, container user, `vscode`, then `root`.

@@ -1,5 +1,7 @@
 # OpenBao Agent
 
+> **Deprecated:** This Feature is no longer maintained and will not receive further updates or support. Existing published versions remain available.
+
 Installs the official [OpenBao](https://openbao.org/) `bao` binary and runs `bao agent` as an [s6-overlay](https://github.com/just-containers/s6-overlay) longrun service. The Feature requires a Debian/Ubuntu image with s6-overlay 3 and supports `amd64` and `arm64`.
 
 OpenBao Agent runs as `root` by default. Rendered secret files reach other Features through the `openbao-secrets` group. Set `serviceUser` to override: `automatic` prefers the remote user, container user, `vscode`, then `root`, and a user name selects that user. Authentication inputs must be readable, and template destinations and token sinks writable, by the selected user.

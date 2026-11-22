@@ -18,7 +18,7 @@ sudo /command/s6-rc -a list
 
 ## Container health
 
-Docker reports `starting` while s6 starts the configured services. The check waits for startup oneshots, then checks that the supervised services are running and have reported readiness where configured. Services that restart must run for ten seconds before passing the check. Legacy services configured to start by hand with a `down` file are skipped.
+Docker reports `starting` while s6 starts the configured services. The check waits for startup oneshots, then checks that the supervised services are running and have reported readiness where configured. Two exits within the past minute fail the service check, even while the process is running again. Legacy services configured to start by hand with a `down` file are skipped.
 
 Docker gives startup a two-minute grace period by default. It starts counting consecutive failures after the grace period or the first successful check, whichever comes first. Three consecutive failures make the container `unhealthy`. A successful check makes it `healthy`, including after a late start or a service restart. Override the grace period with Docker's `--health-start-period` or Compose's `healthcheck.start_period`. To see recent probe output, look under `.State.Health.Log` in `docker inspect`.
 

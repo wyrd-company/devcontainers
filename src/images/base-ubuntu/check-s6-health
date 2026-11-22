@@ -9,24 +9,30 @@ fail() {
 check_longrun() {
     service_dir=$1
     service=${service_dir##*/}
-    status=$(/command/s6-svstat -o up,ready,updownfor "$service_dir") ||
+    status=$(/command/s6-svstat -o up,ready "$service_dir") ||
         fail "s6 supervisor status is unavailable: $service"
     case "$status" in
-        'true true '*) ;;
-        'true false '*)
+        'true true') ;;
+        'true false')
             [ ! -f "$service_dir/notification-fd" ] || fail "s6 service is not ready: $service"
             ;;
         *) fail "s6 service is not running: $service" ;;
     esac
 
-    # A restarted service must stay up for the default probe interval.
-    # Its first start can be healthy as soon as it is ready.
-    uptime=${status##* }
-    if [ "$uptime" -lt 10 ]; then
-        last_exit=$(/command/s6-svdt -n 1 "$service_dir") ||
-            fail "s6 restart history is unavailable: $service"
-        [ -z "$last_exit" ] || fail "s6 service has restarted recently: $service"
-    fi
+    # s6-svdt returns the most recent deaths in chronological order.
+    deaths=$(/command/s6-svdt -n 2 "$service_dir") ||
+        fail "s6 restart history is unavailable: $service"
+    case "$deaths" in
+        *'
+'*)
+            oldest_exit=$(printf '%s\n' "${deaths%% *}" | TZ=UTC /command/s6-tai64nlocal)
+            oldest_exit_epoch=$(date -u -d "$oldest_exit" +%s) ||
+                fail "s6 restart history has an invalid timestamp: $service"
+            now=$(date -u +%s)
+            [ "$oldest_exit_epoch" -le "$((now - 60))" ] ||
+                fail "s6 service exited repeatedly: $service"
+            ;;
+    esac
 
     if [ -x "$service_dir/data/healthcheck" ]; then
         "$service_dir/data/healthcheck" || fail "s6 service health probe failed: $service"

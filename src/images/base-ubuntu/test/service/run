@@ -2,8 +2,8 @@
 # shellcheck shell=sh
 
 echo "$$" >>/tmp/restart-probe-pids
-if [ -f /tmp/restart-probe-crash ]; then
-    sleep 1
+if [ -r /tmp/restart-probe-crash ] && read -r delay </tmp/restart-probe-crash; then
+    sleep "$delay"
     exit 1
 fi
 exec sleep infinity

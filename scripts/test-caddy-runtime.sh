@@ -34,7 +34,7 @@ docker run --detach --name "${name}" \
 ' >/dev/null
 
 wait_for() {
-    for _ in $(seq 1 100); do
+    for _ in $(seq 1 300); do
         if "$@"; then return 0; fi
         sleep 0.25
     done
@@ -48,9 +48,9 @@ has_health() {
 }
 
 # Caddy's DNS wait affects Docker health while legacy services and CMD start.
+has_health starting
 wait_for docker exec "${name}" test -f /tmp/sample-legacy-started
 wait_for docker exec "${name}" test -f /tmp/sample-cmd-started
-has_health starting
 wait_for has_health unhealthy
 docker exec "${name}" rm /etc/caddy/required-hosts.d/sample-pending.host
 wait_for has_health healthy

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+### Features
+
+- Report Docker health from s6 startup, service state, and readiness notifications.
+
 ## 1.1.0
 
 ### Features

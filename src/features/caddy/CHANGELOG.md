@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+### Fixes
+
+- Report Docker readiness after the DNS wait and Caddy configuration load.
+
 ## 1.2.1
 
 ### Fixes

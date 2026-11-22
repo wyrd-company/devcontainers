@@ -1,6 +1,6 @@
 {
   "id": "ubuntu",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Ubuntu with s6-overlay",
   "description": "An Ubuntu development container with s6-overlay process and service supervision.",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/templates/ubuntu",

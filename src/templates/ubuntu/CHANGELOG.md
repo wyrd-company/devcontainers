@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+### Fixes
+
+- Keep the image entrypoint and command active so s6 services start in the Ubuntu template.
+
 ## 1.0.0
 
 ### Features

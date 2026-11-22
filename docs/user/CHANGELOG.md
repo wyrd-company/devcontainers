@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+### Fixes
+
+- Document the container startup grace period and s6 readiness requirements.
+
 ## 0.1.1
 
 ### Features

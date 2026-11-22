@@ -16,6 +16,14 @@ sudo /command/s6-svstat /run/service/<service>
 sudo /command/s6-rc -a list
 ```
 
+## Container health
+
+Docker reports `starting` while s6 starts the configured services. The check waits for startup oneshots to complete, then checks that the supervised services are running and that services with a `notification-fd` have reported ready. D-Bus signals ready when it accepts connections. Caddy signals ready after its DNS wait and configuration load.
+
+Docker gives startup a two-minute grace period by default. It starts counting consecutive failures after the grace period or the first successful check, whichever comes first. Three consecutive failures make the container `unhealthy`. A successful check makes it `healthy`, including after a late start or a service restart. Override the grace period with Docker's `--health-start-period` or Compose's `healthcheck.start_period`. To see recent probe output, look under `.State.Health.Log` in `docker inspect`.
+
+Longruns without a `notification-fd` are checked for a running process. To have a longrun gate container health on application readiness, declare `notification-fd` and notify s6 when the service can accept work. Use the daemon's own notification support or s6's `s6-notifyoncheck` with an application-specific probe.
+
 ## D-Bus session bus
 
 The image runs one [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/) session bus for the `vscode` user as the `dbus-session` service. Its socket is `/run/dbus-session/bus`, and the image sets `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/dbus-session/bus` for every process in the container: shells, `docker exec`, editors and s6 services.

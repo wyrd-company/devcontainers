@@ -14,8 +14,50 @@ cleanup() {
 }
 trap cleanup EXIT
 
-docker run --detach --name "${container}" "${test_image}" \
-    >/dev/null
+docker run --detach --name "${container}" \
+    --health-start-period 8s --health-start-interval 250ms --health-interval 500ms --health-retries 2 \
+    "${test_image}" >/dev/null
+
+wait_for() {
+    for _ in $(seq 1 80); do
+        if "$@"; then return 0; fi
+        sleep 0.25
+    done
+    docker inspect --format '{{json .State.Health}}' "${container}" >&2
+    docker logs --tail 25 "${container}" >&2
+    return 1
+}
+
+has_health() {
+    test "$(docker inspect --format '{{.State.Health.Status}}' "${container}")" = "$1"
+}
+
+# Docker keeps starting while the oneshot is blocked, then becomes unhealthy
+# if a running longrun still hasn't notified s6 after the grace period.
+wait_for docker exec "${container}" test -f /tmp/setup-probe-started
+has_health starting
+if docker exec "${container}" /usr/local/bin/check-s6-health; then
+    echo 'expected setup-probe to block health until it exits' >&2
+    exit 1
+fi
+docker exec "${container}" touch /tmp/setup-probe-release
+wait_for docker exec "${container}" test -f /tmp/ready-probe-started
+wait_for has_health unhealthy
+docker exec "${container}" touch /tmp/ready-probe-release
+wait_for has_health healthy
+
+# s6-rc still remembers a directly stopped longrun as active. Docker must
+# notice the stopped process and recover when it starts again.
+docker exec "${container}" /command/s6-svc -d /run/service/ready-probe
+wait_for has_health unhealthy
+docker exec "${container}" /command/s6-svc -u /run/service/ready-probe
+wait_for has_health healthy
+
+# The oneshot's state matters even while all longruns are still running.
+docker exec "${container}" /command/s6-rc -d change setup-probe
+wait_for has_health unhealthy
+docker exec "${container}" /command/s6-rc -u change setup-probe
+wait_for has_health healthy
 
 for _ in $(seq 1 30); do
     restart_count="$(docker exec "${container}" sh -c 'test -f /tmp/restart-probe-pids && wc -l </tmp/restart-probe-pids || true')"

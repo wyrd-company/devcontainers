@@ -32,6 +32,20 @@ for _ in $(seq 1 30); do
 done
 docker exec "${name}" test -S /run/caddy/admin.sock
 
+docker exec "${name}" /command/s6-svwait -U -t 10000 /run/service/caddy
+docker exec "${name}" sh -c 'echo pending.example.test > /etc/caddy/required-hosts.d/sample-pending.host'
+docker exec "${name}" /command/s6-svc -r /run/service/caddy
+for _ in $(seq 1 30); do
+    if docker logs "${name}" 2>&1 | grep -F 'Waiting for DNS: pending.example.test' >/dev/null; then
+        break
+    fi
+    sleep 0.5
+done
+docker logs "${name}" 2>&1 | grep -F 'Waiting for DNS: pending.example.test' >/dev/null
+test "$(docker exec "${name}" /command/s6-svstat -o up,ready /run/service/caddy)" = 'true false'
+docker exec "${name}" rm /etc/caddy/required-hosts.d/sample-pending.host
+docker exec "${name}" /command/s6-svwait -U -t 10000 /run/service/caddy
+
 docker exec "${name}" runuser --user vscode -- \
     bash -c "printf ':8080 {\n    respond \"first\"\n}\n' > /etc/caddy/conf.d/test.caddy"
 for _ in $(seq 1 30); do

@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+touch /tmp/setup-probe-started
+while [ ! -f /tmp/setup-probe-release ]; do sleep 0.1; done

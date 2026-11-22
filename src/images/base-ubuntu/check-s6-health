@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+fail() {
+    printf '%s\n' "$*" >&2
+    exit 1
+}
+
+check_longrun() {
+    service_dir=$1
+    service=${service_dir##*/}
+    status=$(/command/s6-svstat -o up,ready "$service_dir") ||
+        fail "s6 supervisor status is unavailable: $service"
+    case "$status" in
+        'true true') ;;
+        'true false')
+            [ ! -f "$service_dir/notification-fd" ] || fail "s6 service is not ready: $service"
+            ;;
+        *) fail "s6 service is not running: $service" ;;
+    esac
+}
+
+# The live database resolves both startup bundles and their dependencies,
+# including oneshots, against the service definitions compiled at boot.
+required=$(/command/s6-rc-db all-dependencies top) ||
+    fail 's6-rc has not initialized its service database'
+active=$(/command/s6-rc -a list) ||
+    fail 's6-rc service state is unavailable'
+longruns=$(/command/s6-rc-db list longruns) ||
+    fail 's6-rc could not list its longruns'
+
+while IFS= read -r name; do
+    if ! printf '%s\n' "$active" | grep -Fxq -- "$name"; then
+        fail "s6-rc service has not started: $name"
+    fi
+    # A longrun can stop while still marked active by s6-rc.
+    if printf '%s\n' "$longruns" | grep -Fxq -- "$name"; then
+        check_longrun "/run/service/$name"
+    fi
+done <<EOF
+$required
+EOF
+
+# s6-overlay copies legacy services here before adding them to supervision.
+for legacy_dir in /run/s6/legacy-services/*; do
+    [ -d "$legacy_dir" ] || continue
+    check_longrun "$legacy_dir"
+done

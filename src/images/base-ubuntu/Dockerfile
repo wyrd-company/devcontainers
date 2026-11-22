@@ -49,6 +49,10 @@ RUN set -eux; \
     command -v dbus-daemon
 ENV DBUS_SESSION_BUS_ADDRESS="unix:path=/run/dbus-session/bus"
 
+COPY --chmod=0755 check-s6-health /usr/local/bin/check-s6-health
+HEALTHCHECK --interval=10s --timeout=3s --start-period=2m --start-interval=1s --retries=3 \
+    CMD ["/usr/local/bin/check-s6-health"]
+
 LABEL org.opencontainers.image.authors="Bob Langley" \
       org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay and a D-Bus session bus" \
       org.opencontainers.image.licenses="MIT" \

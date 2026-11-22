@@ -90,13 +90,15 @@ docker run --detach --name "${client_name}" \
     "${client_image}" >/dev/null
 
 for _ in $(seq 1 30); do
-    if docker logs "${client_name}" 2>&1 | grep -q 'Enrollment required'; then
+    if client_logs="$(docker logs "${client_name}" 2>&1)" && [[ "${client_logs}" == *'Enrollment required'* ]]; then
         break
     fi
     sleep 1
 done
-docker logs "${client_name}" 2>&1 | grep -q 'Enrollment required' \
-    || fail "The disconnected client oneshot did not run at startup."
+if [[ "${client_logs}" != *'Enrollment required'* ]]; then
+    printf '%s\n' "${client_logs}" >&2
+    fail "The disconnected client oneshot did not run at startup."
+fi
 [ "$(docker inspect --format '{{.State.Running}}' "${client_name}")" = true ] \
     || fail "The disconnected client oneshot blocked container startup."
 docker exec "${client_name}" test ! -e /etc/s6-overlay/s6-rc.d/opencodex \

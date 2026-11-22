@@ -8,22 +8,111 @@ container="base-ubuntu-s6-test-${RANDOM}"
 
 docker build --build-arg "IMAGE=${image}" --tag "${test_image}" "$(dirname "$0")"
 "$(dirname "$0")/../../../../scripts/check-sudo-no-all.sh" "${test_image}"
+health_settings="$(docker image inspect --format \
+    '{{.Config.Healthcheck.StartPeriod}} {{.Config.Healthcheck.StartInterval}} {{.Config.Healthcheck.Interval}} {{.Config.Healthcheck.Timeout}} {{.Config.Healthcheck.Retries}}' \
+    "${test_image}")"
+test "${health_settings}" = '2m0s 1s 10s 3s 3'
 
 cleanup() {
     docker container rm --force "${container}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-docker run --detach --name "${container}" "${test_image}" \
-    >/dev/null
+docker run --detach --name "${container}" \
+    --health-start-period 8s --health-start-interval 250ms --health-interval 500ms --health-retries 2 \
+    "${test_image}" >/dev/null
 
-for _ in $(seq 1 30); do
-    restart_count="$(docker exec "${container}" sh -c 'test -f /tmp/restart-probe-pids && wc -l </tmp/restart-probe-pids || true')"
-    if [ "${restart_count:-0}" -ge 2 ]; then
-        break
+wait_for() {
+    for _ in $(seq 1 300); do
+        if "$@"; then return 0; fi
+        sleep 0.25
+    done
+    docker inspect --format '{{json .State.Health}}' "${container}" >&2
+    docker logs --tail 25 "${container}" >&2
+    return 1
+}
+
+has_health() {
+    test "$(docker inspect --format '{{.State.Health.Status}}' "${container}")" = "$1"
+}
+
+expect_probe_failure() {
+    local output
+    if output="$(docker exec "${container}" /usr/local/bin/check-s6-health 2>&1)" || [ "$output" != "$1" ]; then
+        printf 'expected health probe failure "%s", got "%s"\n' "$1" "$output" >&2
+        return 1
     fi
-    sleep 1
-done
+}
+
+has_health starting
+
+# Release the longrun first so the oneshot is the only remaining startup gate.
+wait_for docker exec "${container}" test -f /tmp/setup-probe-started
+wait_for docker exec "${container}" test -f /tmp/ready-probe-started
+docker exec "${container}" touch /tmp/ready-probe-release
+docker exec "${container}" /command/s6-svwait -U -t 10000 /run/service/ready-probe
+expect_probe_failure 's6-rc service has not started: setup-probe'
+wait_for has_health unhealthy
+docker exec "${container}" touch /tmp/setup-probe-release
+wait_for has_health healthy
+test "$(docker exec "${container}" /command/s6-svstat -o up,normallyup /run/service/legacy-manual)" = 'false false'
+
+# Probing repeatedly must leave the live lock available for service changes.
+docker exec "${container}" sh -ec '
+    (
+        for attempt in $(seq 1 100); do /usr/local/bin/check-s6-health; done
+    ) &
+    probe_pid=$!
+    for attempt in $(seq 1 100); do /command/s6-rc -u change setup-probe; done
+    wait "$probe_pid"
+'
+
+# A running service that has not sent its readiness signal still fails.
+docker exec "${container}" rm /tmp/ready-probe-started /tmp/ready-probe-release
+docker exec "${container}" /command/s6-svc -r /run/service/ready-probe
+wait_for docker exec "${container}" test -f /tmp/ready-probe-started
+test "$(docker exec "${container}" /command/s6-svstat -o up,ready /run/service/ready-probe)" = 'true false'
+wait_for has_health unhealthy
+docker exec "${container}" touch /tmp/ready-probe-release
+wait_for has_health healthy
+
+# An enabled legacy service participates in health and can recover after a stop.
+docker exec "${container}" /command/s6-svc -d /run/service/legacy-enabled
+wait_for has_health unhealthy
+docker exec "${container}" /command/s6-svc -u /run/service/legacy-enabled
+wait_for has_health healthy
+
+# The oneshot's state matters even while all longruns are still running.
+docker exec "${container}" /command/s6-rc -d change setup-probe
+wait_for has_health unhealthy
+docker exec "${container}" /command/s6-rc -u change setup-probe
+wait_for has_health healthy
+
+# A stopped required longrun stays active in the s6-rc state. Hold it down
+# past the former ten-second restart guard to isolate the running check.
+docker exec "${container}" /command/s6-svc -d /run/service/restart-probe
+sleep 11
+expect_probe_failure 's6 service is not running: restart-probe'
+wait_for has_health unhealthy
+docker exec "${container}" /command/s6-svc -u /run/service/restart-probe
+wait_for has_health healthy
+
+# Require two actual crashes and sample while the next process has been up
+# long enough to pass the former ten-second restart guard.
+docker exec "${container}" sh -c 'echo 15 > /tmp/restart-probe-crash'
+docker exec "${container}" /command/s6-svc -r /run/service/restart-probe
+wait_for docker exec "${container}" sh -c '
+    deaths=$(/command/s6-svdt /run/service/restart-probe | grep -c " exitcode 1$")
+    [ "$deaths" -ge 2 ]
+'
+wait_for docker exec "${container}" sh -c '
+    set -- $(/command/s6-svstat -o up,updownfor /run/service/restart-probe)
+    [ "$1" = true ] && [ "$2" -gt 10 ]
+'
+expect_probe_failure 's6 service exited repeatedly: restart-probe'
+wait_for has_health unhealthy
+docker exec "${container}" rm /tmp/restart-probe-crash
+wait_for has_health healthy
 
 docker exec "${container}" sh -c "tr '\0' ' ' </proc/1/cmdline | grep -q s6-svscan"
 docker exec "${container}" sh -c 'tr "\0" " " </proc/$(pgrep -x s6-pause)/cmdline | grep -q s6-pause'

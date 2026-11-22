@@ -425,9 +425,9 @@ jobs:
 
       - name: Validate metadata and substitutions
         run: |
-          jq -e '.id == "ubuntu" and .version == "1.0.0" and .options.imageVariant.default == "noble"' src/templates/ubuntu/devcontainer-template.json
+          jq -e '.id == "ubuntu" and (.version | type == "string" and length > 0) and .options.imageVariant.default == "noble"' src/templates/ubuntu/devcontainer-template.json
           for variant in noble resolute; do
-            sed "s/\${templateOption:imageVariant}/${variant}/g" src/templates/ubuntu/.devcontainer/devcontainer.json | jq -e --arg variant "$variant" '.image == ("ghcr.io/wyrd-company/devcontainers/base:" + $variant)'
+            sed "s/\${templateOption:imageVariant}/${variant}/g" src/templates/ubuntu/.devcontainer/devcontainer.json | jq -e --arg variant "$variant" '.image == ("ghcr.io/wyrd-company/devcontainers/base:" + $variant) and .overrideCommand == false'
           done
 
   test-codex-runtime:

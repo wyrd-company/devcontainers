@@ -25,7 +25,8 @@ RUN set -eux; \
     done; \
     rm -rf "${download_dir}"; \
     test -x /init; \
-    test -x /command/s6-svscan
+    test -x /command/s6-svscan; \
+    /command/s6-rc --no-lock help >/dev/null
 
 # Limit the vscode user's sudo access to apt installs and s6-overlay service control.
 COPY sudoers.d/vscode /etc/sudoers.d/vscode
@@ -48,6 +49,10 @@ RUN set -eux; \
     chmod 0755 /etc/s6-overlay/s6-rc.d/dbus-session/run; \
     command -v dbus-daemon
 ENV DBUS_SESSION_BUS_ADDRESS="unix:path=/run/dbus-session/bus"
+
+COPY --chmod=0755 check-s6-health /usr/local/bin/check-s6-health
+HEALTHCHECK --interval=10s --timeout=3s --start-period=2m --start-interval=1s --retries=3 \
+    CMD ["/usr/local/bin/check-s6-health"]
 
 LABEL org.opencontainers.image.authors="Bob Langley" \
       org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay and a D-Bus session bus" \

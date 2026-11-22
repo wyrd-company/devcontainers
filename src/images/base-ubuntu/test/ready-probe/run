@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+touch /tmp/ready-probe-started
+while [ ! -f /tmp/ready-probe-release ]; do sleep 0.1; done
+printf '\n' >&3
+exec sleep infinity

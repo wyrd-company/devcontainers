@@ -8,6 +8,10 @@ container="base-ubuntu-s6-test-${RANDOM}"
 
 docker build --build-arg "IMAGE=${image}" --tag "${test_image}" "$(dirname "$0")"
 "$(dirname "$0")/../../../../scripts/check-sudo-no-all.sh" "${test_image}"
+health_settings="$(docker image inspect --format \
+    '{{.Config.Healthcheck.StartPeriod}} {{.Config.Healthcheck.StartInterval}} {{.Config.Healthcheck.Interval}} {{.Config.Healthcheck.Timeout}} {{.Config.Healthcheck.Retries}}' \
+    "${test_image}")"
+test "${health_settings}" = '2m0s 1s 10s 3s 3'
 
 cleanup() {
     docker container rm --force "${container}" >/dev/null 2>&1 || true
@@ -32,25 +36,48 @@ has_health() {
     test "$(docker inspect --format '{{.State.Health.Status}}' "${container}")" = "$1"
 }
 
-# Docker keeps starting while the oneshot is blocked, then becomes unhealthy
-# if a running longrun still hasn't notified s6 after the grace period.
+# Release the longrun first so the oneshot is the only remaining startup gate.
 wait_for docker exec "${container}" test -f /tmp/setup-probe-started
+wait_for docker exec "${container}" test -f /tmp/ready-probe-started
+docker exec "${container}" touch /tmp/ready-probe-release
+docker exec "${container}" /command/s6-svwait -U -t 10000 /run/service/ready-probe
 has_health starting
-if docker exec "${container}" /usr/local/bin/check-s6-health; then
+if probe_output="$(docker exec "${container}" /usr/local/bin/check-s6-health 2>&1)"; then
     echo 'expected setup-probe to block health until it exits' >&2
     exit 1
 fi
+if [ "${probe_output}" != 's6-rc service has not started: setup-probe' ]; then
+    printf 'unexpected startup probe output: %s\n' "${probe_output}" >&2
+    exit 1
+fi
+wait_for has_health unhealthy
 docker exec "${container}" touch /tmp/setup-probe-release
+wait_for has_health healthy
+test "$(docker exec "${container}" /command/s6-svstat -o up,normallyup /run/service/legacy-manual)" = 'false false'
+
+# Probing repeatedly must leave the live lock available for service changes.
+docker exec "${container}" sh -ec '
+    (
+        for attempt in $(seq 1 100); do /usr/local/bin/check-s6-health; done
+    ) &
+    probe_pid=$!
+    for attempt in $(seq 1 100); do /command/s6-rc -u change setup-probe; done
+    wait "$probe_pid"
+'
+
+# A running service that has not sent its readiness signal still fails.
+docker exec "${container}" rm /tmp/ready-probe-started /tmp/ready-probe-release
+docker exec "${container}" /command/s6-svc -r /run/service/ready-probe
 wait_for docker exec "${container}" test -f /tmp/ready-probe-started
+test "$(docker exec "${container}" /command/s6-svstat -o up,ready /run/service/ready-probe)" = 'true false'
 wait_for has_health unhealthy
 docker exec "${container}" touch /tmp/ready-probe-release
 wait_for has_health healthy
 
-# s6-rc still remembers a directly stopped longrun as active. Docker must
-# notice the stopped process and recover when it starts again.
-docker exec "${container}" /command/s6-svc -d /run/service/ready-probe
+# An enabled legacy service participates in health and can recover after a stop.
+docker exec "${container}" /command/s6-svc -d /run/service/legacy-enabled
 wait_for has_health unhealthy
-docker exec "${container}" /command/s6-svc -u /run/service/ready-probe
+docker exec "${container}" /command/s6-svc -u /run/service/legacy-enabled
 wait_for has_health healthy
 
 # The oneshot's state matters even while all longruns are still running.
@@ -59,13 +86,13 @@ wait_for has_health unhealthy
 docker exec "${container}" /command/s6-rc -u change setup-probe
 wait_for has_health healthy
 
-for _ in $(seq 1 30); do
-    restart_count="$(docker exec "${container}" sh -c 'test -f /tmp/restart-probe-pids && wc -l </tmp/restart-probe-pids || true')"
-    if [ "${restart_count:-0}" -ge 2 ]; then
-        break
-    fi
-    sleep 1
-done
+# A crash loop must be unhealthy even when a probe sees a new process running.
+docker exec "${container}" touch /tmp/restart-probe-crash
+docker exec "${container}" /command/s6-svc -r /run/service/restart-probe
+wait_for docker exec "${container}" sh -c 'test "$(wc -l </tmp/restart-probe-pids)" -ge 4'
+wait_for has_health unhealthy
+docker exec "${container}" rm /tmp/restart-probe-crash
+wait_for has_health healthy
 
 docker exec "${container}" sh -c "tr '\0' ' ' </proc/1/cmdline | grep -q s6-svscan"
 docker exec "${container}" sh -c 'tr "\0" " " </proc/$(pgrep -x s6-pause)/cmdline | grep -q s6-pause'

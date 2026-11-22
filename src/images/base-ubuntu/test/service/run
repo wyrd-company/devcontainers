@@ -2,7 +2,8 @@
 # shellcheck shell=sh
 
 echo "$$" >>/tmp/restart-probe-pids
-if [ "$(wc -l </tmp/restart-probe-pids)" -eq 1 ]; then
+if [ -f /tmp/restart-probe-crash ]; then
+    sleep 1
     exit 1
 fi
 exec sleep infinity

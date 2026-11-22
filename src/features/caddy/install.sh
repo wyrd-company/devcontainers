@@ -242,12 +242,11 @@ chmod 0755 /usr/local/bin/caddy-watch-config
 caddy_service=/etc/s6-overlay/s6-rc.d/caddy
 install -d -m 0755 "${caddy_service}/data" "${caddy_service}/dependencies.d"
 printf 'longrun\n' >"${caddy_service}/type"
-printf '3\n' >"${caddy_service}/notification-fd"
 touch "${caddy_service}/dependencies.d/base"
 if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
     touch "${caddy_service}/dependencies.d/ansible-setup"
 fi
-cat >"${caddy_service}/data/check" <<'EOF'
+cat >"${caddy_service}/data/healthcheck" <<'EOF'
 #!/bin/sh
 exec /command/s6-setuidgid caddy curl --fail --silent --max-time 1 --noproxy '*' --output /dev/null \
     --unix-socket /run/caddy/admin.sock http://localhost/config/admin/listen
@@ -257,12 +256,11 @@ cat >"${caddy_service}/run" <<'EOF'
 set -e
 install -d -m 0750 -o caddy -g caddy /run/caddy
 /usr/local/bin/caddy-wait-for-dns
-# The notification helper needs access to the root-owned supervisor directory.
-exec /command/s6-notifyoncheck -d -n 0 /command/s6-setuidgid caddy \
+exec /command/s6-setuidgid caddy \
     env HOME=/var/lib/caddy XDG_DATA_HOME=/var/lib/caddy/.local/share XDG_CONFIG_HOME=/var/lib/caddy/.config \
     caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
 EOF
-chmod 0755 "${caddy_service}/run" "${caddy_service}/data/check"
+chmod 0755 "${caddy_service}/run" "${caddy_service}/data/healthcheck"
 
 watcher_service=/etc/s6-overlay/s6-rc.d/caddy-config-watcher
 install -d -m 0755 "${watcher_service}/dependencies.d"

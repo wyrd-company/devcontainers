@@ -25,7 +25,8 @@ RUN set -eux; \
     done; \
     rm -rf "${download_dir}"; \
     test -x /init; \
-    test -x /command/s6-svscan
+    test -x /command/s6-svscan; \
+    /command/s6-rc --no-lock help >/dev/null
 
 # Limit the vscode user's sudo access to apt installs and s6-overlay service control.
 COPY sudoers.d/vscode /etc/sudoers.d/vscode

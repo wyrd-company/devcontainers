@@ -22,29 +22,51 @@ docker build \
 
 "${repo_root}/scripts/check-sudo-no-all.sh" "${image}"
 
-docker run --detach --name "${name}" "${image}" >/dev/null
+docker run --detach --name "${name}" \
+    --health-start-period 8s --health-start-interval 250ms --health-interval 500ms --health-retries 2 \
+    --entrypoint /bin/sh "${image}" -ec '
+    echo pending.example.test > /etc/caddy/required-hosts.d/sample-pending.host
+    printf ":8082 {\n    respond \"ready\"\n}\n" > /etc/caddy/system.d/sample-readiness.caddy
+    mkdir -p /etc/services.d/sample-legacy
+    printf "#!/bin/sh\ntouch /tmp/sample-legacy-started\nexec sleep infinity\n" > /etc/services.d/sample-legacy/run
+    chmod 0755 /etc/services.d/sample-legacy/run
+    exec /init /bin/sh -ec "touch /tmp/sample-cmd-started; exec /command/s6-pause"
+' >/dev/null
 
-for _ in $(seq 1 30); do
-    if docker exec "${name}" test -S /run/caddy/admin.sock; then
-        break
-    fi
-    sleep 0.5
-done
-docker exec "${name}" test -S /run/caddy/admin.sock
+wait_for() {
+    for _ in $(seq 1 100); do
+        if "$@"; then return 0; fi
+        sleep 0.25
+    done
+    docker inspect --format '{{json .State.Health}}' "${name}" >&2
+    docker logs --tail 25 "${name}" >&2
+    return 1
+}
 
-docker exec "${name}" /command/s6-svwait -U -t 10000 /run/service/caddy
-docker exec "${name}" sh -c 'echo pending.example.test > /etc/caddy/required-hosts.d/sample-pending.host'
-docker exec "${name}" /command/s6-svc -r /run/service/caddy
-for _ in $(seq 1 30); do
-    if docker logs "${name}" 2>&1 | grep -F 'Waiting for DNS: pending.example.test' >/dev/null; then
-        break
-    fi
-    sleep 0.5
-done
-docker logs "${name}" 2>&1 | grep -F 'Waiting for DNS: pending.example.test' >/dev/null
-test "$(docker exec "${name}" /command/s6-svstat -o up,ready /run/service/caddy)" = 'true false'
+has_health() {
+    test "$(docker inspect --format '{{.State.Health.Status}}' "${name}")" = "$1"
+}
+
+# Caddy's DNS wait affects Docker health while legacy services and CMD start.
+wait_for docker exec "${name}" test -f /tmp/sample-legacy-started
+wait_for docker exec "${name}" test -f /tmp/sample-cmd-started
+has_health starting
+wait_for has_health unhealthy
 docker exec "${name}" rm /etc/caddy/required-hosts.d/sample-pending.host
-docker exec "${name}" /command/s6-svwait -U -t 10000 /run/service/caddy
+wait_for has_health healthy
+test "$(docker exec "${name}" curl -fsS http://127.0.0.1:8082)" = ready
+
+# A broken config at startup remains unhealthy until a new server loads it.
+docker exec "${name}" sh -c 'echo "invalid configuration {" > /etc/caddy/system.d/sample-invalid.caddy'
+docker exec "${name}" /command/s6-svc -r /run/service/caddy
+wait_for has_health unhealthy
+if docker exec "${name}" /run/service/caddy/data/healthcheck; then
+    echo 'Caddy answered its readiness probe with an invalid configuration.' >&2
+    exit 1
+fi
+docker exec "${name}" rm /etc/caddy/system.d/sample-invalid.caddy
+wait_for has_health healthy
+test "$(docker exec "${name}" curl -fsS http://127.0.0.1:8082)" = ready
 
 docker exec "${name}" runuser --user vscode -- \
     bash -c "printf ':8080 {\n    respond \"first\"\n}\n' > /etc/caddy/conf.d/test.caddy"

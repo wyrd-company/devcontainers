@@ -9,24 +9,39 @@ fail() {
 check_longrun() {
     service_dir=$1
     service=${service_dir##*/}
-    status=$(/command/s6-svstat -o up,ready "$service_dir") ||
+    status=$(/command/s6-svstat -o up,ready,updownfor "$service_dir") ||
         fail "s6 supervisor status is unavailable: $service"
     case "$status" in
-        'true true') ;;
-        'true false')
+        'true true '*) ;;
+        'true false '*)
             [ ! -f "$service_dir/notification-fd" ] || fail "s6 service is not ready: $service"
             ;;
         *) fail "s6 service is not running: $service" ;;
     esac
+
+    # A restarted service must stay up for the default probe interval.
+    # Its first start can be healthy as soon as it is ready.
+    uptime=${status##* }
+    if [ "$uptime" -lt 10 ]; then
+        last_exit=$(/command/s6-svdt -n 1 "$service_dir") ||
+            fail "s6 restart history is unavailable: $service"
+        [ -z "$last_exit" ] || fail "s6 service has restarted recently: $service"
+    fi
+
+    if [ -x "$service_dir/data/healthcheck" ]; then
+        "$service_dir/data/healthcheck" || fail "s6 service health probe failed: $service"
+    fi
 }
 
-# The live database resolves both startup bundles and their dependencies,
-# including oneshots, against the service definitions compiled at boot.
-required=$(/command/s6-rc-db all-dependencies top) ||
+live=$(readlink -e /run/s6-rc) ||
     fail 's6-rc has not initialized its service database'
-active=$(/command/s6-rc -a list) ||
+required=$(/command/s6-rc-db -c "$live/compiled" all-dependencies top) ||
+    fail 's6-rc has not initialized its service database'
+# s6-rc replaces its state file atomically. A read-only probe can read it
+# without a lock, leaving startup and operator-driven changes free to run.
+active=$(/command/s6-rc --no-lock -l "$live" -a list) ||
     fail 's6-rc service state is unavailable'
-longruns=$(/command/s6-rc-db list longruns) ||
+longruns=$(/command/s6-rc-db -c "$live/compiled" list longruns) ||
     fail 's6-rc could not list its longruns'
 
 while IFS= read -r name; do
@@ -44,5 +59,6 @@ EOF
 # s6-overlay copies legacy services here before adding them to supervision.
 for legacy_dir in /run/s6/legacy-services/*; do
     [ -d "$legacy_dir" ] || continue
+    [ ! -e "$legacy_dir/down" ] || continue
     check_longrun "$legacy_dir"
 done

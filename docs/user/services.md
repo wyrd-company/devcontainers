@@ -18,11 +18,13 @@ sudo /command/s6-rc -a list
 
 ## Container health
 
-Docker reports `starting` while s6 starts the configured services. The check waits for startup oneshots to complete, then checks that the supervised services are running and that services with a `notification-fd` have reported ready. D-Bus signals ready when it accepts connections. Caddy signals ready after its DNS wait and configuration load.
+Docker reports `starting` while s6 starts the configured services. The check waits for startup oneshots, then checks that the supervised services are running and have reported readiness where configured. Services that restart must run for ten seconds before passing the check. Legacy services configured to start by hand with a `down` file are skipped.
 
 Docker gives startup a two-minute grace period by default. It starts counting consecutive failures after the grace period or the first successful check, whichever comes first. Three consecutive failures make the container `unhealthy`. A successful check makes it `healthy`, including after a late start or a service restart. Override the grace period with Docker's `--health-start-period` or Compose's `healthcheck.start_period`. To see recent probe output, look under `.State.Health.Log` in `docker inspect`.
 
-Longruns without a `notification-fd` are checked for a running process. To have a longrun gate container health on application readiness, declare `notification-fd` and notify s6 when the service can accept work. Use the daemon's own notification support or s6's `s6-notifyoncheck` with an application-specific probe.
+Docker health requires the image's `/init` entrypoint. If you bypass it, disable the inherited check with `HEALTHCHECK NONE` in a derived Dockerfile, `docker run --no-healthcheck`, or Compose's `healthcheck.disable: true`.
+
+Longruns can report readiness to s6 via `notification-fd`, as D-Bus does. This also affects when dependent services start. For readiness that affects only Docker health, install a trusted executable as `data/healthcheck` in the s6 service definition. It must exit zero when the running service is ready. Caddy uses this check to wait for DNS and configuration loading while the rest of the container starts independently.
 
 ## D-Bus session bus
 

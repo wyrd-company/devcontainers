@@ -256,10 +256,17 @@ grep -qx "USER=${expected_user}" <<<"${vector_environ}" || fail "the environment
 if grep -Fq sample-token-value <<<"${vector_environ}"; then
     fail "the secret value reached Vector's environment"
 fi
-# The capture pipeline writes what the webhook received, so its file is left out.
-if docker exec "${name}" grep -rqs --exclude=sample-capture.jsonl sample-token-value /etc/vector /var/lib/vector /run /tmp; then
-    fail "the secret value was written to disk"
-fi
+# The capture pipeline writes what the webhook received, so its file is left
+# out. grep exits 1 for no match; any other status means the scan itself
+# failed, which must not read as clean. Sockets and FIFOs hold no contents.
+scan_status=0
+docker exec "${name}" grep --recursive --quiet --devices=skip --exclude=sample-capture.jsonl \
+    sample-token-value /etc/vector /var/lib/vector /run /tmp || scan_status=$?
+case "${scan_status}" in
+    0) fail "the secret value was written to disk" ;;
+    1) ;;
+    *) fail "the disk scan failed with status ${scan_status}" ;;
+esac
 grep -q ' no-token$' "${openbao_dir}/requests.log" || fail "bao-secret did not read from OpenBao"
 if grep -q ' token$' "${openbao_dir}/requests.log"; then
     fail "bao-secret sent a token to OpenBao"

@@ -4,7 +4,8 @@
 Usage: fake-openbao.py SOCKET LOG
 
 It answers GET /v1/secret/data/sample-app, refuses secret/data/sample-denied
-with 403, returns a non-KV body for secret/data/sample-not-kv, and 404 for
+with 403, returns a non-KV body for secret/data/sample-not-kv, an empty 200 for
+secret/data/sample-empty, two documents for secret/data/sample-twice, and 404 for
 anything else. Each request line, and whether it carried a token header, is
 appended to LOG.
 """
@@ -37,6 +38,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.reply(403, {"errors": ["permission denied"]})
         elif self.path == "/v1/secret/data/sample-not-kv":
             self.reply(200, ["sample", "not", "kv"])
+        elif self.path == "/v1/secret/data/sample-twice":
+            one = json.dumps({"data": {"data": SECRETS["/v1/secret/data/sample-app"]}}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(2 * len(one)))
+            self.end_headers()
+            self.wfile.write(one + one)
+        elif self.path == "/v1/secret/data/sample-empty":
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
         else:
             self.reply(404, {"errors": []})
 

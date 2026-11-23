@@ -135,7 +135,7 @@ for tool in curl jq; do
         >"/tmp/sample-spy/${tool}"
     chmod 0755 "/tmp/sample-spy/${tool}"
 done
-printf 'set -o xtrace\n' >/tmp/sample-bash-env
+printf 'set -o xtrace\n: >/tmp/sample-bash-env-ran\n' >/tmp/sample-bash-env
 printf 'output = "/tmp/sample-curlrc-output"\nheader = "X-Vault-Token: sample-curlrc-token"\n' >"${HOME}/.curlrc"
 run_hostile() {
     env PATH="/tmp/sample-spy:${PATH}" SHELLOPTS=xtrace BASHOPTS=xpg_echo BASH_ENV=/tmp/sample-bash-env \
@@ -148,6 +148,7 @@ run_hostile() {
 }
 echo "get=$(run_hostile get secret/sample-app/token 2>/tmp/sample-spy/stderr)"
 echo "vector=$(printf '%s' '{"version":"1.0","secrets":["secret/sample-app/token"]}' | run_hostile vector 2>>/tmp/sample-spy/stderr)"
+[ ! -e /tmp/sample-bash-env-ran ] || echo "LEAK: BASH_ENV was sourced"
 for leak in /tmp/sample-curlrc-output /tmp/sample-function-output; do
     [ ! -e "${leak}" ] || echo "LEAK: ${leak} exists"
 done

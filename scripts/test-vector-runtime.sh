@@ -248,7 +248,12 @@ captured | grep -F '"message":"{\"payload\":{\"action\":\"move\",\"task_id\":1}}
     || fail "the webhook did not receive the event payload"
 pass "a JSONL line is delivered to the webhook with the secret token"
 
-if docker exec "${name}" sh -c "tr '\0' '\n' </proc/$(vector_pid)/environ" | grep -Fq sample-token-value; then
+# The read must succeed: a failed read would hide a leak. bao-secret's own
+# children are short-lived; the base image test spies on them.
+vector_environ="$(docker exec --user "${expected_user}" "${name}" sh -c "tr '\0' '\n' </proc/$(vector_pid)/environ")" \
+    || fail "unable to read Vector's environment"
+grep -qx "USER=${expected_user}" <<<"${vector_environ}" || fail "the environment read did not return Vector's environment"
+if grep -Fq sample-token-value <<<"${vector_environ}"; then
     fail "the secret value reached Vector's environment"
 fi
 # The capture pipeline writes what the webhook received, so its file is left out.

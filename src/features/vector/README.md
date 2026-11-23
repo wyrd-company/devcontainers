@@ -93,8 +93,9 @@ The Feature requires `/usr/local/bin/bao-secret`. When the image does not have i
 
 Version 1 loaded `/run/openbao/secrets/vector.env` into Vector's environment and resolved `SECRET[environment.NAME]`. Version 2 does neither:
 
-1. Replace each `SECRET[environment.NAME]` with the OpenBao reference of the same value, `SECRET[openbao.<mount>/<path>/<field>]`.
-2. Remove the OpenBao Agent `template` whose `destination` is `/run/openbao/secrets/vector.env`, and delete the file. Otherwise the Agent keeps writing the secrets to disk, although Vector no longer reads them.
+1. Change the Feature reference in `devcontainer.json` from `ghcr.io/wyrd-company/devcontainers/vector:1` to `ghcr.io/wyrd-company/devcontainers/vector:2`, and use a base image that has `/usr/local/bin/bao-secret`.
+2. Replace each `SECRET[environment.NAME]` with the OpenBao reference of the same value, `SECRET[openbao.<mount>/<path>/<field>]`.
+3. Remove the OpenBao Agent `template` whose `destination` is `/run/openbao/secrets/vector.env`, and delete the file. Otherwise the Agent keeps writing the secrets to disk, although Vector no longer reads them.
 
 ## Configuration watcher
 
@@ -116,7 +117,7 @@ On Linux, Vector watches its configuration with inotify. The kernel limits inoti
 {
   "image": "ghcr.io/wyrd-company/devcontainers/base:noble",
   "features": {
-    "ghcr.io/wyrd-company/devcontainers/vector:1": {}
+    "ghcr.io/wyrd-company/devcontainers/vector:2": {}
   }
 }
 ```

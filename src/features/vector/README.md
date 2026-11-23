@@ -81,13 +81,20 @@ Pipelines read secrets from [OpenBao](https://openbao.org/) while they load. The
 - Values stay in Vector's memory. The Feature and `bao-secret` do not write them to a file or put them in an environment variable.
 - Vector itself can print a resolved value in its own configuration errors, which go to the container log. With Vector 0.62.0, a secret placed inside a URI that Vector rejects appears in the error message. Put secrets only in fields that hold a whole credential, such as `auth.token`, `auth.password` or a request header, never inside a `uri`, a template or other text that Vector parses.
 - Vector reads the secrets each time it loads the pipelines, at start and at every reload. A rotated secret takes effect at the next change to a pipeline file, or after `sudo /command/s6-svc -r /run/service/vector`.
-- A secret that is missing or not permitted stops the file that uses it from loading, with the reason in the container log, and Vector keeps running the previous pipelines. `vector-service validate` reports the same error.
+- A secret that is missing or not permitted, or a missing `bao-secret`, stops the whole configuration from loading, with the reason in the container log. On a reload, Vector rejects the change and keeps running the previous pipelines. At start there are no previous pipelines: Vector loads none of them, including pipelines that read no secret, exits, and s6 restarts it until the secret is readable or the file is fixed. `vector-service validate` reports the same error.
 - Reference segments hold only letters, digits, `.`, `_` and `-`. Vector does not recognize a placeholder with other characters, such as `#` or `:`, and passes it on as literal text without an error.
 - Do not write a `SECRET[...]` placeholder in a comment: Vector resolves placeholders anywhere in a file.
 
 Vector does not substitute `${NAME}` environment variables in configuration unless it is started with `--dangerously-allow-env-var-interpolation`, and this Feature keeps that default.
 
-The Feature requires `/usr/local/bin/bao-secret`. When the image does not have it, the installer logs a warning, and only pipelines that read a secret fail to load.
+The Feature requires `/usr/local/bin/bao-secret`. When the image does not have it, the installer logs a warning. Vector still runs while no pipeline reads a secret; once one does, the configuration fails to load as described above.
+
+### Upgrading from version 1
+
+Version 1 loaded `/run/openbao/secrets/vector.env` into Vector's environment and resolved `SECRET[environment.NAME]`. Version 2 does neither:
+
+1. Replace each `SECRET[environment.NAME]` with the OpenBao reference of the same value, `SECRET[openbao.<mount>/<path>/<field>]`.
+2. Remove the OpenBao Agent `template` whose `destination` is `/run/openbao/secrets/vector.env`, and delete the file. Otherwise the Agent keeps writing the secrets to disk, although Vector no longer reads them.
 
 ## Configuration watcher
 

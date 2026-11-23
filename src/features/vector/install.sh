@@ -79,9 +79,10 @@ service_group="$(id -gn "${service_user}")"
 service_home="$(getent passwd "${service_user}" | cut -d: -f6)"
 [ -n "${service_home}" ] || err "Unable to resolve the home directory for ${service_user}."
 
-# Rendered secret files from the OpenBao Agent Feature are group-readable.
-if [ "${service_user}" != root ] && getent group openbao-secrets >/dev/null 2>&1; then
-    usermod -aG openbao-secrets "${service_user}"
+# The base image's bao-secret answers the openbao secret backend. A pipeline
+# that reads a secret fails to load without it; the rest of Vector works.
+if [ ! -x /usr/local/bin/bao-secret ]; then
+    log "WARNING: /usr/local/bin/bao-secret is missing, so SECRET[openbao.*] cannot be resolved. Use a current ghcr.io/wyrd-company/devcontainers/base image."
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -149,12 +150,13 @@ install -d -m 0750 -o "${service_user}" -g "${service_group}" "${data_dir}"
         echo '  enabled: false'
     fi
     # Vector resolves secret placeholders even inside comments, so none is written here.
-    echo '# The environment backend reads variables of the service environment.'
+    echo '# The openbao backend reads <mount>/<path>/<field> from OpenBao through BAO_ADDR.'
     echo 'secret:'
-    echo '  environment:'
+    echo '  openbao:'
     echo '    type: exec'
     echo '    command:'
-    echo '      - /usr/local/bin/vector-secret-environment'
+    echo '      - /usr/local/bin/bao-secret'
+    echo '      - vector'
 } >"${config_file}"
 chmod 0644 "${config_file}"
 
@@ -176,35 +178,12 @@ check_output="$(/usr/local/bin/vector validate --no-environment \
     --config-dir "${check_dir}" "${config_file}" 2>&1)" \
     || err "Vector rejected the generated configuration; check apiAddress. ${check_output}"
 
-cat >/usr/local/bin/vector-secret-environment <<'EOF'
-#!/usr/bin/env bash
-# Vector exec secret backend: answers SECRET[environment.NAME] from the
-# environment of the Vector process, which includes the OpenBao secret file.
-set -euo pipefail
-
-exec jq --compact-output '
-    (.secrets // [])
-    | map({
-        key: .,
-        value: (
-            if test("^[A-Za-z_][A-Za-z0-9_]*$") and ($ENV[.] != null)
-            then {value: $ENV[.], error: null}
-            else {value: null, error: "environment variable is not set"}
-            end
-        )
-    })
-    | from_entries
-'
-EOF
-chmod 0755 /usr/local/bin/vector-secret-environment
-
 printf -v quoted_config_file '%q' "${config_file}"
 printf -v quoted_config_dir '%q' "${config_dir}"
 printf -v quoted_watch_method '%q' "${watch_method}"
 printf -v quoted_poll_interval '%q' "${poll_interval}"
 # The launcher runs with the user's environment, so its own variables carry a
-# reserved prefix and are never exported. Secret file values reach Vector only
-# through `env`, so a key can share a name with any launcher variable.
+# reserved prefix and are never exported.
 cat >/usr/local/bin/vector-service <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -215,13 +194,6 @@ __vector_service_watch_method=${quoted_watch_method}
 __vector_service_poll_interval=${quoted_poll_interval}
 EOF
 cat >>/usr/local/bin/vector-service <<'EOF'
-
-# Names exported by the container, captured before the launcher assigns anything
-# that could shadow them.
-declare -A __vector_service_incoming=()
-while IFS= read -r __vector_service_name; do
-    __vector_service_incoming["${__vector_service_name}"]=1
-done < <(compgen -e)
 
 # The Feature manages these settings. Some would add configuration beside the
 # managed files, and Vector parses all of them even for subcommands.
@@ -237,49 +209,15 @@ if [ "${1:-}" = validate ]; then
     shift
 fi
 
-__vector_service_secret_file=/run/openbao/secrets/vector.env
-__vector_service_secrets=()
-if [ "${__vector_service_mode}" = run ] && [ -x /usr/local/bin/openbao-wait-for-secrets ]; then
-    /usr/local/bin/openbao-wait-for-secrets vector
-fi
-if [ -e "${__vector_service_secret_file}" ] && [ ! -r "${__vector_service_secret_file}" ]; then
-    echo "[vector] ERROR: ${__vector_service_secret_file} exists but is not readable by $(id -un)." >&2
-    exit 1
-fi
-if [ -r "${__vector_service_secret_file}" ]; then
-    # Values are literal text, not shell. The container environment takes precedence.
-    while IFS= read -r __vector_service_line || [ -n "${__vector_service_line}" ]; do
-        __vector_service_line="${__vector_service_line#"${__vector_service_line%%[![:space:]]*}"}"
-        case "${__vector_service_line}" in
-            ''|'#'*) continue ;;
-        esac
-        __vector_service_name="${__vector_service_line%%=*}"
-        if [ "${__vector_service_name}" = "${__vector_service_line}" ] \
-            || ! [[ "${__vector_service_name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-            echo "[vector] ERROR: ${__vector_service_secret_file} contains a line that is not NAME=value." >&2
-            exit 1
-        fi
-        for __vector_service_setting in "${__vector_service_managed[@]}"; do
-            if [ "${__vector_service_name}" = "${__vector_service_setting}" ]; then
-                echo "[vector] ERROR: ${__vector_service_secret_file} sets ${__vector_service_name}, which the Feature manages." >&2
-                exit 1
-            fi
-        done
-        if [ -z "${__vector_service_incoming["${__vector_service_name}"]+x}" ]; then
-            __vector_service_secrets+=("${__vector_service_line}")
-        fi
-    done <"${__vector_service_secret_file}"
-fi
-
 unset "${__vector_service_managed[@]}"
 
 if [ "${__vector_service_mode}" = validate ]; then
-    exec env -- "${__vector_service_secrets[@]}" /usr/local/bin/vector validate \
+    exec /usr/local/bin/vector validate \
         --no-environment --resolve-secrets \
         --config-dir "${__vector_service_config_dir}" "$@" "${__vector_service_config_file}"
 fi
 
-exec env -- "${__vector_service_secrets[@]}" /usr/local/bin/vector \
+exec /usr/local/bin/vector \
     --config "${__vector_service_config_file}" \
     --config-dir "${__vector_service_config_dir}" \
     --watch-config \
@@ -296,9 +234,6 @@ printf 'longrun\n' >"${service_dir}/type"
 touch "${service_dir}/dependencies.d/base"
 if [ -d /etc/s6-overlay/s6-rc.d/ansible-setup ]; then
     touch "${service_dir}/dependencies.d/ansible-setup"
-fi
-if [ -d /etc/s6-overlay/s6-rc.d/openbao-secrets ]; then
-    touch "${service_dir}/dependencies.d/openbao-secrets"
 fi
 printf -v quoted_user '%q' "${service_user}"
 printf -v quoted_home '%q' "${service_home}"

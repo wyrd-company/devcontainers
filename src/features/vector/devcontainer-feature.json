@@ -3,7 +3,7 @@
   "version": "1.0.1",
   "name": "Vector",
   "documentationURL": "https://github.com/wyrd-company/devcontainers/tree/main/src/features/vector",
-  "description": "Installs Vector and runs it as an s6-overlay service that hot-loads and unloads pipeline files from a well-known directory.",
+  "description": "Installs Vector and runs it as an s6-overlay service that hot-loads and unloads pipeline files from a well-known directory and reads secrets from OpenBao.",
   "options": {
     "version": {
       "type": "string",
@@ -34,7 +34,6 @@
   },
   "installsAfter": [
     "ghcr.io/devcontainers/features/common-utils",
-    "ghcr.io/wyrd-company/devcontainers/ansible",
-    "ghcr.io/wyrd-company/devcontainers/openbao-agent"
+    "ghcr.io/wyrd-company/devcontainers/ansible"
   ]
 }

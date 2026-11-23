@@ -12,8 +12,7 @@ The Feature requires a Debian/Ubuntu image with s6-overlay 3 already installed.
 | Managed configuration  | `/etc/vector/vector.yaml`                |
 | Data and checkpoints   | `/var/lib/vector`                        |
 | Launcher and validator | `/usr/local/bin/vector-service`          |
-| Secret backend         | `/usr/local/bin/vector-secret-environment` |
-| Secret file            | `/run/openbao/secrets/vector.env`        |
+| Secret backend         | `/usr/local/bin/bao-secret vector`       |
 
 A pipeline file holds any `sources`, `transforms` and `sinks`, in YAML (`.yaml`, `.yml`), TOML (`.toml`) or JSON (`.json`). Vector merges every file in the directory with the managed configuration into one topology, so component ids must be unique across files: prefix them with the file's name. Files with other extensions are ignored.
 
@@ -60,7 +59,7 @@ sinks:
     uri: http://127.0.0.1:8080/api/v1/webhooks/board-activity
     auth:
       strategy: bearer
-      token: "SECRET[environment.DAGU_WEBHOOK_TOKEN]"
+      token: "SECRET[openbao.secret/sample-application/token]"
     encoding:
       codec: json
     framing:
@@ -76,23 +75,18 @@ sinks:
 
 ## Secrets
 
-Since Vector 0.58, Vector does not substitute `${NAME}` environment variables in configuration unless it is started with `--dangerously-allow-env-var-interpolation`. This Feature keeps that default. The managed configuration declares an `exec` secret backend named `environment` instead: `SECRET[environment.NAME]` in a pipeline reads the variable `NAME` from Vector's environment. Do not write a `SECRET[...]` placeholder in a comment: Vector resolves placeholders anywhere in a file, and a missing variable stops the file from loading.
+Pipelines read secrets from [OpenBao](https://openbao.org/) while they load. The managed configuration declares an `exec` secret backend named `openbao` that runs `bao-secret vector` from the [Wyrd base image](https://wyrd.foo/tools/base). `SECRET[openbao.<mount>/<path>/<field>]` reads one field of a KV version 2 secret: `SECRET[openbao.secret/sample-application/token]` reads the field `token` of `secret/sample-application`.
 
-The service loads `NAME=value` lines from `/run/openbao/secrets/vector.env` into its environment when that file exists, and waits for it when the [OpenBao Agent](https://openbao.org/) Feature renders it. Values are literal text, not shell, and the container environment takes precedence. A malformed line, or a line that sets one of the `VECTOR_*` variables the Feature manages (see [Environment and flags](#environment-and-flags)), stops the service. Add one Agent `template` whose `destination` is that path:
+- `bao-secret` reads the OpenBao address from `BAO_ADDR`, then `VAULT_ADDR`, in Vector's environment, and sends no token: the address must authenticate the caller, as the [Wyrwood](https://wyrd.foo/tools/wyrwood/) socket `unix:///run/wyrwood/vault.sock` does. See the base image's [Secrets](https://wyrd.foo/docs/base/secrets) page.
+- Values stay in Vector's memory. They are not written to a file or put in an environment variable.
+- Vector reads the secrets each time it loads the pipelines, at start and at every reload. A rotated secret takes effect at the next change to a pipeline file, or after `sudo /command/s6-svc -r /run/service/vector`.
+- A secret that is missing or not permitted stops the file that uses it from loading, with the reason in the container log, and Vector keeps running the previous pipelines. `vector-service validate` reports the same error.
+- Reference segments hold only letters, digits, `.`, `_` and `-`. Vector does not recognize a placeholder with other characters, such as `#` or `:`, and passes it on as literal text without an error.
+- Do not write a `SECRET[...]` placeholder in a comment: Vector resolves placeholders anywhere in a file.
 
-```hcl
-template {
-  destination = "/run/openbao/secrets/vector.env"
-  perms       = "0640"
-  contents    = <<-EOT
-    {{ with secret "secret/data/sample-application" -}}
-    DAGU_WEBHOOK_TOKEN={{ .Data.data.token }}
-    {{- end }}
-  EOT
-}
-```
+Vector does not substitute `${NAME}` environment variables in configuration unless it is started with `--dangerously-allow-env-var-interpolation`, and this Feature keeps that default.
 
-The environment is read when Vector starts. After the secret file changes, restart the service with `sudo /command/s6-svc -r /run/service/vector`.
+The Feature requires `/usr/local/bin/bao-secret`. When the image does not have it, the installer logs a warning, and only pipelines that read a secret fail to load.
 
 ## Configuration watcher
 

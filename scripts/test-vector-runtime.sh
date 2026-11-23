@@ -22,6 +22,14 @@ poll_interval="${WATCH_CONFIG_POLL_INTERVAL_SECONDS:-30}"
 remap_uid="${REMAP_UID:-}"
 name="vector-runtime-test-${RANDOM}-$$"
 
+# A fake OpenBao on a bind-mounted Unix socket stands in for the Wyrwood
+# vault.sock that bao-secret reads through BAO_ADDR.
+openbao_dir="$(mktemp -d)"
+chmod 0755 "${openbao_dir}"
+python3 "${repo_root}/src/images/base-ubuntu/test/fake-openbao.py" \
+    "${openbao_dir}/vault.sock" "${openbao_dir}/requests.log" &
+openbao_pid=$!
+
 expected_user=vscode
 if [ "${service_user_option}" != automatic ]; then
     expected_user="${service_user_option}"
@@ -30,6 +38,8 @@ fi
 cleanup() {
     docker stop "${name}" >/dev/null 2>&1 || true
     docker rm "${name}" >/dev/null 2>&1 || true
+    kill "${openbao_pid}" 2>/dev/null || true
+    rm -rf "${openbao_dir}"
 }
 trap cleanup EXIT
 
@@ -107,8 +117,8 @@ docker build \
 docker run --detach \
     --name "${name}" \
     --env SAMPLE_RUNTIME_VALUE=sample-runtime-value \
-    --env SAMPLE_PRECEDENCE=sample-from-container \
-    --env line=sample-container-line \
+    --env BAO_ADDR=unix:///run/sample-openbao/vault.sock \
+    --volume "${openbao_dir}:/run/sample-openbao" \
     --env VECTOR_CONFIG=/tmp/sample-env-config.yaml \
     --env VECTOR_CONFIG_DIR=/tmp/sample-env-config.d \
     --env VECTOR_CONFIG_YAML=/tmp/sample-env-extra.yaml \
@@ -159,10 +169,6 @@ case "${cmdline}" in
 esac
 pass "environment variables do not override the managed flags"
 
-# The token reaches the pipeline from the OpenBao secret file convention. The
-# keys `mode` and `line` share names with variables a launcher might use.
-docker exec "${name}" sh -c \
-    'install -d -m 0755 /run/openbao/secrets && printf "SAMPLE_WEBHOOK_TOKEN=sample-webhook-token\nmode=sample-file-mode\nline=sample-file-line\nSAMPLE_PRECEDENCE=sample-from-file\n" >/run/openbao/secrets/vector.env && chmod 0644 /run/openbao/secrets/vector.env'
 previous_pid="${pid}"
 docker exec "${name}" /command/s6-svc -r /run/service/vector
 for _ in $(seq 1 60); do
@@ -175,17 +181,6 @@ done
 [ -n "${pid}" ] && [ "${pid}" != "${previous_pid}" ] || fail "s6 did not restart Vector"
 wait_for "the Vector API after restart" bash -c 'exec 3<>/dev/tcp/127.0.0.1/8686'
 pass "s6 restarts Vector"
-
-environ="$(docker exec --user "${expected_user}" "${name}" sh -c "tr '\0' '\n' </proc/${pid}/environ")"
-grep -qx 'mode=sample-file-mode' <<<"${environ}" || fail "the secret file key mode did not reach Vector"
-grep -qx 'SAMPLE_WEBHOOK_TOKEN=sample-webhook-token' <<<"${environ}" || fail "the secret file token did not reach Vector"
-grep -qx 'line=sample-container-line' <<<"${environ}" || fail "the secret file overrode the container's line"
-grep -qx 'SAMPLE_PRECEDENCE=sample-from-container' <<<"${environ}" \
-    || fail "the secret file overrode the container environment"
-if grep -q '^__vector_service_' <<<"${environ}"; then
-    fail "launcher variables reached Vector"
-fi
-pass "secret file keys reach Vector whatever their name, and the container environment wins"
 
 as_user 'install -d /tmp/sample-board && : >/tmp/sample-board/activity.jsonl'
 
@@ -221,10 +216,10 @@ sinks:
     uri: http://127.0.0.1:18080/api/v1/webhooks/sample-dag
     auth:
       strategy: bearer
-      token: "SECRET[environment.SAMPLE_WEBHOOK_TOKEN]"
+      token: "SECRET[openbao.secret/sample-app/token]"
     request:
       headers:
-        X-Sample-Mode: "SECRET[environment.mode]"
+        X-Sample-Mode: "SECRET[openbao.secret/sample-app/port]"
     encoding: {codec: json}
     framing: {method: newline_delimited}
     batch: {max_events: 1}'
@@ -245,27 +240,77 @@ pass "vector-service validate accepts the pipelines"
 
 as_user 'printf "%s\n" "{\"action\":\"move\",\"task_id\":1}" >>/tmp/sample-board/activity.jsonl'
 wait_for "the first event" grep -q 'move' /tmp/sample-capture.jsonl
-captured | grep -F '"Authorization":"Bearer sample-webhook-token"' >/dev/null \
-    || fail "the webhook did not receive the token from the secret file"
-captured | grep -F '"X-Sample-Mode":"sample-file-mode"' >/dev/null \
-    || fail "the webhook did not receive the secret file key mode"
+captured | grep -F '"Authorization":"Bearer sample-token-value"' >/dev/null \
+    || fail "the webhook did not receive the token from OpenBao"
+captured | grep -F '"X-Sample-Mode":"8080"' >/dev/null \
+    || fail "the webhook did not receive the second field from OpenBao"
 captured | grep -F '"message":"{\"payload\":{\"action\":\"move\",\"task_id\":1}}' >/dev/null \
     || fail "the webhook did not receive the event payload"
 pass "a JSONL line is delivered to the webhook with the secret token"
+
+if docker exec "${name}" sh -c "tr '\0' '\n' </proc/$(vector_pid)/environ" | grep -Fq sample-token-value; then
+    fail "the secret value reached Vector's environment"
+fi
+# The capture pipeline writes what the webhook received, so its file is left out.
+if docker exec "${name}" grep -rqs --exclude=sample-capture.jsonl sample-token-value /etc/vector /var/lib/vector /run /tmp; then
+    fail "the secret value was written to disk"
+fi
+grep -q ' no-token$' "${openbao_dir}/requests.log" || fail "bao-secret did not read from OpenBao"
+if grep -q ' token$' "${openbao_dir}/requests.log"; then
+    fail "bao-secret sent a token to OpenBao"
+fi
+pass "the secret stays out of Vector's environment and off the disk, and no token is sent"
+
+# A pipeline that reads a secret OpenBao does not have is refused with the reason.
+missing_pipeline='sources:
+  sample_missing_in:
+    type: demo_logs
+    format: json
+sinks:
+  sample_missing_out:
+    type: http
+    inputs: [sample_missing_in]
+    uri: http://127.0.0.1:18080/api/v1/webhooks/sample-dag
+    auth:
+      strategy: bearer
+      token: "SECRET[openbao.secret/sample-missing/token]"
+    encoding: {codec: json}'
+write_pipeline sample-missing.yaml "${missing_pipeline}"
+for _ in $(seq 1 $((poll_interval * 2 + 60))); do
+    if docker logs "${name}" 2>&1 | grep -q 'secret secret/sample-missing was not found'; then
+        break
+    fi
+    sleep 0.5
+done
+docker logs "${name}" 2>&1 | grep -q 'secret secret/sample-missing was not found' \
+    || fail "Vector did not report the missing secret"
+if output="$(as_user 'vector-service validate' 2>&1)"; then
+    fail "vector-service validate accepted a pipeline with a missing secret"
+fi
+grep -Fq 'secret secret/sample-missing was not found' <<<"${output}" \
+    || fail "vector-service validate rejected the missing secret for the wrong reason: ${output}"
+before="$(reload_count)"
+as_user 'rm /etc/vector/conf.d/sample-missing.yaml'
+wait_for_reload "${before}" "removing the pipeline with a missing secret"
+pass "a pipeline with a missing secret is refused and reported"
 
 # A broken file is rejected, and the running pipelines keep working.
 broken_pipeline='sinks:
   sample_broken:
     type: sample-not-a-sink
     inputs: [sample_board_payload]'
+aborted_count() {
+    docker logs "${name}" 2>&1 | grep -c 'reload aborted' || true
+}
+aborted_before="$(aborted_count)"
 write_pipeline sample-broken.yaml "${broken_pipeline}"
 for _ in $(seq 1 $((poll_interval * 2 + 60))); do
-    if docker logs "${name}" 2>&1 | grep -q 'reload aborted'; then
+    if [ "$(aborted_count)" -gt "${aborted_before}" ]; then
         break
     fi
     sleep 0.5
 done
-docker logs "${name}" 2>&1 | grep -q 'reload aborted' || fail "Vector did not reject the broken file"
+[ "$(aborted_count)" -gt "${aborted_before}" ] || fail "Vector did not reject the broken file"
 if as_user 'vector-service validate' >/dev/null 2>&1; then
     fail "vector-service validate accepted a broken pipeline"
 fi
@@ -295,14 +340,6 @@ pass "a restored pipeline resumes from its checkpoint"
 
 [ "$(vector_pid)" = "${pid}" ] || fail "Vector restarted during hot reloads"
 pass "every reload happened in the same Vector process"
-
-docker exec "${name}" sh -c 'printf "VECTOR_CONFIG_YAML=/tmp/sample-extra.yaml\n" >>/run/openbao/secrets/vector.env'
-if output="$(as_user 'vector-service validate' 2>&1)"; then
-    fail "a secret file that sets a managed VECTOR_* setting was accepted"
-fi
-grep -Fq 'sets VECTOR_CONFIG_YAML, which the Feature manages' <<<"${output}" \
-    || fail "a managed setting in the secret file was rejected for the wrong reason: ${output}"
-pass "the secret file cannot set a managed VECTOR_* setting"
 
 assert_install_rejected() {
     local description="$1" expected="$2" output

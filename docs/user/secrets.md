@@ -23,3 +23,5 @@ A reference is `<mount>/<path>/<field>`: the first segment is the KV mount, the 
 ## Vector
 
 `bao-secret vector` answers [Vector](https://vector.dev/)'s `exec` secret backend protocol: it reads a request on standard input and writes each value, or an error, on standard output. The Vector Feature configures it as the `openbao` backend, so a pipeline reads a field as `SECRET[openbao.secret/sample-application/token]`. Each secret is read once per request, however many of its fields are requested.
+
+`bao-secret` keeps values out of files and the environment, but it cannot control what the program that receives a value does with it. Vector, for example, can print a resolved value in a configuration error; the Vector Feature's documentation says where to place secrets.

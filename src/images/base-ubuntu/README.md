@@ -1,6 +1,6 @@
 # Ubuntu Dev Container base with s6-overlay
 
-`ghcr.io/wyrd-company/devcontainers/base` derives from Microsoft's Ubuntu Dev Container base and adds [s6-overlay](https://github.com/just-containers/s6-overlay) as PID 1 and a [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/) session bus for the `vscode` user. It has Ubuntu 24.04 LTS (`noble`, `ubuntu24.04`) and 26.04 LTS (`resolute`, `ubuntu26.04`) variants for `amd64` and `arm64`.
+`ghcr.io/wyrd-company/devcontainers/base` derives from Microsoft's Ubuntu Dev Container base and adds [s6-overlay](https://github.com/just-containers/s6-overlay) as PID 1 a [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/) session bus for the `vscode` user, and `bao-secret`, which reads [OpenBao](https://openbao.org/) secrets. It has Ubuntu 24.04 LTS (`noble`, `ubuntu24.04`) and 26.04 LTS (`resolute`, `ubuntu26.04`) variants for `amd64` and `arm64`.
 
 The image docs are in [`docs/user/`](../../../docs/user/) and published on [wyrd.foo](https://wyrd.foo/tools/base):
 
@@ -8,6 +8,7 @@ The image docs are in [`docs/user/`](../../../docs/user/) and published on [wyrd
 - [Use the image](../../../docs/user/devcontainer.md): `devcontainer.json` and Features.
 - [Services](../../../docs/user/services.md): s6-rc service definitions and the D-Bus session bus.
 - [sudo](../../../docs/user/sudo.md): the `vscode` user's sudo policy.
+- [Secrets](../../../docs/user/secrets.md): `bao-secret`, which reads OpenBao secrets.
 
 ## Trademarks
 

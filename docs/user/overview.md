@@ -4,7 +4,7 @@ product: base
 order: 1
 ---
 
-`ghcr.io/wyrd-company/devcontainers/base` derives from Microsoft's Ubuntu Dev Container base and adds [s6-overlay](https://github.com/just-containers/s6-overlay) as PID 1 and a D-Bus session bus for the `vscode` user (see [Services](services.md)).
+`ghcr.io/wyrd-company/devcontainers/base` derives from Microsoft's Ubuntu Dev Container base and adds [s6-overlay](https://github.com/just-containers/s6-overlay) as PID 1 and a D-Bus session bus for the `vscode` user (see [Services](services.md)), and `bao-secret`, which reads [OpenBao](https://openbao.org/) secrets without writing them to disk (see [Secrets](secrets.md)).
 
 ## Supported variants
 

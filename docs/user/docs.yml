@@ -23,6 +23,7 @@ products:
       - Rolling tags name the Ubuntu release, so a tag never silently moves to another release.
       - Every build also gets a dated immutable tag, and twelve are kept for rollback.
       - The vscode user may use sudo only to install packages and control s6 services.
+      - bao-secret reads OpenBao secrets with curl and jq, without writing them to disk or the environment.
       - Images are published with provenance and SBOM attestations.
     media:
       - src: assets/base-image.gif
@@ -43,6 +44,7 @@ products:
             pages:
               - services
               - sudo
+              - secrets
     kinds:
       - kind: devcontainer-image
         ref: ghcr.io/wyrd-company/devcontainers/base

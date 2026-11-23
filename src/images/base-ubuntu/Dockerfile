@@ -50,12 +50,20 @@ RUN set -eux; \
     command -v dbus-daemon
 ENV DBUS_SESSION_BUS_ADDRESS="unix:path=/run/dbus-session/bus"
 
+# bao-secret reads OpenBao secrets with the curl and jq of the upstream image,
+# without installing the OpenBao CLI.
+COPY --chmod=0755 bao-secret /usr/local/bin/bao-secret
+RUN set -eux; \
+    command -v curl; \
+    command -v jq; \
+    bash -n /usr/local/bin/bao-secret
+
 COPY --chmod=0755 check-s6-health /usr/local/bin/check-s6-health
 HEALTHCHECK --interval=10s --timeout=3s --start-period=2m --start-interval=1s --retries=3 \
     CMD ["/usr/local/bin/check-s6-health"]
 
 LABEL org.opencontainers.image.authors="Bob Langley" \
-      org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay and a D-Bus session bus" \
+      org.opencontainers.image.description="Microsoft Dev Container Ubuntu base with s6-overlay, a D-Bus session bus and an OpenBao secret reader" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.source="https://github.com/wyrd-company/devcontainers" \
       org.opencontainers.image.title="Ubuntu Dev Container base with s6-overlay"

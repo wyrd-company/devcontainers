@@ -231,3 +231,5 @@ test "${after}" -gt "${before}"
 
 docker stop --time 10 "${container}" >/dev/null
 test "$(docker inspect --format '{{.State.ExitCode}}' "${container}")" -eq 0
+
+"$(dirname "$0")/bao-secret.sh" "${image}"

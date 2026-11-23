@@ -120,8 +120,8 @@ echo "PASS: address errors are reported before curl runs and do not repeat the a
 
 # An inherited environment cannot leak a value. A .curlrc that writes the
 # response to a file and adds a token header, exported variables with the
-# helper's names, xtrace, and exported functions named jq and curl are all in
-# place, and spies in front of the real curl and jq record every child's
+# helper's names, xtrace through SHELLOPTS and BASH_ENV, and exported
+# functions named jq, curl, set, unset, builtin and printf are all in place, and spies in front of the real curl and jq record every child's
 # command line and environment.
 hostile="$(docker run --rm --interactive --user vscode --entrypoint /bin/bash \
     --volume "${socket_dir}:/run/sample-openbao" \
@@ -135,12 +135,15 @@ for tool in curl jq; do
         >"/tmp/sample-spy/${tool}"
     chmod 0755 "/tmp/sample-spy/${tool}"
 done
+printf 'set -o xtrace\n' >/tmp/sample-bash-env
 printf 'output = "/tmp/sample-curlrc-output"\nheader = "X-Vault-Token: sample-curlrc-token"\n' >"${HOME}/.curlrc"
 run_hostile() {
-    env PATH="/tmp/sample-spy:${PATH}" SHELLOPTS=xtrace \
+    env PATH="/tmp/sample-spy:${PATH}" SHELLOPTS=xtrace BASHOPTS=xpg_echo BASH_ENV=/tmp/sample-bash-env \
         body=sample-inherited result=sample-inherited error=sample-inherited response=sample-inherited \
         "BASH_FUNC_jq%%=() { cat >/tmp/sample-function-output; }" \
         "BASH_FUNC_curl%%=() { cat >/tmp/sample-function-output; }" \
+        "BASH_FUNC_set%%=() { :; }" "BASH_FUNC_unset%%=() { :; }" "BASH_FUNC_builtin%%=() { :; }" \
+        "BASH_FUNC_printf%%=() { builtin printf \"\$@\"; builtin printf \"\$@\" >>/tmp/sample-function-output; }" \
         /usr/local/bin/bao-secret "$@"
 }
 echo "get=$(run_hostile get secret/sample-app/token 2>/tmp/sample-spy/stderr)"
@@ -165,4 +168,4 @@ spied="$(sed -n 's/^spied=//p' <<<"${hostile}")"
 if grep -q ' token$' "${socket_dir}/requests.log"; then
     fail "a .curlrc header reached OpenBao"
 fi
-echo "PASS: no value leaks through .curlrc, exported variables, xtrace or exported functions (${spied} children spied)"
+echo "PASS: no value leaks through .curlrc, exported variables, xtrace, BASH_ENV or exported functions (${spied} children spied)"

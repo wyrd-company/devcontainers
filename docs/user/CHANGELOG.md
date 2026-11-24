@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+### Fixes
+
+- Combine the two highlights about image tags into one, so the base image page has the six highlights wyrd.foo allows and publishes again.
+
 ## 0.1.3
 
 ### Features

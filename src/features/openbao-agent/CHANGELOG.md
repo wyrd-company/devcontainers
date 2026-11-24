@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.3
+
+### Fixes
+
+- The README no longer lists the Vector Feature as a consumer of `/run/openbao/secrets/<feature-id>.env`: Vector 2 reads secrets with the base image's `bao-secret`. Remove any template that still writes `vector.env`.
+
 ## 2.1.2
 
 ### Fixes

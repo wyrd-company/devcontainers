@@ -20,8 +20,7 @@ products:
     highlights:
       - s6-overlay 3 runs as PID 1, so services start, restart and stop under supervision.
       - Ubuntu 24.04 LTS and 26.04 LTS variants, each for amd64 and arm64.
-      - Rolling tags name the Ubuntu release, so a tag never silently moves to another release.
-      - Every build also gets a dated immutable tag, and twelve are kept for rollback.
+      - Rolling tags name the Ubuntu release and never silently move to another; every build also gets a dated immutable tag, and twelve are kept for rollback.
       - The vscode user may use sudo only to install packages and control s6 services.
       - bao-secret reads OpenBao secrets with curl and jq, without writing them to disk or the environment.
       - Images are published with provenance and SBOM attestations.
